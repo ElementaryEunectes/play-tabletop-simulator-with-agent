@@ -11,7 +11,8 @@
 param(
     [string]$SavesDir = '',
     [string]$Out = '',
-    [string]$File = ''
+    [string]$File = '',
+    [switch]$Hist
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
 if ($SavesDir -eq '') { $SavesDir = $TtsSavesDir }
@@ -81,7 +82,11 @@ Walk $o['ObjectStates'] 0 ''
 $rows | Export-Csv -LiteralPath $Out -NoTypeInformation -Encoding UTF8
 Write-Host ("save : {0}   mtime : {1}" -f $src.Name, $src.LastWriteTime.ToString('HH:mm:ss'))
 Write-Host ("rows={0}  wrote {1}" -f $rows.Count, $Out)
-Write-Host "=== Name histogram ==="
-$rows | Group-Object name | Sort-Object Count -Descending | Select-Object -First 25 | ForEach-Object {
-    Write-Host ("  {0,-34} {1}" -f $_.Name, $_.Count)
+# The 25-line name histogram is opt-in (-Hist): this is a lookup tool, and 25 lines of
+# histogram is a lot of context to pay for on every run. The two lines above always matter.
+if ($Hist) {
+    Write-Host "=== Name histogram (top 25) ==="
+    $rows | Group-Object name | Sort-Object Count -Descending | Select-Object -First 25 | ForEach-Object {
+        Write-Host ("  {0,-34} {1}" -f $_.Name, $_.Count)
+    }
 }

@@ -7,14 +7,21 @@
   绝不编内容：查不到就说查不到。
 #>
 param(
-    [Parameter(Mandatory = $true, Position = 0)]
-    [string]$Q,
+    [Parameter(Position = 0)]
+    [string]$Q = '',
     [int]$Max = 3,
     [switch]$Full
 )
 
 $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+
+# A missing -Q used to make PowerShell itself dump a multi-line mandatory-parameter error
+# (~630 bytes of context for nothing). Answer it ourselves, in two lines.
+if ([string]::IsNullOrWhiteSpace($Q)) {
+    Write-Output "usage: card.ps1 -Q '<name or fragment>'   (data: cache\dicethrone_cards.md)"
+    exit 2
+}
 
 $db = Join-Path $PSScriptRoot '..\cache\dicethrone_cards.md'
 $db = [System.IO.Path]::GetFullPath($db)
