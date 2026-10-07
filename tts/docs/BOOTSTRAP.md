@@ -59,6 +59,7 @@ ds.ps1 -Do count       # 名称直方图
 > —— 协议表见 `tts_api.ps1` 文件头：**发包 `messageID` = 命令类型**（`2`=自定义消息 / `3`=对某物件执行 Lua，**选 3 时必须带 `guid`**）；
 > **收包 `messageID` = 事件类型**（`1`=scriptStates `2`=print `3`=error **`4`=custom（命令层回包走这个）** `5`=returnValue `6`=saved `7`=objectCreated）。
 > ⚠️ **TTS 会主动推无关事件** ⇒ **循环读、只认 `messageID == 4` 的包**，别把 `5`/`6` 当成回包。
+> 📖 **完整表（含方向，以及"`5` 是 ExecuteLua 的返回值、**不是**载入"这处更正）**：`PRIOR_ART.md §3.2`。
 > ```powershell
 > $l = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 39998); $l.Start()
 > $c = [System.Net.Sockets.TcpClient]::new(); $c.Connect('127.0.0.1', 39999)

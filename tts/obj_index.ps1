@@ -42,15 +42,36 @@ function Walk($list, $depth, $parentGuid) {
         $gm = [string]$it['GMNotes']
         $ss = [string]$it['LuaScriptState']
         $urln = ''
+        $usrc = ''
+        $pdfUrl = ''
         $ci = $it['CustomImage']
-        if ($ci) { $urln = [string]$ci['ImageURL'] }
+        if ($ci) { $urln = [string]$ci['ImageURL']; if ($urln -ne '') { $usrc = 'CustomImage' } }
         if ($urln -eq '') {
             $cd = $it['CustomDeck']
             if ($cd) {
-                foreach ($p in $cd.PSObject.Properties) { if ($p.Value.FaceURL) { $urln = [string]$p.Value.FaceURL; break } }
+                foreach ($p in $cd.PSObject.Properties) { if ($p.Value.FaceURL) { $urln = [string]$p.Value.FaceURL; $usrc = 'CustomDeck'; break } }
             }
         }
-        if ($urln -eq '') { $urln = [string]$it['CustomAssetBundle'] }
+        # Rulebooks: a PDF object carries CustomPDF.PDFUrl / .FileURL. PRIOR_ART 1.1 (the
+        # TabletopSimulatorCompanion trick) is that the SAVE is a structured metadata store, so
+        # this is how you get the official rulebook without photographing pages. The full URL is
+        # kept (not just the tail) because a PDF has to be downloaded, not matched to a cache file.
+        if ($urln -eq '') {
+            foreach ($k in 'CustomPDF', 'Custom_PDF') {
+                $cp = $it[$k]
+                if ($null -ne $cp) {
+                    foreach ($f in 'PDFUrl', 'FileURL') {
+                        $v = [string]$cp[$f]
+                        if ($v -ne '') { $urln = $v; $pdfUrl = $v; $usrc = ($k + '.' + $f); break }
+                    }
+                }
+                if ($urln -ne '') { break }
+            }
+        }
+        if ($urln -eq '') {
+            $u = [string]$it['CustomAssetBundle']
+            if ($u -ne '') { $urln = $u; $usrc = 'CustomAssetBundle' }
+        }
         $tail = ($urln.TrimEnd('/') -split '/')[-1]
         [void]$rows.Add([pscustomobject]@{
             guid   = [string]$it['GUID']
@@ -71,6 +92,8 @@ function Walk($list, $depth, $parentGuid) {
             url    = $tail
             depth  = $depth
             parent = $parentGuid
+            src    = $usrc
+            pdfurl = $pdfUrl
         })
         $myGuid = [string]$it['GUID']
         foreach ($k in 'ContainedObjects', 'ChildObjects', 'States') {

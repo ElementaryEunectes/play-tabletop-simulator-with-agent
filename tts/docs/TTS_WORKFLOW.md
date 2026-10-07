@@ -66,7 +66,8 @@
 ```powershell
 & powershell -NoProfile -File '<本仓库>\tts\obj_index.ps1'
 # -> cache\obj_index.csv ：一行一个物件（行数以实际存档为准），
-#    每行 guid/name/nick/x/y/z/scale/rotY/gm/ss/url/depth
+#    每行 guid/name/nick/x/y/z/sx/rotY/rotX/rotZ/gm/ss/url/depth/parent/src/pdfurl
+#    （src = url 的来源字段；pdfurl = Custom_PDF 的完整 URL —— 规则书就是这么取到的，见 RULEBOOK.md）
 ```
 
 关键实现要点（都是踩过的坑）：

@@ -27,7 +27,7 @@
 
 | 脚本 | 干什么 |
 |---|---|
-| `obj_index.ps1` | **存档**侧全量物件索引 → `cache\obj_index.csv`（含 url hash / 容器关系 / GMNotes；**滞后 ~5 分钟**）。输出默认 2 行，名称直方图加 **`-Hist`**（25 行，按需） |
+| `obj_index.ps1` | **存档**侧全量物件索引 → `cache\obj_index.csv`（含 url hash / **url 来源 `src`** / **规则书 `pdfurl`** / 容器关系 / GMNotes；**滞后 ~5 分钟**）。输出默认 2 行，名称直方图加 **`-Hist`**（25 行，按需） |
 | `guidinfo.ps1` | 给定 guid → 从存档里切出 CardID / deck / 位置等身份字段（**认牌用**） |
 | `bags_dump.ps1` · `bag_list.ps1` | 展开容器（牌堆/袋）内容 → `cache\bag_contents.txt` |
 | `bootstrap.ps1` | **换局/新存档**时重新认一遍关键物件（guid 全变的场合） |

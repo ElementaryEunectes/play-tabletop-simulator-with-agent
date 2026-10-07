@@ -86,6 +86,22 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
   `say.ps1` 每条消息 **0.79s**（原 ~1.7s，少了两次子进程）。**每个 PowerShell 进程启动固定 ~0.35s ⇒ 合并命令就是省时间**，TTS 往返不是瓶颈。
 - 🧾 `LICENSE` = **MIT**（见下）。
 
+## 相关项目（prior art —— 我们站在谁旁边）
+
+完整调研（每项的关键事实 · 可搬/不可搬结论）在 **[`tts\docs\PRIOR_ART.md`](tts/docs/PRIOR_ART.md)**。摘要：
+
+- **[Smirk1921/tts-toolkit](https://github.com/Smirk1921/tts-toolkit)**（MIT）—— TTS 图包作者工具链：**hub 守护（39997）独占唯一连接再扇出**给 CLI / VSCode / **MCP agent**、存档 pack/unpack（字节级一致）、**游戏内 Lua 测试**、工坊发布。
+  **我们没接它**（现有重试已够稳，且接入是协议改动），但它解决的是与我们同一类"抢 39998"问题。配套 [tts-lua-hub](https://github.com/Smirk1921/tts-lua-hub)（上游插件 2023-04 起停更后的 fork）。
+- **[libin7099901/TabletopSimulatorCompanion](https://github.com/libin7099901/TabletopSimulatorCompanion)** —— 目前唯一完整的「LLM × TTS」项目，但**只做规则问答**，不操作棋子；我们的"**从存档取 PDF URL**"技巧来自它。
+- **[rolandostar/tts-editor](https://github.com/rolandostar/tts-editor)**（Node）· **[LucasOe/tts-external-api](https://github.com/LucasOe/tts-external-api)**（Rust）—— External Editor API 的两个独立参考实现；我们走的是**同一个协议**。
+- **[cloudwu/cardocr](https://github.com/cloudwu/cardocr)** —— 卡面 OCR/VLM 路线（我们的对照面：我们读 `FaceURL` 的 40 位 hash，**免费且确定**）。
+- **[pr1m8/haive-games](https://pr1m8.github.io/haive-games/overview.html)** —— LLM 桌游 agent 框架；**明确不装**（它绑定自己的环境，接进来会得到与桌面不一致的镜像状态）。
+- 学术：arXiv [2510.25595](https://arxiv.org/abs/2510.25595)（信息不对称下的通信与校验 —— 我们只搬了**训练无关的 verifier 那半**）· [Tabletop Games Framework](https://rdgain.github.io/assets/pdf/TAG.pdf) · BALROG。
+
+**我们的位置**：公开项目里**仍然没有**"AI 当玩家在 TTS 里打完整一局"的实现（2026-10-08 复核过一遍）。
+现有开源要么是**工具链/连接层**（tts-toolkit），要么是**规则问答**（Companion），要么是**别的平台**（play-with-agents）。
+本项目补的是**玩家层**：状态语义化读取 · 隐藏信息纪律 · 每回合 token/时间预算 · 人机分工（人只决策 ＋ 点「结束回合」）。
+
 ## 许可与第三方
 
 本仓库的**代码与文档**按 **MIT** 授权（见 `LICENSE`，Copyright (c) 2026 ElementaryEunectes）。

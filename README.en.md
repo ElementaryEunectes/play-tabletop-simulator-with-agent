@@ -119,6 +119,38 @@ the dot-source, and `tts\tests\test_param_backfill.ps1` enforces exactly that.
   trips are not the bottleneck.
 - 🧾 `LICENSE` = **MIT** (see below).
 
+## Related work (prior art)
+
+The full survey — key facts per project, and what we did and did not adopt — is in
+[`tts\docs\PRIOR_ART.md`](tts/docs/PRIOR_ART.md) (Chinese). Summary:
+
+- **[Smirk1921/tts-toolkit](https://github.com/Smirk1921/tts-toolkit)** (MIT) — a mod-creator
+  toolchain whose **hub daemon owns the single TTS connection on 39997 and fans it out** to CLI,
+  VSCode and **MCP agents**, plus byte-identical save pack/unpack, **in-game Lua tests** and
+  Workshop publishing. We did **not** adopt it (our retry loop is stable enough and adopting it is
+  a protocol change), but it solves the same "who holds 39998" problem we hand-rolled around.
+  Companion extension: [tts-lua-hub](https://github.com/Smirk1921/tts-lua-hub).
+- **[libin7099901/TabletopSimulatorCompanion](https://github.com/libin7099901/TabletopSimulatorCompanion)**
+  — the only complete "LLM × TTS" project, but it only answers rules questions; our
+  "read the PDF URL out of the save" trick comes from it.
+- **[rolandostar/tts-editor](https://github.com/rolandostar/tts-editor)** (Node) ·
+  **[LucasOe/tts-external-api](https://github.com/LucasOe/tts-external-api)** (Rust) — the two
+  independent reference implementations of the External Editor API; we speak the same protocol.
+- **[cloudwu/cardocr](https://github.com/cloudwu/cardocr)** — the card-OCR/VLM route, which is our
+  contrast case: we read the 40-character `FaceURL` hash instead, which is free and deterministic.
+- **[pr1m8/haive-games](https://pr1m8.github.io/haive-games/overview.html)** — an LLM board-game
+  agent framework we deliberately did **not** install: it binds its own environment, so wiring it
+  in would give a mirror state that disagrees with the real table.
+- Academic: arXiv [2510.25595](https://arxiv.org/abs/2510.25595) (communication and verification
+  under information asymmetry — we adopted only its training-free verifier half) ·
+  [Tabletop Games Framework](https://rdgain.github.io/assets/pdf/TAG.pdf) · BALROG.
+
+**Where we sit**: as of 2026-10-08 there is still **no public project where an AI plays a full
+board game inside Tabletop Simulator as a player**. What exists is either tooling/plumbing
+(tts-toolkit), rules Q&A (Companion), or a different platform. What this project adds is the
+**player layer**: semantic state reading, hidden-information discipline, a per-turn token/time
+budget, and a human/AI split where the human only decides and clicks End Turn.
+
 ## License and third parties
 
 This repository's **code and documentation** are MIT licensed — see `LICENSE`,

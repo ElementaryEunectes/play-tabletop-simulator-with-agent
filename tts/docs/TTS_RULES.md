@@ -14,6 +14,15 @@
 - ⛔ **隐藏信息双向纪律**：① **不读**对手隐藏区（手牌/盖放/牌堆顶），**也不做位置推断**；
   ② **我自己的隐藏信息也不说**（手里有什么牌 / 盖放了什么 / 下一步打算）。只报**已公开的事实**（移动 · 落点 · 计数 · 牌堆张数 · **已翻开的牌**）。
   看桌面变化一律走 **`diff_hidden.ps1 -Game <游戏>`**（按 `cache\hidden_zones.csv` 折叠隐藏区，从源头掐掉"看到了就顺手对上"）。
+- ✅ **隐藏信息的标准解（能读、且公平）**：请玩家把要公开的牌**落到桌面中央**（面朝下也行）——
+  桥接读不到的只是"**容器里**的牌"；桌面上的牌我能读 `CustomDeck.FaceURL` 的 **40 位 hash**（免费、确定）
+  ⇒ **玩家看不到牌面（公平）· 我能认牌（可决策）**。步骤：① 请他拖到桌上（或贴图）② `obj_index.ps1`/`live_index.ps1` 取该 guid 的 `url`(hash)
+  ③ `guidinfo.ps1 -Guid <g>` 认身份 ④ **只把"已公开"的那部分**写进 STATE。
+- ⚠️ **不再一律"以话为准"，而是"以物为准"**：玩家的**读数**（骰面）依然是权威；但他的**效果/结算主张**先记为**假设（claim）**，
+  只有 ① 与 TTS state diff 一致，或 ② 与公开牌面/其它独立声明**无矛盾**时才升级为事实；**一有矛盾就当场请他把东西摊到桌面可见区**（亮牌/摆 token），不靠嘴确认。
+  （来源：arXiv 2510.25595 —— 信息不对称下带 verifier 的配置 89.3% vs 无 verifier 58.7%；我们搬的就是"verifier"这一半，训练那半搬不了。）
+- 🚫 **默认不接 VLM/OCR**（PRIOR_ART §4③）：一张卡一次视觉推理 = 慢、有概率错、要模型权重；而 `FaceURL` hash 是**免费且确定**的。
+  只有"**牌面朝下且必须当场认牌**"这种没有别的路的情形才考虑（`cloudwu/cardocr` 那条路线）。
 - ⭐ **对手翻出的公开牌必须主动读**（事件牌/结算牌）：不读就无法核对计数、也预判不了局势。**别等他提醒。**
 
 ## 二、工具地图（全在 `tts\`；死代码在 `archive\tts-legacy\`）
@@ -30,6 +39,7 @@
 | 叫醒 / 判活 | `front_watch.ps1` → `cache\front.txt`（`TURN=Pn`）· `channel_watch.ps1` → `cache\chan.txt`（`NEW`）→ 配 **file 哨兵** `sentinel_watch kind=file target=<绝对路径> pattern=<正则>`（**新会话必须重挂**，编号每会话不同）。判活 = 两个 txt 的 **mtime 秒级滚动**（`OTHER <时:分:秒>` 也算）；停了才后台重启：`front_watch.ps1 -Minutes 600` / `channel_watch.ps1 -Minutes 600 -IntervalMs 12000`。收工：`sentinel_cancel` + kill 后台作业 |
 | 读"轮到谁" | `read_turn.ps1`（采样横幅色块）；TTS 不在前台 = `NOTFOREGROUND`，**不给假数据** |
 | 换局 / 冷启动 | `BOOTSTRAP.md` ＋ `bootstrap.ps1` · `install_save2.ps1`（写存档唯一通道）· `crop_zoom.ps1`（裁图读牌面） |
+| 拿规则书 / 规则有争议 | **`RULEBOOK.md`** —— 官方规则书就是存档里的 `Custom_PDF`（`obj_index.ps1` 取 URL ⇒ Node 下载 ⇒ 抽整页图 ⇒ 看那一页） |
 | 改完脚本 | `check_ps1.ps1`（**递归**补 BOM ＋ 真解析器校验全部 `.ps1`）· **`tts\tests\test_*.ps1`**（离线自测，**不需要 TTS**）· `validate_lua.js`（改 Lua 前跑，并同时改 `DSH_VERSION`） |
 
 ## 三、一回合怎么走
