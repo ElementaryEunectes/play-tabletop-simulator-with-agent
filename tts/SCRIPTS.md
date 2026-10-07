@@ -10,7 +10,7 @@
 | 脚本 | 干什么 |
 |---|---|
 | **`play.ps1`** | **本局控制台**（骰铸专用）：`status` / `income` / `roll` / `attack` / `defense` / `say` —— 一条命令一个阶段。**别 read 它的本体**（~10k token） |
-| **`roll.ps1`** | 掷/读骰面：`-Tray moon\|scar` ⚠️ **不带 `-NoRoll` 会先掷再读**；纯读必须加 `-NoRoll` |
+| **`roll.ps1`** | 掷/读骰面：`-Tray moon\|scar` —— **必须明说意图**：`-Roll` 才掷、`-NoRoll` 只读；**裸调用 `exit 2`（不接触 TTS）** |
 | **`ds.ps1`** | **跟 TTS 说话的高层入口**：`-Do 'ping / tabread / getState:<g> / setCount:<g>:<n> / act:<g>:<verb> / move:… / draw:… / all:<n> / read:<g>'` |
 | `dsbatch.ps1` | 一条进程跑多条 `ds.ps1` 命令（`-Commands 'a;;b'`）；⚠️ 两层子进程会被沙箱掐网络，优先 `ds.ps1` 逐条 |
 | `ttsx.ps1` · `ttslib.ps1` | 原始通道（只回 `customMessage`）＋ **唯一的 TCP 传输层**（`ttslib` **dot-source，别 spawn**） |
@@ -43,6 +43,20 @@
 | `tts_click.ps1` | 合成鼠标输入。⚠️ **已定案：合成点击点不到 mod 的「结束回合」按钮** ⇒ 基本没用；但 `front_watch.ps1` 默认参数引用它，**动它要连 `front_watch` 一起改** |
 | `tts_api.ps1` | TTS **External Editor API（39999）** 原始客户端；协议表在它文件头。`ds.ps1`/`ttsx.ps1`（40000 消息通道）是主路，这个是退路 |
 | `validate_lua.js` | **改 `lua\dsh_global.lua` 之前**必跑（并同时改 `DSH_VERSION`） |
+
+## 🧪 测试（**不开 TTS 也能跑**）
+
+| 脚本 | 干什么 |
+|---|---|
+| `tests\test_diff_index.ps1` | `diff_index.ps1` 的**离线自测**：`fake_live_index.ps1` 冒充 `live_index.ps1`，`fixtures\*.csv` 是合成数据 ⇒ 六类变化各 1、`-Snapshot` 写基线、相同快照必须安静 |
+| `tests\test_param_backfill.ps1` | **每个 `''` 默认值都必须被回填或判空** —— 就是那次"5 个脚本能解析、一跑却写空路径"的 bug 类 |
+| `tests\fake_live_index.ps1` | 上面用到的桩（只认 `-Out`） |
+| `tests\fixtures\` | 合成的前后快照 CSV（**不是真实存档**） |
+
+跑法：`powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps1`（`exit 0` = 过）。
+⚠️ `check_ps1.ps1` 现在是**递归**的 ⇒ 测试自身也会被补 BOM ＋ 真解析器校验。
+⚠️ **校验器要有阳性对照**：`test_param_backfill.ps1` 第一版因为正则锚在行首而**完全看不见**单行 `param([string]$X = '')`，
+  故意造一个坏脚本才试出来（`HANDOFF.md` §6.8）——改这个测试时必须重跑那个对照。
 
 ## 目录
 

@@ -9,9 +9,9 @@
 # USAGE (ASCII only on the command line; Chinese lives in the data file)
 #   play.ps1 status
 #   play.ps1 income  -Seat moon
-#   play.ps1 roll    -Seat moon [-Lock 1,3] [-NoRoll] [-Tries 1]
+#   play.ps1 roll    -Seat moon [-Roll] [-NoRoll] [-Lock 1,3] [-Tries 1]
 #   play.ps1 attack  -Seat moon -Ability '<name>' [-Apply] [-Damage N] [-Idx K]
-#   play.ps1 defense -Seat scar [-Roll] [-NoRoll] [-Apply -Incoming N] [-DamageOverride N]
+#   play.ps1 defense -Seat scar [-Roll] [-NoRoll] [-Apply -Incoming N] [-Damage N]
 #   play.ps1 say     -TextFile <utf8 file>
 #
 # ERROR CODES (each one is a DIFFERENT fault and must never be blurred)
@@ -24,11 +24,16 @@
 #
 # IRON RULE: every write to HP/CP is read back and the read-back is printed. A write
 #   whose read-back disagrees is reported as BAD DATA, never smoothed over.
+# GUARDRAILS: roll/defense are READ-ONLY unless -Roll is passed (there is no rolling default);
+#   -Apply is the ONLY writer and it accepts -WhatIf, which prints the exact HP change and
+#   touches nothing. Use -WhatIf whenever the damage number is still under argument.
 #
 # ASCII only outside comments and the few Chinese strings that ARE the game's own names.
 # Requires the UTF-8 BOM: run tts\check_ps1.ps1 after any edit.
 
-[CmdletBinding()]
+# SupportsShouldProcess is what makes -WhatIf bindable. The write checks $WhatIfPreference
+# directly instead of calling ShouldProcess, so -Confirm can never block a non-interactive run.
+[CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
     [ValidateSet('status', 'income', 'roll', 'attack', 'defense', 'say')]
@@ -557,7 +562,15 @@ function Cmd-Income {
 
 # ------------------------------------------------------------ command: roll ------
 function Cmd-Roll {
-    $g = Roll-Dice $Seat $Lock ([bool]$NoRoll)
+    $doRoll = $true
+    if ($NoRoll) { $doRoll = $false }
+    if (-not $Roll -and -not $NoRoll) {
+        # Default is READ-ONLY, exactly like Cmd-Defense. It used to throw the dice, so a bare
+        # "play.ps1 roll" destroyed the very faces somebody was asking about. Pass -Roll to throw.
+        Write-Host ("roll {0} read-only (pass -Roll to actually throw the dice)" -f $Seat)
+        $doRoll = $false
+    }
+    $g = Roll-Dice $Seat $Lock (-not $doRoll)
     $faces = $g.faces
     $num = @(); $sym = @(); $unsettled = 0
     foreach ($i in 1..5) {
@@ -612,8 +625,18 @@ function Find-Ability([string]$seat, [string]$name, [int]$idx) {
 function Apply-Damage([string]$seat, [int]$n) {
     $who = if ($seat -eq 'moon') { 'scar' } else { 'moon' }
     $hp = (Seat-Obj $who).hp_counter
-    $r = Set-Counter $hp (((Get-Counter $hp ($who + ' HP')) - $n) ) ($who + ' HP')
+    $before = Get-Counter $hp ($who + ' HP')
+    $want = $before - $n
+    # Announce the exact write BEFORE making it. The damage number is usually the thing still
+    # being argued about, so a preview that touches nothing (-WhatIf) is cheap insurance.
+    Write-Host ("WILL WRITE  HP {0} {1} -> {2}  (-{3})" -f $who, $before, $want, $n)
+    if ($WhatIfPreference) {
+        Write-Host ("WHATIF: nothing written, {0} HP stays {1}" -f $who, $before)
+        return
+    }
+    $r = Set-Counter $hp $want ($who + ' HP')
     Write-Host ("HP {0} {1}->{2} (-{3}, read back {2})" -f $who, $r.before, $r.after, $n)
+    if ([int]$r.after -ne [int]$want) { Fail 'BAD DATA' ("read-back mismatch: asked for {0} HP {1}, the table says {2}" -f $who, $want, $r.after) }
 }
 
 function Cmd-Attack {

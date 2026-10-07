@@ -22,15 +22,17 @@
 |---|---|
 | `status` | 物件数 ＋ 双方 HP/CP ＋ 状态 token |
 | `income -Seat moon` | 收入阶段（+1 CP；**这模组收入不抽牌**） |
-| `roll -Seat moon [-Lock 1,3]` | 我的进攻掷骰（但 `setLock` 是坏的 ⇒ 见下） |
+| `roll -Seat moon [-Roll] [-Lock 1,3]` | 我的进攻掷骰；**不加 `-Roll` 是只读**（只报当前骰面 ＋ 可打招式） |
 | `attack -Seat scar -Ability '<名>' [-Apply] [-Damage N]` | 判定/结算**他**的技能（不带 `-Apply` 只查表，不写任何东西） |
 | `defense -Seat moon [-Apply -Incoming N]` | 我的防御判定/结算（`-Apply` 才真扣血） |
 | `say -TextFile <utf8>` | 往笔记本发一行 |
 
 ⚠️ **别 read `play.ps1` 本体**（~10k token）；技能表在 `cache\dicethrone_rules.json`，卡面文本在 `cache\dicethrone_cards.md`（`tts\card.ps1 -Q '<名>'` 查）。
 ⚠️ **`setLock` 坏了**（`cannot convert userdata to Boolean`）⇒ **重掷只能逐颗**：`ds.ps1 -Do act:<骰guid>:roll`。
-⚠️ **骰子读数**：`roll.ps1 -Tray <seat>` **默认会先掷再读**，纯读要加 **`-NoRoll`**；**骰子判定以玩家报的为准**（详见 `TTS_RULES.md` 的坑）。
-⚠️ **结算顺序**：宣告 → **先问玩家改不改骰** → 防御掷骰 → 才扣血；`-Apply` 之后**必须回读**。
+⚠️ **骰子读数**：`roll.ps1` **必须明说意图** —— `-Roll` 才掷、`-NoRoll` 只读，**裸调用 `exit 2`**（不接触 TTS）；
+`play.ps1 roll` 同样"不加 `-Roll` 只读"。**骰子判定以玩家报的为准**（详见 `TTS_RULES.md` 的坑）。
+⚠️ **结算顺序**：宣告 → **先问玩家改不改骰** → 防御掷骰 → 才扣血；**数字还没谈定就先跑 `-Apply -WhatIf`**（打印 `WILL WRITE` 但一个字节都不写），
+`-Apply` 真写之后**必须回读**（`Apply-Damage` 会自己回读并在不一致时报 `BAD DATA`）。
 
 ## 哨兵 / 叫醒（**不跨会话继承**）
 

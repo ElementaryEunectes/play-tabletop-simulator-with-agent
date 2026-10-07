@@ -4,7 +4,7 @@
 #   "Who goes first" and every attack/defence roll in Dice Throne is "roll 5 dice,
 #   read the faces, match a skill pattern". Doing that by hand cost a tool call per
 #   die per step. This is the one command a round needs:
-#       powershell -NoProfile -ExecutionPolicy Bypass -File tts\roll.ps1
+#       powershell -NoProfile -ExecutionPolicy Bypass -File tts\roll.ps1 -Roll
 #   => rolls both trays, waits for them to SETTLE, prints the face of each die.
 #
 # HOW THE FACE IS READ (the whole point of this script)
@@ -38,20 +38,37 @@
 # ASCII only outside comments and the two tray labels. Requires the UTF-8 BOM:
 # run tts\check_ps1.ps1 after any edit.
 #
-# USAGE
-#   roll.ps1                       # roll both trays, print faces + totals
-#   roll.ps1 -First                # same, then print who goes first by total
-#   roll.ps1 -Tray moon            # only the Blue (moon elf) tray
-#   roll.ps1 -Tray scar -NoRoll    # just read the faces currently showing
-#   roll.ps1 -Poll 40              # settle timeout in seconds (default 25)
+# USAGE  (intent is MANDATORY: -Roll throws, -NoRoll only reads; there is no default)
+#   roll.ps1 -Roll                 # roll both trays, print faces + totals
+#   roll.ps1 -Roll -First          # same, then print who goes first by total
+#   roll.ps1 -Roll -Tray moon      # only the Blue (moon elf) tray
+#   roll.ps1 -NoRoll -Tray scar    # just read the faces currently showing
+#   roll.ps1 -Roll -Poll 40        # settle timeout in seconds (default 25)
 param(
     [ValidateSet('all', 'moon', 'scar')][string]$Tray = 'all',
+    [switch]$Roll,
     [switch]$NoRoll,
     [switch]$First,
     [int]$Poll = 25,
     [int]$SettleMs = 250,
     [int]$StableHits = 2
 )
+
+# --- guardrail: say what you mean -------------------------------------------------
+# This script used to throw the dice by DEFAULT and only read the faces when -NoRoll was
+# passed. That default cost real throws: an agent asking "what do the dice show?" re-threw the
+# player's dice four times in a row before anyone noticed (HANDOFF section 6.1). A throw cannot
+# be undone and the dice are the player's, so there is no default any more -- and a bare call
+# writes NOTHING to the game.
+if ($Roll -and $NoRoll) {
+    Write-Host 'ERR -Roll and -NoRoll are mutually exclusive.'
+    exit 2
+}
+if (-not $Roll -and -not $NoRoll) {
+    Write-Host 'ERR say what you mean: -Roll (throw the dice) or -NoRoll (only read the faces).'
+    Write-Host '    Nothing was sent to Tabletop Simulator.'
+    exit 2
+}
 
 $ErrorActionPreference = 'Continue'
 
@@ -133,7 +150,7 @@ foreach ($d in $target) {
     if ($null -ne $rot) { $before[$d.guid] = [string]$rot.result } else { $before[$d.guid] = '' }
 }
 
-if (-not $NoRoll) {
+if ($Roll) {
     foreach ($d in $target) {
         $r = Send-Tts @{ cmd = 'act'; guid = $d.guid; verb = 'roll' }
         if ($null -eq $r -or $r.ok -ne $true) {
@@ -184,7 +201,7 @@ $notSettled = @($target | Where-Object { -not $stable.ContainsKey($_.guid) })
 if ($notSettled.Count -gt 0) {
     Write-Host ("WARN not settled in {0}s: {1}" -f $Poll, (($notSettled | ForEach-Object { $_.guid }) -join ',')) -ForegroundColor Yellow
 }
-if (-not $NoRoll) {
+if ($Roll) {
     Write-Host ("settle: {0:N1}s  ({1}/{2} dice confirmed still)" -f ((Get-Date) - $settleStart).TotalSeconds, $stable.Count, $target.Count)
 }
 

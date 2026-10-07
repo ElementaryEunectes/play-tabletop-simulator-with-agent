@@ -1,4 +1,5 @@
-﻿# check_ps1.ps1 - make every .ps1 here BOM-safe, then syntax-check it with the real parser.
+﻿# check_ps1.ps1 - make every .ps1 here (and below) BOM-safe, then syntax-check it with the
+# real parser.
 #
 # WHY THIS EXISTS (a real incident)
 #   Editing a .ps1 with a tool that REWRITES the file drops the UTF-8 BOM. PowerShell 5.1
@@ -22,7 +23,7 @@ if ([string]::IsNullOrWhiteSpace($Dir)) { $Dir = $DshTts }
 $enc  = New-Object System.Text.UTF8Encoding($true)
 $utf8 = [System.Text.Encoding]::UTF8
 $bad  = @()
-$all  = Get-ChildItem -LiteralPath $Dir -Filter *.ps1
+$all  = Get-ChildItem -LiteralPath $Dir -Filter *.ps1 -Recurse -File
 foreach ($f in $all) {
     $bytes  = [System.IO.File]::ReadAllBytes($f.FullName)
     $hadBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191)
