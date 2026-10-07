@@ -51,6 +51,7 @@
 |---|---|
 | `tests\test_diff_index.ps1` | `diff_index.ps1` 的**离线自测**：`fake_live_index.ps1` 冒充 `live_index.ps1`，`fixtures\*.csv` 是合成数据 ⇒ 六类变化各 1、`-Snapshot` 写基线、相同快照必须安静 |
 | `tests\test_param_backfill.ps1` | **每个 `''` 默认值都必须被回填或判空** —— 就是那次"5 个脚本能解析、一跑却写空路径"的 bug 类 |
+| `tests\test_agents_hygiene.ps1` | **三个指令槽各守其位**：项目 `AGENTS.md` ≤3 KB ＋ 必含 5 个承载性指针 · 被跟踪文件里**不许有真实用户名/绝对用户路径** · `AGENTS.local.md` 必须被 gitignore · **全局那份必须与模板正文逐字一致**（漂移检查） |
 | `tests\fake_live_index.ps1` | 上面用到的桩（只认 `-Out`） |
 | `tests\fixtures\` | 合成的前后快照 CSV（**不是真实存档**） |
 

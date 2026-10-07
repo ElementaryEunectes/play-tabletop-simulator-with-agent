@@ -120,7 +120,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 13. **这个 harness 的工具壳是 Windows PowerShell 5.1**（`$PSVersionTable` = `5.1 Desktop`，不是 PS7）⇒ 我**直接**用 `Get-Content` /
     `Select-String` 读这些中文文件会按 **ANSI** 解码，**打印出来是乱码**（文件本身没坏，`read` 工具读同一个文件是好的）。
     修法：`Get-Content ... -Encoding UTF8`，或 `[System.IO.File]::ReadAllText/ReadAllLines`（默认 UTF-8）。
-    ⚠️ **ASCII 模式的搜索不受影响**（`<user>`、`C:\Users\` 这类字节在 GBK 下一样）⇒ 之前的隐私扫描结论仍然有效；受影响的是**中文内容与中文模式**。
+    ⚠️ **ASCII 模式的搜索不受影响**（`<用户名>`、`C:\Users\` 这类字节在 GBK 下一样）⇒ 之前的隐私扫描结论仍然有效；受影响的是**中文内容与中文模式**。
+    （本条曾把真实用户名写进举例里，被 `tts\tests\test_agents_hygiene.ps1` 抓到 —— 这就是那个测试存在的理由。）
 
 ## §7 交接时的原始数据（万一文档与实物冲突）
 
@@ -161,6 +162,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 | 项目专属纪律（骰子护栏/路径/param 规则） | 仓库的 `AGENTS.md` | 随 clone 走，人人相同（约 2.9 KB） |
 | 机器专属（本机路径/端口/偏好） | `AGENTS.local.md` | overlay，**已 gitignore**，不会误提交进公开仓库 |
 | 跨项目通用纪律 | `$DSH_HOME\AGENTS.md` | 各机器自己的事，仓库管不着 |
+
+### 已落地（2026-10-08）—— 三个槽都真实存在了
+
+| 槽位 | 文件 | 体积 | 谁管 |
+|---|---|---|---|
+| 项目 | 仓库 `AGENTS.md` | **2960 B** | git，随 clone |
+| 机器 | 仓库 `AGENTS.local.md`（**gitignore**） | **1048 B** | 本机手写（换机器就不一样的事实） |
+| 通用 | `$DSH_HOME\AGENTS.md` | **4170 B** | **源在仓库**：`tts\docs\HARNESS_HOME_AGENTS.template.md` —— 改模板 → 取其 `---` **之后的正文**覆盖过去（其余是文件头说明，不拷） |
+
+- **每请求注入 = 2960 ＋ 1048 ＋ 4170 = 8178 B**。⚠️ 比"没隔离"之前（6885 B）**多 1293 B（+19%）** ——
+  **隔离不是免费的**：多一个槽就多一份注入，省字节的唯一办法是**删内容**，不是换排版。
+- **有回归测试了**：`tts\tests\test_agents_hygiene.ps1`（**不需要 TTS，也不需要 Node**）：
+  项目那份 ≤3 KB ＋ 必含 5 个承载性指针（`start-agent.ps1` / `DICETHRONE_STATE.md` / `PLAY.md` / `tts\config.ps1` / `check_ps1.ps1`）·
+  **被 git 跟踪的文件里不许出现真实用户名或绝对用户路径** · `AGENTS.local.md` 必须被 gitignore 且 ≤2 KB ·
+  **全局那份必须与模板正文逐字一致**（漂移检查）。它第一次跑就抓到我写进 §6.13 的真实用户名。
+- ⚠️ 全局那份**在工作区之外** ⇒ 写它需要**一次提权**；而且**无法自动化**（"模板即源"是我们自己约定的，harness 不知道）。
+- ⚠️ 测试会 `WARN`："全局那份比项目那份还大" —— 本项目**确实如此**（通用那份扛着 BOM/沙箱/PS 5.1/端口这些跨项目纪律），
+  但它是**有用的信号**：哪天通用那份继续长胖，就该按 §1 的"边界"往下砍。
 
 **想跨工具统一**（Cursor / Copilot / Claude Code / Codex 各读各的规则文件）⇒ 开源方案 **[rulesync](https://rulesync.dyoshikawa.com/)**（MIT）：
 单一真源 → 按 target 生成各家文件、支持 project/global 两套作用域；它的支持表里**已列 DeepSeek Harness**。
