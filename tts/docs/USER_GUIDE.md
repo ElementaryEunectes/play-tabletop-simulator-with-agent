@@ -1,7 +1,7 @@
 # USER_GUIDE.md —— 人怎么用（玩家手册）
 
 > 你（人类）只需要做两件事：**做决策** 和 **点「结束回合」**。其余棋子操作由 AI 通过 TTS 桥接完成。
-> 给 AI 看的规矩在 `AGENTS.md` · `PLAY.md`；装环境 / 换局 / 换模组在 `BOOTSTRAP.md`；脚本清单在 `..\SCRIPTS.md`。
+> 给 AI 看的规矩在 `AGENTS.md` · `DICETHRONE_STATE.md`（每回合那一份）；装环境 / 换局 / 换模组在 `BOOTSTRAP.md`；脚本清单在 `TTS_RULES.md` §二。
 
 ## 1. 开一局（30 秒）
 

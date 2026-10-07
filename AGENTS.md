@@ -18,13 +18,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 它把 `$env:DSH_HOME` 钉到本仓库根再起 dsh。环境里若残留旧值（`<用户目录>\.dsh`），脚本会静默读写一个**不存在**的目录。
 验证：`tts\play.ps1 status` 应回 `bridge=v12-*`，`objs` 与桌面相符。
 
-## 每回合只读这两份（**别整份读手册**）
+## 每回合只读这一份（**别整份读手册**）
 
-1. `tts\docs\DICETHRONE_STATE.md` —— ⭐ **唯一真源**：HP/CP · 状态 token · 待办 · guid
-2. `tts\docs\PLAY.md` —— 随身卡：回合步骤 · 控制台动词 · 哨兵约定
+`tts\docs\DICETHRONE_STATE.md` —— **现在这款 ＋ 本局状态（唯一真源：HP/CP · 状态 token · 待办 · guid）＋ 随身卡（回合步骤 · 控制台动词 · 哨兵）**；原 `CURRENT.md` / `PLAY.md` 已并入。
 
-只在需要时查：`tts\docs\CURRENT.md`（现在玩哪款，1 行）· `DICETHRONE_FLOW.md`（规则/骰面/伤害）·
-`tts\docs\TTS_RULES.md`（TTS 通用坑，每局开工读一次）· `tts\SCRIPTS.md`（脚本清单）· `tts\docs\USER_GUIDE.md`（人怎么用）。
+只在需要时查：`tts\docs\DICETHRONE_FLOW.md`（规则/骰面/伤害，顶部有路由表）· `tts\docs\TTS_RULES.md`（TTS 通用坑 ＋ **§二 工具清单**）·
+`tts\docs\USER_GUIDE.md`（人怎么用）· `tts\docs\MAINTENANCE.md`（动手改东西前）。
 
 ## ⛔ 纪律
 

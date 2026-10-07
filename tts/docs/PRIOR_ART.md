@@ -170,7 +170,7 @@ Shino 的一手抱怨 + `TabletopSimulatorCompanion` 专门做 RAG 索引 + 玩�
 | 中 | 隐藏牌（面朝下）才考虑接 VLM，**日常不接** | 本文 §4③ | ✅ 落地为 `TTS_RULES.md` 的 🚫 条（写清"什么情形才考虑"） |
 | 中 | 继续维护 HANDOFF 的小节索引 | 本文 §4④ | ✅ 持续（HANDOFF 已有 §1–§8，并加了 §8 上下文注入） |
 | 低 | 参考 `tts-editor` / `tts-external-api` 的协议实现（错误处理/重连） | 比自写更稳 | ⏳ 未做（已有重试；等真出协议级 bug 再对照） |
-| 低 | `TabletopSimulatorCompanion` 的「从存档取 PDF URL」技巧 ⇒ 规则书 | 本文 §1.1 | ✅ **已落地且超出预期**：`obj_index.ps1` 现在记 `CustomPDF.PDFUrl`（＋ `src`/`pdfurl` 列）；**实测取到官方规则书 9.1 MB / 15 页**，三步流程与**逐页目录**见 **`RULEBOOK.md`** |
+| 低 | `TabletopSimulatorCompanion` 的「从存档取 PDF URL」技巧 ⇒ 规则书 | 本文 §1.1 | ✅ **已落地且超出预期**：`obj_index.ps1` 现在记 `CustomPDF.PDFUrl`（＋ `src`/`pdfurl` 列）；**实测取到官方规则书 9.1 MB / 15 页**，三步流程与**逐页目录**见 **`DICETHRONE_FLOW.md（附录 A）`** |
 
 ---
 

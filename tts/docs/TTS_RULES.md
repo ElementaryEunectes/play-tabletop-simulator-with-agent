@@ -2,7 +2,7 @@
 
 > **什么时候读我**：任务是在 TTS 里替人打桌游（任何一款）时。
 > **别的项目不要读我** —— 平台纪律在 `~/.dsh\AGENTS.md`（自动注入）。
-> 每款游戏的规则/坐标/状态在 `tts\docs\`（索引：`README.md`；**每局随身卡**：`PLAY.md`）。
+> 每款游戏的规则/坐标/状态在 `tts\docs\`（索引：`README.md`；**每回合那一份**：`<游戏>_STATE.md`，随身卡已并入）。
 
 ## 一、跟人怎么配合
 
@@ -25,27 +25,87 @@
   只有"**牌面朝下且必须当场认牌**"这种没有别的路的情形才考虑（`cloudwu/cardocr` 那条路线）。
 - ⭐ **对手翻出的公开牌必须主动读**（事件牌/结算牌）：不读就无法核对计数、也预判不了局势。**别等他提醒。**
 
-## 二、工具地图（全在 `tts\`；死代码在 `archive\tts-legacy\`）
 
-| 场景 | 用什么 |
+## 二、工具清单（`tts\*.ps1`，按使用频率 · **找脚本 / 清理时读我**）
+
+> **什么时候读我**：想知道"这个脚本能不能动""有没有现成工具"时。
+> 规则：**根目录只放现役工具**；死的/一次性的/实验性的在 **`~\.dsh\archive\tts-legacy\`**（33 个旧 `.ps1`，各自带 `README.md`）。
+> ⚠️ 2026-10-08 更正：这个归档目录**不在本仓库里**（项目从 `~/.dsh` 迁出时没搬它），别再按 `..\archive\tts-legacy\` 去找。
+> **改任何 `.ps1` 之后必须跑 `check_ps1.ps1`**（补 BOM ＋ 真解析器校验全部脚本）。
+
+### ⭐ 核心（每局都在用）
+
+| 脚本 | 干什么 |
 |---|---|
-| 跟 TTS 说话 | **`ds.ps1 -Do '<动词>'`** —— `ping` · `tabread` · `getState:<guid>` · `setState:<guid>:<json>` · `setCount:<guid>:<N>` · `call:<guid>:<fn>` · `act:<guid>:<verb>` · `move:<g>:<x>:<y>:<z>` · `rotate:` · `flip:<g>` · `draw:<deck>:<n>:<x>:<y>:<z>[:1]` · `find:` · `all:<n>` · `read:<g>` · `probe:<g>` |
-| 原始通道 / 底座 | `ttsx.ps1 -Cmd '<json>'`（只回 `customMessage`）· `ttslib.ps1`（**dot-source，别 spawn**） |
-| 多命令一次跑 | `dsbatch.ps1 -Commands 'a;;b'`（⚠️ 两层子进程会被沙箱掐网络 ⇒ 优先 `ds.ps1` 逐条） |
-| 看桌面变化 | `live_index.ps1`（实时快照 CSV）· `diff_index.ps1 [-Snapshot]` · **`diff_hidden.ps1 -Game <游戏>`（对外一律用这个）** |
-| 认牌 / 查牌 | `card.ps1 -Q '<名字>'`（卡库 `cache\dicethrone_cards.md`）· `guidinfo.ps1 -Guid a,b`（CardID）· `obj_index.ps1`（存档索引，滞后 ~5 min） |
-| 发消息 | `say.ps1 -MessageFile <utf8.txt>`（**中文走文件**；单进程就地 TCP） |
-| 人（玩家）怎么用 | **`USER_GUIDE.md`** —— 开局 · 你只做两件事 · AI 何时请人帮忙 · 在哪说话 · 常见问题 · 什么会动桌面/存档 |
-| 叫醒 / 判活 | `front_watch.ps1` → `cache\front.txt`（`TURN=Pn`）· `channel_watch.ps1` → `cache\chan.txt`（`NEW`）→ 配 **file 哨兵** `sentinel_watch kind=file target=<绝对路径> pattern=<正则>`（**新会话必须重挂**，编号每会话不同）。判活 = 两个 txt 的 **mtime 秒级滚动**（`OTHER <时:分:秒>` 也算）；停了才后台重启：`front_watch.ps1 -Minutes 600` / `channel_watch.ps1 -Minutes 600 -IntervalMs 12000`。收工：`sentinel_cancel` + kill 后台作业 |
-| 读"轮到谁" | `read_turn.ps1`（采样横幅色块）；TTS 不在前台 = `NOTFOREGROUND`，**不给假数据** |
-| 换局 / 冷启动 | `BOOTSTRAP.md` ＋ `bootstrap.ps1` · `install_save2.ps1`（写存档唯一通道）· `crop_zoom.ps1`（裁图读牌面） |
-| 拿规则书 / 规则有争议 | **`RULEBOOK.md`** —— 官方规则书就是存档里的 `Custom_PDF`（`obj_index.ps1` 取 URL ⇒ Node 下载 ⇒ 抽整页图 ⇒ 看那一页） |
-| 改完脚本 | `check_ps1.ps1`（**递归**补 BOM ＋ 真解析器校验全部 `.ps1`）· **`tts\tests\test_*.ps1`**（离线自测，**不需要 TTS**）· `validate_lua.js`（改 Lua 前跑，并同时改 `DSH_VERSION`） |
+| **`play.ps1`** | **本局控制台**（骰铸专用）：⭐`turn`（**回合开局一条命令**：盘面＋骰面＋招式＋笔记本尾条，全只读）/ `status` / `income` / `roll` / `attack` / `defense` / `say` —— 一条命令一个阶段。写动词要显式开关（`-Apply` / `-Roll`）且支持 `-WhatIf`。**别 read 它的本体**（35KB ≈ 10k token） |
+| **`roll.ps1`** | 掷/读骰面：`-Tray moon\|scar` —— **必须明说意图**：`-Roll` 才掷、`-NoRoll` 只读；**裸调用 `exit 2`（不接触 TTS）** |
+| **`ds.ps1`** | **跟 TTS 说话的高层入口**：`-Do 'ping / tabread / getState:<g> / setCount:<g>:<n> / act:<g>:<verb> / move:… / draw:… / all:<n> / read:<g>'` |
+| `dsbatch.ps1` | 一条进程跑多条 `ds.ps1` 命令（`-Commands 'a;;b'`）；⚠️ 两层子进程会被沙箱掐网络，优先 `ds.ps1` 逐条 |
+| `ttsx.ps1` · `ttslib.ps1` | 原始通道（只回 `customMessage`）＋ **唯一的 TCP 传输层**（`ttslib` **dot-source，别 spawn**） |
+| `say.ps1` | 往笔记本对话频道发一条（**中文走 `-MessageFile`**）；**单进程就地 TCP**（2026-10-08 去掉两次子进程 `ds.ps1`，每条消息省 ~0.9s） |
+| `live_index.ps1` · `diff_index.ps1` | 整桌**实时**快照（CSV）· 差异（`-Snapshot` 冻结基线） |
+| **`diff_hidden.ps1`** | **带隐藏区遮蔽的 diff —— 对外显示一律用它**（规则在 `cache\hidden_zones.csv`） |
+| `card.ps1` | 查卡面文本库 `cache\dicethrone_cards.md`（`-Q '<名字>'`）；**无 `-Q` 只回一行用法 + `exit 2`**（以前是 PowerShell 自己吐 600 字节的强制参数报错） |
+| `front_watch.ps1` | 后台：写 `cache\front.txt`（前台状态 ＋ `TURN=Pn`）→ 配 file 哨兵叫醒 |
+| `channel_watch.ps1` | 后台：写 `cache\chan.txt`（笔记本尾部变化 → `NEW`）→ 配 file 哨兵 |
+| `check_ps1.ps1` | **改完 `.ps1` 必跑**：补 BOM ＋ 真解析器校验 |
+| **`doctor.ps1`** | **新机器 / 新 clone 第一步**（**只读**体检）：PowerShell · 路径解析 · TTS 目录 · 39999 端口 · node · **每请求注入字节数** ⇒ `VERDICT: ready` 或带修复建议的问题清单 |
+
+### 🔧 常用（按需）
+
+| 脚本 | 干什么 |
+|---|---|
+| `obj_index.ps1` | **存档**侧全量物件索引 → `cache\obj_index.csv`（含 url hash / **url 来源 `src`** / **规则书 `pdfurl`** / 容器关系 / GMNotes；**滞后 ~5 分钟**）。输出默认 2 行，名称直方图加 **`-Hist`**（25 行，按需） |
+| `guidinfo.ps1` | 给定 guid → 从存档里切出 CardID / deck / 位置等身份字段（**认牌用**） |
+| `bags_dump.ps1` · `bag_list.ps1` | 展开容器（牌堆/袋）内容 → `cache\bag_contents.txt` |
+| `bootstrap.ps1` | **换局/新存档**时重新认一遍关键物件（guid 全变的场合）：**默认 stdout 只打座位表 + 摘要**（13 行），全表写进 `cache\session_map.md`（~490 行）；要打全表加 **`-Full`**。⚠️ 它的认物规则是按**上一局《游城拓荒》**写死的（金券/源石/事件牌堆）⇒ **换游戏要重写那几节** |
+| `install_save2.ps1` | **写存档的唯一通道**（把 `lua\dsh_global.lua` 灌进存档 ＋ 修 notebook tab id；需一次提权） |
+| `crop_zoom.ps1` | 裁图 + 放大转真 PNG（**读卡面/查图用**；`Mods\Images` 里扩展名常与真实格式不符） |
+| `read_turn.ps1` | 采样 mod 横幅色块 → `PLAYER=n`（TTS 不在前台时报 `NOTFOREGROUND`，**不给假数据**） |
+
+### 💤 休眠但别删（只在特定情形才用 —— 删了会踩坑）
+
+| 脚本 | 什么时候才需要 |
+|---|---|
+| `card_index.ps1` · `index_images.ps1` | 要把**卡片映射到本地图缓存**时（建卡库、认新牌面）—— 现在卡库已建好，平时不用 |
+| `grab_window.ps1` | 抓 TTS 窗口像素（**Unity 下 `PrintWindow` 无效，靠 BitBlt**）；被 `read_turn.ps1` 引用；"没有 Lua 通道、只能看画面"时的兜底 |
+| `tts_click.ps1` | 合成鼠标输入。⚠️ **已定案：合成点击点不到 mod 的「结束回合」按钮** ⇒ 基本没用；但 `front_watch.ps1` 默认参数引用它，**动它要连 `front_watch` 一起改** |
+| `tts_api.ps1` | TTS **External Editor API（39999）** 原始客户端；协议表在它文件头。`ds.ps1`/`ttsx.ps1`（40000 消息通道）是主路，这个是退路 |
+| `validate_lua.js` | **改 `lua\dsh_global.lua` 之前**必跑（并同时改 `DSH_VERSION`） |
+
+### 🧪 测试（**不开 TTS 也能跑**）
+
+| 脚本 | 干什么 |
+|---|---|
+| `tests\test_diff_index.ps1` | `diff_index.ps1` 的**离线自测**：`fake_live_index.ps1` 冒充 `live_index.ps1`，`fixtures\*.csv` 是合成数据 ⇒ 六类变化各 1、`-Snapshot` 写基线、相同快照必须安静 |
+| `tests\test_param_backfill.ps1` | **每个 `''` 默认值都必须被回填或判空** —— 就是那次"5 个脚本能解析、一跑却写空路径"的 bug 类 |
+| `tests\test_agents_hygiene.ps1` | **三个指令槽各守其位**：项目 `AGENTS.md` ≤3 KB ＋ 必含 5 个承载性指针 · 被跟踪文件里**不许有真实用户名/绝对用户路径** · `AGENTS.local.md` 必须被 gitignore · **全局那份必须与模板正文逐字一致**（漂移检查） |
+| `tests\fake_live_index.ps1` | 上面用到的桩（只认 `-Out`） |
+| `tests\fixtures\` | 合成的前后快照 CSV（**不是真实存档**） |
+
+跑法：`powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps1`（`exit 0` = 过）。
+⚠️ `check_ps1.ps1` 现在是**递归**的 ⇒ 测试自身也会被补 BOM ＋ 真解析器校验。
+⚠️ **校验器要有阳性对照**：`test_param_backfill.ps1` 第一版因为正则锚在行首而**完全看不见**单行 `param([string]$X = '')`，
+  故意造一个坏脚本才试出来（`HANDOFF.md` §6.8）——改这个测试时必须重跑那个对照。
+
+### 目录
+
+```
+tts\
+├── *.ps1            现役脚本（本文件就是它的清单）
+├── validate_lua.js  改 Lua 前的校验器
+├── lua\             dsh_global.lua（桥接本体，install_save2.ps1 依赖，别动）· dsh_panel.lua
+└── docs\            所有文档（索引 docs\README.md；本文件 docs\TTS_RULES.md；每回合那一份 docs\<游戏>_STATE.md）
+```
+
+⚠️ **跨脚本引用**（改名前先看这里）：`bootstrap → ds/obj_index/live_index` · `diff_index → live_index` ·
+`live_index → ds` · `read_turn → grab_window/tts_click` · `front_watch → read_turn（＋ tts_click 参数）` ·
+`channel_watch/ttsx/roll → ttslib` · `play → ttslib/say` · `install_save2 → lua\dsh_global.lua`。
 
 ## 三、一回合怎么走
 
-1. 读**该局自己的文档链**：`tts\docs\<游戏>_STATE.md`（**唯一真源**：比分/资源/待办）→ `tts\docs\PLAY.md`（**随身卡**：本局控制台动词 ＋ 每回合步骤）。
-   `CURRENT.md` 只在需要时看一眼（现在玩哪款）。
+1. 读**那一份**：`tts\docs\<游戏>_STATE.md` = **唯一真源**（比分/资源/待办）＋ **随身卡**（控制台动词 · 每回合步骤）—— 换局时「当前在玩哪个游戏」也写在它里面。
+   现在玩哪款写在它开头的「现在这款 / 去哪读」一节。
 2. **核对盘面**：**一条命令**拿实测值 —— 骰铸就是 **`play.ps1 turn`**（盘面 ＋ 我的骰面 ＋ 可打招式 ＋ 笔记本尾条，**全只读**）；
    别的游戏用 `status` 类命令。**别靠记忆**。（每次调用都要付一个 PowerShell 进程启动 ≈0.35s ⇒ 合并命令就是省时间）
 3. **该我走**：按 STATE 待办 ＋ `<游戏>_FLOW.md` 的技能表，**一条命令一个阶段**。
@@ -87,4 +147,4 @@
 - **冷启动 / 换局 / 换模组**：照 `tts\docs\BOOTSTRAP.md` 走（三种情形 ＋ 共同核心四步）；`ds.ps1 -Do ping` 是任何情形的第一步。
 - **guid 全变** ⇒ 识别一律靠 **hash ＋ nick ＋ scale ＋ 坐标关系**，**绝不用记住的 guid**；上一局的坐标/常量一律作废
   （资源点上放什么常常是开局随机）。
-- 换局后：改 `tts\docs\CURRENT.md`，新建 `<游戏>_STATE.md` / `<游戏>_FLOW.md`，卡库/规则库按需重建。
+- 换局后：改 `tts\docs\<游戏>_STATE.md` 开头的「现在这款」，新建 `<游戏>_FLOW.md`，卡库/规则库按需重建。

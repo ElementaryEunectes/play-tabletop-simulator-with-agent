@@ -146,7 +146,7 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
 
 ## §3 状态页规范（**一个游戏一份，绝不共用**）
 > 规则/边界全在 `AGENTS.md`（常驻宪章）；本节只讲**换局时怎么落状态页**。
-- **`tts\docs\CURRENT.md`** = 当前在玩哪个游戏 → 指向哪份状态页（**先读它**）。
+- **`tts\docs\DICETHRONE_STATE.md`** = 当前在玩哪个游戏 → 指向哪份状态页（**先读它**）。
 - 每局/每游戏一份 `<游戏>_STATE.md`（例：`DICETHRONE_STATE.md`；旧局 `archive\NOMADCITY_STATE_final.md`），内容=**只写"现在是什么"**：
   比分/资源/位置/**待办** + 本局 guid 对照。**规则、坐标、工具用法、纪律都不放这里**（规则→`<游戏>_FLOW.md`，纪律→`AGENTS.md`）。
 - 一局结束 ⇒ 归档到 `tts\docs\archive\`，状态页重置或另开新的。

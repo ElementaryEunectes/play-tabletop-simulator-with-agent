@@ -12,10 +12,10 @@
 |---|---|
 | 平台纪律（跨项目，自动注入） | `AGENTS.md` |
 | **做 TTS 工作**（工具地图 · 按钮 · 桥接坑 · 一句话约定） | `tts\docs\TTS_RULES.md` |
-| 每局开工 | `tts\docs\CURRENT.md` → `tts\docs\<游戏>_STATE.md` → `tts\docs\PLAY.md` |
+| 每局开工 | `tts\docs\DICETHRONE_STATE.md`（**现状 ＋ 待办 ＋ 随身卡，一份**）· 换局才需 `tts\docs\BOOTSTRAP.md` |
 | 本局规则/技能/骰面 | `tts\docs\DICETHRONE_FLOW.md` ·
     卡面文本 `cache\dicethrone_cards.md`（`cache\` 不入库，脚本会重建/手抄） |
-| 脚本清单（⭐常用 / 💤休眠 / 改名前必读的引用图） | `tts\SCRIPTS.md` |
+| 脚本清单（⭐常用 / 💤休眠 / 改名前必读的引用图） | `tts\docs\TTS_RULES.md（§二 工具清单）` |
 | 换局 / 冷启动 | `tts\docs\BOOTSTRAP.md` |
 | **人怎么用（拿给玩家看）** | `tts\docs\USER_GUIDE.md` |
 | 文档与目录总索引 | `tts\docs\README.md` |

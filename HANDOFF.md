@@ -2,7 +2,7 @@
 
 > **谁读**：接手这个项目的下一个 agent（或几天后的我）。
 > **怎么读**：本文件 = "现在到哪了 + 先干什么"；长期规矩在 `AGENTS.md`（本项目）与 `~/.dsh\AGENTS.md`（平台）；
-> 每局开工照 `tts\docs\CURRENT.md` → `DICETHRONE_STATE.md` → `PLAY.md` 三步走。
+> 每局开工照 `tts\docs\DICETHRONE_STATE.md`（现状 · 待办 · 随身卡都在这一份）——**先做 §1 的启动动作**。
 > ⚠️ **先做 §1 的启动动作，否则所有脚本会读写一个不存在的旧目录。**
 > 🛠️ **维护参考在 `tts\docs\MAINTENANCE.md`**（动手改脚本 / 改流程 / 排查怪现象前读：坑 ×13 ＋ 上下文注入与隔离）。
 
@@ -30,7 +30,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 | 棋子状态 | 他 **爆裂 3/3（满）**；他该放 1 个「操控概率」token（厄运缠身的 ✳；`Infinite_Bag` 取出来的 token 没图案 ⇒ **摆放归他**） |
 | 哨兵/watcher | **都已撤停**（续局时要重挂：file 哨兵盯 `cache\front.txt` 的 `TURN=P2`，以及 `cache\chan.txt` 的 `^NEW`） |
 
-## §3 续局怎么走（照 `DICETHRONE_STATE.md` 的「恢复打法」）
+## §3 续局怎么走（照 `DICETHRONE_STATE.md` 的「恢复 / 续局三步」）
 
 1. `tts\play.ps1 status` 核盘面 → 与 STATE 不一致时**以 STATE 为准复位**（`ds.ps1 -Do setCount:<guid>:<n>`）；
 2. 向玩家复述"轮到谁 ＋ 待办"，**由他决定**：① 重新宣告「厄运缠身」或改打别的 ② 放操控概率 token ③ 按「结束回合」；
@@ -44,7 +44,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
    |---|---|---|
    | 语法 | `tts\diff_index.ps1` · `tts\card_index.ps1` | **只是丢了 BOM**（中文被当 ANSI 读 ⇒ 一堆假语法错）。**根因在 `check_ps1.ps1` 本身**，见 §6.8 |
    | 语法 | `tts\index_images.ps1` · `tts\tts_api.ps1` | 真被改写坏（`$`→`i`、`)` 被删、`'`→`C`、`J` 被吃；`@()`→`@(`；一处硬编码输出路径）。**逐行手工重写** |
-   | 运行 | `tts\obj_index.ps1` · `tts\bags_dump.ps1` · `tts\install_save2.ps1` · `tts\bootstrap.ps1` · `tts\diff_index.ps1` | 少了"dot-source 之后回填默认路径"那行 ⇒ **解析 0 错误、一跑就写空路径**。已按 `SCRIPTS.md`/文档补回原文件名 |
+   | 运行 | `tts\obj_index.ps1` · `tts\bags_dump.ps1` · `tts\install_save2.ps1` · `tts\bootstrap.ps1` · `tts\diff_index.ps1` | 少了"dot-source 之后回填默认路径"那行 ⇒ **解析 0 错误、一跑就写空路径**。已按 `TTS_RULES.md（§二 工具清单）`/文档补回原文件名 |
    ⇒ 现在 28/28 通过真解析器。**下次动 `.ps1` 照旧**：逐个 `read` → 精确 `edit`（⛔ 不许批量字符串替换）→ `check_ps1.ps1` → `git commit`。
 2. 🔴 **仍有 5 条规则冲突等玩家拍板**（板面 vs 卡面不一致，**别自行合并**）：
    `打不到我`（板面 👣👣 防半 ＋ 每 2🏹 反 1 ／ 卡面 II 箭+月 防 14 ＋ 1×🏹 反伤）·
@@ -57,14 +57,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
    **英文 README** ✅（`README.en.md`）· **测试** ✅（`tts\tests\` 两个离线自测，且都做过阳性对照）· `validate_lua.js` 可移植 ✅。
    **还缺**：`LICENSE` —— 已选 **MIT**，**只等署名**（仓库 git 身份是 `DSH agent / agent@local`，不适合当版权行）。
    ⚠️ **真正 publish 之前还有一件必做**：`tts\docs\DICETHRONE_STATE.md`「我方手牌」与 `HANDOFF.md` §7 记着**对局中的隐藏信息**；
-   这一局若还要继续，公开仓库就等于把我的牌摊给任何人看 ⇒ **发布前先删掉那两段**（或按 `PLAY.md` 的 ≤5KB 规则把细节挪进 gitignore 的 `tts\docs\archive\`）。
+   这一局若还要继续，公开仓库就等于把我的牌摊给任何人看 ⇒ **发布前先删掉那两段**（细节挪进**不进仓库**的 `local\`）。
 5. ✅ **`diff_index.ps1` 的离线自测已收进仓库**：`tts\tests\test_diff_index.ps1`（＋ `fake_live_index.ps1` 桩 ＋ `fixtures\*.csv`）
    与 `tts\tests\test_param_backfill.ps1`；`check_ps1.ps1` 已改**递归**，测试自身也受 BOM ＋ 真解析器校验。
    ⚠️ 改这两个测试**必须重跑阳性对照**（故意造一个坏探针看它是否真报错，见 §6.8/§6.9）。
 6. ✅ **效率优化（2026-10-08）**：回合开局压成**一条命令** `play.ps1 turn`（实测 **1.5s**，替代 `status`+`roll`+`tabread` 的 ~2.9s）；
    `say.ps1` 改成**单进程就地 TCP**（**0.79s** vs ~1.7s）；`income` 补上写护栏（默认只读，见 §6.11）；
    项目 `AGENTS.md` **6432 → ~2100 字节**（这份**每次请求都在计费**，所以易变的「已知状态」全部推给 STATE/HANDOFF）；
-   `PLAY.md` **4219 → ~2100**；新增 **`tts\docs\USER_GUIDE.md`**（人怎么用）。
+   随身卡 **4219 → ~2100**（现已并入 `DICETHRONE_STATE.md`）；新增 **`tts\docs\USER_GUIDE.md`**（人怎么用）。
    ⇒ **下一次开局的默认动作：`tts\play.ps1 turn`，别再 status+roll 各跑一次。**
    **为什么没动 Lua**：实测往返不是瓶颈 —— 一个 PowerShell 进程启动固定 **0.35s**，而一次 TTS 往返只 ~40ms
    （`play.ps1 turn` 17 次往返仍是 1.48s）。把 17 次并成 1 次大约省 0.6s，却要**重装存档 + 请玩家重载**（改 `dsh_global.lua` 的代价）
@@ -76,7 +76,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 7. ✅ **官方规则书落地（2026-10-08）**：规则书**就在存档里** —— `guid 0f4dfd` 的 `Custom_PDF`，nick「规则书（中2.3英2.4版本）」。
    - `obj_index.ps1` 现在会记 **`CustomPDF.PDFUrl`**（新增 `src` / `pdfurl` 两列）⇒ 一眼取到 URL。
    - 已完成整条链：**取 URL → Node 下载（9.1 MB / 15 页）→ 抽整页图 → 缩略索引**；三步命令、**逐页目录**、以及"为什么必须用 Node 下载"
-     全部写在 **`tts\docs\RULEBOOK.md`**。
+     全部写在 **`tts\docs\DICETHRONE_FLOW.md（附录 A）`**。
    - ⇒ **规则有争议先查它**：p05 状态效果图标表 · p08 防御/结算文本 · p09 伤害类型表 · p11 回合详解 · p15 速查表。
    - ⚠️ 它是**基础规则 ＋ 枪手示例页**，**不含**月精灵/猩红女巫的卡面数值 ⇒ 英雄专属数值仍以**桌上卡面**为准（`crop_zoom.ps1` 裁图读）。
 

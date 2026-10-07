@@ -3,33 +3,33 @@
 > 别翻目录、别整份读手册。每份文档顶部都有一句"什么时候读我"。
 > ⚠️ **跨项目平台纪律**在 `~/.dsh\AGENTS.md`（自动注入）；**TTS 全套规则/工具/坑**在 **`TTS_RULES.md`**（做 TTS 工作时读一次）。
 >
-> 📏 **文档预算：18 份**（仓库里跟踪的 `.md`）。**新增门槛**（三条都要满足，否则并进已有文档）：
-> ① 能一句话说清"**什么时候读我**"；② 这个读场合**与现有文档不重叠**（同一个"我要动管线了"只该有一份）；
-> ③ 登记进**下面这张表**。⇒ **超过 20 份必须先合并一份**（`PITFALLS` ＋ `CONTEXT` 并成 `MAINTENANCE` 就是这么来的）。
+> 📏 **文档预算：14 份**。**新增门槛**（三条都要满足，否则并进已有文档）：
+> ① 一句话说清"**什么时候读我**"；② 读场合**与现有文档不重叠**（**一个读场合 = 一份文档**）；③ 登记进下面这张表。
+> ⇒ **超过 20 份必须先合并一份**。2026-10-08 就是按这条从 19 份并到 14 份：
+> `PLAY` ＋ `CURRENT` → **`DICETHRONE_STATE`** · `SCRIPTS` → **`TTS_RULES` §二** · `RULEBOOK` → **`DICETHRONE_FLOW` 附录 A** · `PITFALLS` ＋ `CONTEXT` → **`MAINTENANCE`**。
 
-| 文件 | 一句话 | 何时读 | 变更频率 |
+## 按使用频率分层（同一层 = 同一次读 ⇒ 同一层只该有一份）
+
+| 频率 | 读哪份 | 说明 | 变更 |
 |---|---|---|---|
-| **`TTS_RULES.md`** | **TTS 通用规则**：跟人怎么配合 · 隐藏信息纪律 · 工具地图 · 一回合循环 · 按钮定案 · TTS 特有的坑 · 换局流程 | **开工前读一次** | 低 |
-| `DICETHRONE_STATE.md` | ⭐ **王权骰铸 = 唯一真源**：HP/CP · 状态 token · 待办 · guid | **每回合（与 PLAY 一起，就这两份）** | **每回合** |
-| `PLAY.md` | **每局随身卡**：回合步骤 · 控制台动词（含 ⭐`turn` 一条命令开局）· 哨兵/STATE 约定 | **每回合** | 换局 |
-| **`USER_GUIDE.md`** | **人怎么用**：开局 · 你只做两件事 · AI 何时请你帮忙 · 在哪说话 · 常见问题 · 什么会动桌面/存档 | 第一次用 / 拿给玩家看 | 低 |
-| **`MAINTENANCE.md`** | **维护参考**：① 踩过的坑 ×13（每条都付过真实代价）② 上下文注入与隔离（三槽 · 两种去重 · 字节预算 · 各类工作区注入什么 · rulesync 结论） | **动手改脚本 / 流程 / `AGENTS*` 前读** | 学到新坑时 |
-| `CURRENT.md` | **现在在玩哪个游戏** + 指向哪份 STATE / FLOW | 需要时（1 行） | 换局 |
-| `DICETHRONE_FLOW.md` | 王权骰铸规则：阶段 · 投掷/防御 · **行动牌与响应窗口** · 伤害类型表 · 技能表 · 骰面映射 | 按需查小节 | 学到新规则时 |
-| **`RULEBOOK.md`** | ⭐ **官方规则书在哪/怎么拿/每页是什么**（`guid 0f4dfd` 的 PDF ⇒ 下载 ⇒ 抽整页图 ⇒ 看某一页） | **规则有争议时先查这里** | 低 |
-| `BOOTSTRAP.md` | **冷启动 / 换局 / 换模组**的唯一工作流（三种情形） | 换局时 | 低 |
-| `TTS_WORKFLOW.md` | 跨游戏技术手册（索引/识别/几何/工具/PowerShell 陷阱）· **按节取用** | 查技术细节 | 低 |
-| `PRIOR_ART.md` | 二手调研与先例（**冻结，别重搜**） | 查先例 | 冻结 |
-| `archive\` | **过期留档：旧简报 ×4 · 旧 STATE · 游城拓荒全部文档（FLOW/REF）· 旧 init 产物** —— **不要读** | 永不 | 冻结 |
-| `..\SCRIPTS.md` | **`tts\*.ps1` 脚本清单**（按使用频率分类，含"休眠但别删"的说明） | 找脚本/清理时 | 低 |
+| **每回合** | **`DICETHRONE_STATE.md`** | 现在这款 ＋ **本局状态（唯一真源：HP/CP · 状态 token · 待办 · guid）** ＋ **随身卡**（回合步骤 · 控制台动词 · 哨兵约定） | **每回合** |
+| **开工前一次** | **`TTS_RULES.md`** | TTS 通用纪律（跟人配合 · 隐藏信息 · 以物为准）· **§二 工具清单**（`tts\*.ps1` 按频率分类）· 一回合循环 · 按钮定案 · TTS 特有的坑 · 换局 | 低 |
+| **换局 / 冷启动** | `BOOTSTRAP.md` | 换存档 / 换模组 / 换游戏的**唯一**工作流（三种情形） | 低 |
+| 按需（规则） | `DICETHRONE_FLOW.md` | 王权骰铸规则：阶段 · 投掷/防御 · 行动牌与响应窗口 · 伤害类型表 · 技能表 · 骰面映射 —— **顶部有"我要干什么 ⇒ 读哪节"路由表**；＋ **附录 A：官方规则书**（在哪 · 怎么拿 · 每页是什么） | 学到新规则时 |
+| 按需（技术） | `TTS_WORKFLOW.md` | 跨游戏技术手册（索引 / 识别 / 几何 / 工具 / PowerShell 陷阱）· **顶部有路由表，按节取用** | 低 |
+| 按需（维护） | **`MAINTENANCE.md`** | ① 踩过的坑 ×13（每条都付过真实代价）② 上下文注入与隔离（三槽 · 两种去重 · 字节预算 · 各类工作区注入什么） | 学到新坑时 |
+| 按需（给人） | `USER_GUIDE.md` | **人怎么用**：开局 · 你只做两件事 · AI 何时请你帮忙 · 在哪说话 · 常见问题 | 低 |
+| 按需（先例） | `PRIOR_ART.md` | 二手调研与先例（**冻结，别重搜**；含可搬/不可搬结论） | 冻结 |
+| 不读 | `HARNESS_HOME_AGENTS.template.md` | `$DSH_HOME\AGENTS.md` 的**源**：`---` **以下是正文**（改完拷过去）；`tts\tests\test_agents_hygiene.ps1` 会核对两者逐字一致 | 低 |
+| 永不 | `archive\`（**gitignore**） | 过期留档：旧简报 ×4 · 旧 STATE · 游城拓荒全部文档 · 旧 init 产物 —— **未随仓库分发** | 冻结 |
 
-**目录约定**（保持干净 = 省 token）
-- `tts\*.ps1` = **现役工具**；**清单与用途见 `tts\SCRIPTS.md`**；死的、一次性的、实验性的一律进 `archive\tts-legacy\`。
+## 目录约定（保持干净 = 省 token）
+
+- `tts\*.ps1` = **现役工具**；**清单与用途见 `TTS_RULES.md` §二**；死的 / 一次性的 / 实验性的一律进 `~\.dsh\archive\tts-legacy\`。
 - `tts\tests\` = **离线自测（不需要 TTS、不需要存档）**：`test_diff_index.ps1`（桩冒充 `live_index.ps1` ＋ 合成 fixture）·
-  `test_param_backfill.ps1`（每个 `''` 默认值必须被回填或判空）。**改完脚本先跑它们**，比开游戏试便宜得多。
-- `tts\lua\` = TTS 模组的**全局 Lua**（`dsh_global.lua` = 桥接本体；`install_save2.ps1` 依赖它，**别动**）。
-  `tts\validate_lua.js` = 改 Lua 前的校验器。
-- `cache\` = **产物**（可重建）：`front.txt` / `chan.txt`（哨兵心跳）· `dicethrone_rules.json` / `dicethrone_cards.md`（游戏数据）·
-  `live_index.csv` / `baseline.csv`（快照）· `hidden_zones.csv`（隐藏区规则）。
-  `cache\_artifacts\`（旧截图/裁图）· `cache\_legacy_nomadcity\`（上一局的产物）—— **别读，别改**。
-- `archive\out_legacy\` = 旧的一次性分析图。`saves_backup_*\` = 存档备份（**写存档走 `install_save2.ps1`**）。
+  `test_param_backfill.ps1`（每个 `''` 默认值必须被回填或判空）· `test_agents_hygiene.ps1`（三槽体积 / 承载性指针 / 隐私 / 漂移）。**改完脚本先跑它们。**
+- `tts\lua\` = TTS 模组的**全局 Lua**（`dsh_global.lua` = 桥接本体；`install_save2.ps1` 依赖它，**别动**）。`tts\validate_lua.js` = 改 Lua 前的校验器。
+- `tts\docs\` = 上面那张表里的文档（`archive\` 除外，它只是**留档**）。
+- `cache\` = **产物**（可重建）：`front.txt` / `chan.txt`（哨兵心跳）· `dicethrone_cards.md`（游戏数据）·
+  `live_index.csv` / `baseline.csv` / `obj_index.csv`（快照）· `hidden_zones.csv`（隐藏区规则）· 规则书 PDF 与整页图。
+- **不进仓库的**（都在 `.gitignore`）：`AGENTS.local.md`（本机事实）· `local\`（私有：手牌 / 归档 / scratch）· `cache\` · `out\` · `logs\` · `shots\`。

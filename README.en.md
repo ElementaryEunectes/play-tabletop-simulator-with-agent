@@ -15,9 +15,9 @@ through a message bridge into the running game. The current game is **Dice Thron
 |---|---|
 | Platform discipline (cross-project, auto-injected) | `AGENTS.md` |
 | **Doing TTS work**: tool map, the End Turn button, bridge traps, the one-line conventions | `tts\docs\TTS_RULES.md` |
-| Starting a round | `tts\docs\CURRENT.md` → `tts\docs\<game>_STATE.md` → `tts\docs\PLAY.md` |
+| Starting a round | `tts\docs\DICETHRONE_STATE.md` (status, to-dos and the per-turn card in one file); `tts\docs\BOOTSTRAP.md` only when changing games |
 | This game's rules, skills and dice faces | `tts\docs\DICETHRONE_FLOW.md` · card text in `cache\dicethrone_cards.md` |
-| Script inventory (core / dormant / rename-time reference graph) | `tts\SCRIPTS.md` |
+| Script inventory (core / dormant / rename-time reference graph) | `tts\docs\TTS_RULES.md（§二 工具清单）` |
 | New game, cold start | `tts\docs\BOOTSTRAP.md` |
 | **How a human uses it** (hand this to the player) | `tts\docs\USER_GUIDE.md` (Chinese) |
 | Doc and directory index | `tts\docs\README.md` |
