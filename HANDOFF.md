@@ -95,6 +95,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
    ⇒ **动代码前先 `git commit`；要批量改就先 `Copy-Item` 备份；改完逐个用真解析器验证。**
 3. **`param()` 必须是第一条语句**；**默认值里不能引用 config 变量**（那时还没求值）—— 默认 `''`，dot-source 之后回填。
 4. **BOM 会自己繁殖**：`GetString(bytes)` 把 BOM 变成 U+FEFF 字符，`WriteAllText(..., UTF8Encoding(true))` 再加一个 ⇒ 每跑一次多一个 BOM，三个就解析失败。
+   ⚠️ 2026-10-08 追加：**`check_ps1.ps1` 只扫 `tts\`（递归）—— `out\_selftest\` 里的临时脚本不在覆盖内**。
+   我在那儿写了个**含中文**的分析脚本 ⇒ 没 BOM ⇒ PS 5.1 按 ANSI 读 ⇒ 字符串字面量损坏，脚本还"照常跑"，只是**静默给错答案**（阴性对照报 0、阳性对照也报 0）。
+   ⇒ 临时脚本**要么全 ASCII，要么自己带 BOM**；出现"数字看着不对劲"时先怀疑编码，别先怀疑算法。
 5. **旧路径会静默生效**：`DSH_HOME` 残留旧值时，脚本读写"看起来正常"但其实是空目录 ⇒ **启动先跑 `start-agent.ps1`**。
    同一个病 2026-10-08 又抓到两处：`validate_lua.js` 里写死的 luaparse 路径（项目搬出 `~/.dsh` 后那条路径**早就空了**，
    而它此前一直被当作"改了 Lua 就要跑"的校验器）；以及 `check_ps1.ps1` 那道写反的 BOM 回写条件（见 §6.8）。
