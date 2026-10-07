@@ -30,7 +30,7 @@
 | `obj_index.ps1` | **存档**侧全量物件索引 → `cache\obj_index.csv`（含 url hash / **url 来源 `src`** / **规则书 `pdfurl`** / 容器关系 / GMNotes；**滞后 ~5 分钟**）。输出默认 2 行，名称直方图加 **`-Hist`**（25 行，按需） |
 | `guidinfo.ps1` | 给定 guid → 从存档里切出 CardID / deck / 位置等身份字段（**认牌用**） |
 | `bags_dump.ps1` · `bag_list.ps1` | 展开容器（牌堆/袋）内容 → `cache\bag_contents.txt` |
-| `bootstrap.ps1` | **换局/新存档**时重新认一遍关键物件（guid 全变的场合） |
+| `bootstrap.ps1` | **换局/新存档**时重新认一遍关键物件（guid 全变的场合）：**默认 stdout 只打座位表 + 摘要**（13 行），全表写进 `cache\session_map.md`（~490 行）；要打全表加 **`-Full`**。⚠️ 它的认物规则是按**上一局《游城拓荒》**写死的（金券/源石/事件牌堆）⇒ **换游戏要重写那几节** |
 | `install_save2.ps1` | **写存档的唯一通道**（把 `lua\dsh_global.lua` 灌进存档 ＋ 修 notebook tab id；需一次提权） |
 | `crop_zoom.ps1` | 裁图 + 放大转真 PNG（**读卡面/查图用**；`Mods\Images` 里扩展名常与真实格式不符） |
 | `read_turn.ps1` | 采样 mod 横幅色块 → `PLAYER=n`（TTS 不在前台时报 `NOTFOREGROUND`，**不给假数据**） |

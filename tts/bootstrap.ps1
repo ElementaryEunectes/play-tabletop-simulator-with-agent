@@ -10,11 +10,12 @@
 #   obj_index.ps1 on a new save and it prints (and writes) the whole session map.
 #
 # USAGE
-#   powershell -File '<本仓库>\tts\bootstrap.ps1'
-#   -> prints a markdown table block AND writes cache\session_map.md
+#   powershell -File '<本仓库>\tts\bootstrap.ps1'         # -> cache\session_map.md；stdout 只有座位表 + 摘要
+#   powershell -File '<本仓库>\tts\bootstrap.ps1' -Full   # -> 连整份对照表也打到 stdout（旧行为）
 param(
     [string]$Index = '',
-    [string]$Out   = ''
+    [string]$Out   = '',
+    [switch]$Full
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
 # Backfills AFTER config.ps1 -- restored 2026-10-08. Without them the script exited
@@ -28,18 +29,22 @@ $rows = Import-Csv $Index
 function H8($v) { $s = "$v"; if ($s.Length -ge 8) { return $s.Substring(0, 8) } else { return $s } }
 function NUMSORT($g) { return @($g | Sort-Object { [double]$_.x }) }
 $L = New-Object System.Collections.ArrayList
-function Emit($line) { [void]$L.Add($line); Write-Host $line }
+# Emit always collects the markdown line for cache\session_map.md, but only ALSO prints it when
+# asked. A real save produced 500+ lines here; a session that reads that on stdout pays ~15-20k
+# tokens for a table it rarely needs in full. So the default stdout is the SEAT table (everything
+# else depends on it) plus a one-line summary -- use -Full for the old behaviour, or grep the file.
+function Emit($line, [switch]$Show) { [void]$L.Add($line); if ($Show -or $Full) { Write-Host $line } }
 
-Emit ("# 本局物件对照（bootstrap.ps1 自动生成）")
+Emit ("# 本局物件对照（bootstrap.ps1 自动生成）") -Show
 Emit ("")
-Emit ("> 存档索引：{0}（{1} 行）。**guid 只对这份存档有效**；换存档重跑本脚本。" -f (Split-Path $Index -Leaf), @($rows).Count)
+Emit ("> 存档索引：{0}（{1} 行）。**guid 只对这份存档有效**；换存档重跑本脚本。" -f (Split-Path $Index -Leaf), @($rows).Count) -Show
 Emit ("")
 
 # --- 1. seats -------------------------------------------------------------------
-Emit ("## 座位（桌上从左到右 = P4 / P3 / P2 / P1）")
+Emit ("## 座位（桌上从左到右 = P4 / P3 / P2 / P1）") -Show
 Emit ("")
-Emit ("| 列 | HandTrigger guid | x |")
-Emit ("|---|---|---|")
+Emit ("| 列 | HandTrigger guid | x |") -Show
+Emit ("|---|---|---|") -Show
 # NOTE: this mod ships FIVE HandTrigger zones - four in the seat row and one stray at
 # z = +114 (off-table). Sorting by x alone pulls the stray one into the middle of the
 # seat order and silently shifts every player. Keep only the seat row.
@@ -49,11 +54,11 @@ if ($ht.Count -ne 4) { Write-Host ("WARN HandTrigger in seat row = {0} (expected
 $seatNames = @('P4', 'P3', 'P2', 'P1')
 $seatOf = @{}
 for ($i = 0; $i -lt [math]::Min(4, $ht.Count); $i++) {
-    Emit ("| **{0}** | `{1}` | {2:N2} |" -f $seatNames[$i], $ht[$i].guid, [double]$ht[$i].x)
+    Emit ("| **{0}** | `{1}` | {2:N2} |" -f $seatNames[$i], $ht[$i].guid, [double]$ht[$i].x) -Show
     $seatOf[$seatNames[$i]] = $ht[$i].x
 }
 Emit ("")
-Emit ("> `HandTrigger` 的数量与顺序就是座位数与列序；本 mod 是 **左→右 P4/P3/P2/P1**（P1 = 玩家）。")
+Emit ("> `HandTrigger` 的数量与顺序就是座位数与列序；本 mod 是 **左→右 P4/P3/P2/P1**（P1 = 玩家）。") -Show
 Emit ("")
 
 # --- 2. 金券计数器 ---------------------------------------------------------------
@@ -182,4 +187,10 @@ foreach ($r in @($rows | Where-Object { $_.nick -ne '' -and $_.name -match 'Bag|
 Emit ("")
 
 [System.IO.File]::WriteAllText($Out, (($L -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
-Write-Host ("`nwrote {0}  ({1} bytes)" -f $Out, (Get-Item $Out).Length)
+$bytes = (Get-Item $Out).Length
+if ($Full) {
+    Write-Host ("`nwrote {0}  ({1} lines, {2:N0} B)" -f $Out, $L.Count, $bytes)
+} else {
+    Write-Host ("`nfull map -> {0}  ({1} lines, {2:N0} B)" -f $Out, $L.Count, $bytes)
+    Write-Host "  (stdout shows the seat table only; grep/read the file for the rest, or re-run with -Full)"
+}
