@@ -96,7 +96,7 @@
   删掉独立的「§5 边界」（并入文件头的 ⛔ 一行）—— **规则一条没删**。机制的完整说明（注入顺序 / 两种去重 / 预算 / 各类工作区注入什么）
   移进**模板头部**，那部分**不参与注入**。⇒ 通用那份的"知识"与"成本"从此可以分开维护。
 - **有回归测试了**：`tts\tests\test_agents_hygiene.ps1`（**不需要 TTS，也不需要 Node**）：
-  项目那份 ≤3 KB ＋ 必含 5 个承载性指针（`start-agent.ps1` / `DICETHRONE_STATE.md` / `DICETHRONE_FLOW.md` / `tts\config.ps1` / `check_ps1.ps1`）·
+  项目那份 ≤3.75 KB ＋ 必含 5 个承载性指针（`start-agent.ps1` / `PLAY.md` / `local\games` / `tts\config.ps1` / `check_ps1.ps1`）·
   **被 git 跟踪的文件里不许出现真实用户名或绝对用户路径** · `AGENTS.local.md` 必须被 gitignore 且 ≤2 KB ·
   **全局那份必须与模板正文逐字一致**（漂移检查）。它第一次跑就抓到我写进 §6.13 的真实用户名。
 - ⚠️ 全局那份**在工作区之外** ⇒ 写它需要**一次提权**；而且**无法自动化**（"模板即源"是我们自己约定的，harness 不知道）。

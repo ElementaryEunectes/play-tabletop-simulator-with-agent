@@ -1,7 +1,7 @@
 # USER_GUIDE.md —— 人怎么用（玩家手册）
 
 > 你（人类）只需要做两件事：**做决策** 和 **点「结束回合」**。其余棋子操作由 AI 通过 TTS 桥接完成。
-> 给 AI 看的规矩在 `AGENTS.md` · `DICETHRONE_STATE.md`（每回合那一份）；装环境 / 换局 / 换模组在 `BOOTSTRAP.md`；脚本清单在 `TTS_RULES.md` §二。
+> 给 AI 看的规矩在 `AGENTS.md` · `PLAY.md`（通用每回合卡）＋ `local\games\<游戏>\`（该局状态，不进仓库）；装环境 / 换局 / 换模组在 `BOOTSTRAP.md`；脚本清单在 `TTS_RULES.md` §二。
 
 ## 1. 开一局（30 秒）
 
@@ -50,7 +50,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 | AI 回的是**乱码** | 中文**必须走文件**：让它用 `say.ps1 -MessageFile <utf8 文件>`，别用命令行参数（控制台代码页会毁掉中文） |
 | 我的骰子被重掷了 | 旧版 `roll.ps1` 默认会掷（曾连掷你 4 次）。**2026-10-08 已加护栏**：必须 `-Roll` 才掷，`-NoRoll` 只读，裸调用直接 `exit 2` 且不接触 TTS |
 | HP/CP 数字对不上 | AI 每次写都会**回读并打印**，不一致就报 `BAD DATA` 停下。**以你看到的牌面为准**，它会把台账对齐 |
-| 想暂停 / 收工 | 说"结束游戏"：它会撤哨兵、停后台 watcher，并把现状封存进 `DICETHRONE_STATE.md` |
+| 想暂停 / 收工 | 说"结束游戏"：它会撤哨兵、停后台 watcher，并把现状封存进该游戏的 `local\games\<游戏>\STATE.md` |
 | 想换游戏 / 换模组 | 照 `BOOTSTRAP.md` 走（三种情形 ＋ 共同核心四步） |
 | 想让它少花点 token / 快一点 | 每回合开局让它用**一条命令** `tts\play.ps1 turn`（盘面＋骰面＋招式＋笔记本尾条一次给齐） |
 

@@ -2,7 +2,7 @@
 
 > ⚠️ **脚本名以 `tts\docs\TTS_RULES.md（§二 工具清单）` 为准**：现役按频率分类；**已归档的一律在 `~\.dsh\archive\tts-legacy\`**（不在本仓库）。
 > 本文提到的 `overview.ps1` / `init.ps1` / `resolve_*.ps1` / `dock*.ps1` 之类旧名都按归档看；`diff_safe.ps1` 已由 **`diff_hidden.ps1 -Game <游戏>`** 取代。
-> 每回合怎么打看 `DICETHRONE_STATE.md` · TTS 通用规则看 `TTS_RULES.md` · 上一局（游城拓荒）的文档在 `local\archive\`（**gitignore，未随仓库分发**）。
+> 每回合怎么打看 `PLAY.md`（通用）＋ 该游戏的 `local\games\<游戏>\STATE.md`（不进仓库） · TTS 通用规则看 `TTS_RULES.md` · 上一局（游城拓荒）的文档在 `local\archive\`（**gitignore，未随仓库分发**）。
 
 这份文档是从《明日方舟：游城拓荒》那一局里**踩了十几轮坑**之后总结出来的。
 核心教训一句话：**不要用截图去反推坐标。** 游戏自己知道每个物件在哪，
@@ -79,7 +79,7 @@
 & powershell -NoProfile -File '<本仓库>\tts\obj_index.ps1'
 # -> cache\obj_index.csv ：一行一个物件（行数以实际存档为准），
 #    每行 guid/name/nick/x/y/z/sx/rotY/rotX/rotZ/gm/ss/url/depth/parent/src/pdfurl
-#    （src = url 的来源字段；pdfurl = Custom_PDF 的完整 URL —— 规则书就是这么取到的，见 DICETHRONE_FLOW.md（附录 A））
+#    （src = url 的来源字段；pdfurl = Custom_PDF 的完整 URL —— 规则书就是这么取到的，见该游戏 `FLOW.md` 附录 A（在 `local\games\`））
 ```
 
 关键实现要点（都是踩过的坑）：

@@ -12,8 +12,8 @@
 |---|---|
 | 平台纪律（跨项目，自动注入） | `AGENTS.md` |
 | **做 TTS 工作**（工具地图 · 按钮 · 桥接坑 · 一句话约定） | `tts\docs\TTS_RULES.md` |
-| 每局开工 | `tts\docs\DICETHRONE_STATE.md`（**现状 ＋ 待办 ＋ 随身卡，一份**）· 换局才需 `tts\docs\BOOTSTRAP.md` |
-| 本局规则/技能/骰面 | `tts\docs\DICETHRONE_FLOW.md` ·
+| 每局开工 | `tts\docs\PLAY.md`（**通用**每回合卡）＋ `local\games\<游戏>\STATE.md`（该局状态，**不进仓库**）· 换 mod 才需 `tts\docs\BOOTSTRAP.md` |
+| 本局规则/技能/骰面 | `local\games\<游戏>\FLOW.md`（**不进仓库**）·
     卡面文本 `cache\dicethrone_cards.md`（`cache\` 不入库，脚本会重建/手抄） |
 | 脚本清单（⭐常用 / 💤休眠 / 改名前必读的引用图） | `tts\docs\TTS_RULES.md（§二 工具清单）` |
 | 换局 / 冷启动 | `tts\docs\BOOTSTRAP.md` |
@@ -81,7 +81,7 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
 - ✅ **离线自测**（不需要 TTS）：`tts\tests\test_diff_index.ps1`（桩脚本冒充 `live_index.ps1` ＋ 合成 fixture ⇒ 六类变化全中）·
   `tts\tests\test_param_backfill.ps1`（每个 `''` 默认值都必须被回填或判空）。
 - ✅ **无个人路径**：树里已无 `C:\Users\<名字>` 之类硬编码（`tts\config.ps1` 是唯一解析层）。
-- ⏸ 对局处于**挂起**态，续局步骤写在 `tts\docs\DICETHRONE_STATE.md` 的「恢复 / 续局三步」一节。
+- ⏸ 对局处于**挂起**态：**现状与续局步骤不在仓库里**（`local\games\_current.md` 指到具体文件）。
 - ⚡ **每回合成本**（2026-10-08 实测）：回合开局用**一条** `tts\play.ps1 turn` ≈ **1.5s**，替代原来 `status`+`roll`+`tabread` 三条的 ~2.9s；
   `say.ps1` 每条消息 **0.79s**（原 ~1.7s，少了两次子进程）。**每个 PowerShell 进程启动固定 ~0.35s ⇒ 合并命令就是省时间**，TTS 往返不是瓶颈。
 - 🧾 `LICENSE` = **MIT**（见下）。
@@ -106,6 +106,6 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
 
 本仓库的**代码与文档**按 **MIT** 授权（见 `LICENSE`，Copyright (c) 2026 ElementaryEunectes）。
 它**不覆盖**：**Tabletop Simulator**（Berserk Games）· **《王权骰铸》/ Dice Throne** 及其卡面文本与美术（Roxley / MINDVG）·
-创意工坊模组本身。`tts\docs\DICETHRONE_FLOW.md` 是**自用打牌便签**（转抄了部分卡面文字），**不含任何卡图** ——
+创意工坊模组本身。**规则/卡面文本不随仓库分发**（自用便签在 `local\games\`）：那份便签转抄了部分卡面文字，**不含任何卡图** ——
 图片与卡面文本库都在 `cache\`，不进仓库。
 `tts\validate_lua.js` 依赖 **`luaparse`**（MIT），但**未随仓库分发**：`npm i luaparse`，或设 `LUAPARSE_DIR`。

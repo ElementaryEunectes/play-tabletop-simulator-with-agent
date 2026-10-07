@@ -15,8 +15,8 @@ through a message bridge into the running game. The current game is **Dice Thron
 |---|---|
 | Platform discipline (cross-project, auto-injected) | `AGENTS.md` |
 | **Doing TTS work**: tool map, the End Turn button, bridge traps, the one-line conventions | `tts\docs\TTS_RULES.md` |
-| Starting a round | `tts\docs\DICETHRONE_STATE.md` (status, to-dos and the per-turn card in one file); `tts\docs\BOOTSTRAP.md` only when changing games |
-| This game's rules, skills and dice faces | `tts\docs\DICETHRONE_FLOW.md` · card text in `cache\dicethrone_cards.md` |
+| Starting a round | `tts\docs\PLAY.md` (generic per-turn card) + `local\games\<game>\STATE.md` (that match's state, not shipped); `tts\docs\BOOTSTRAP.md` only when changing mods |
+| This game's rules, skills and dice faces | `local\games\<game>\FLOW.md` (not shipped) · card text in `cache\` |
 | Script inventory (core / dormant / rename-time reference graph) | `tts\docs\TTS_RULES.md（§二 工具清单）` |
 | New game, cold start | `tts\docs\BOOTSTRAP.md` |
 | **How a human uses it** (hand this to the player) | `tts\docs\USER_GUIDE.md` (Chinese) |
@@ -111,7 +111,7 @@ the dot-source, and `tts\tests\test_param_backfill.ps1` enforces exactly that.
 - ✅ **Offline tests**: `tts\tests\test_diff_index.ps1`, `tts\tests\test_param_backfill.ps1`.
 - ✅ **Guardrails** on `roll.ps1`, `play.ps1 -Apply` and `install_save2.ps1 -DryRun`.
 - ✅ **No personal paths** anywhere in the tree: `tts\config.ps1` is the only resolver.
-- ⏸ The Dice Throne match is **suspended**; how to resume is in `tts\docs\DICETHRONE_STATE.md`.
+- ⏸ A match is **suspended**; its status and resume steps are **not in the repository** (see `local\games\_current.md`).
 - ⚡ **Per-turn cost** (measured 2026-10-08): open a turn with the single command
   `tts\play.ps1 turn` — about **1.5s**, replacing the ~2.9s of `status` + `roll` + `tabread`.
   `say.ps1` costs **0.79s** per message (was ~1.7s, two child processes fewer). **Starting one
@@ -156,7 +156,7 @@ budget, and a human/AI split where the human only decides and clicks End Turn.
 This repository's **code and documentation** are MIT licensed — see `LICENSE`,
 Copyright (c) 2026 ElementaryEunectes.
 That does **not** cover: **Tabletop Simulator** (Berserk Games), **Dice Throne** and its card
-text/art (Roxley / MINDVG), or the Workshop mod itself. `tts\docs\DICETHRONE_FLOW.md` is a
+text/art (Roxley / MINDVG), or the Workshop mod itself. No game rules or card text ship with this repository (the self-use notes live in `local\games\`); that file is a
 personal play-aid that transcribes parts of the card text; **no card art is included** — the
 images and the card-text cache live in `cache\`, which is not committed.
 `tts\validate_lua.js` needs **`luaparse`** (MIT), which is not vendored here: run

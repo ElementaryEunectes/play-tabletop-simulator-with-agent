@@ -2,7 +2,7 @@
 
 > **谁读**：接手这个项目的下一个 agent（或几天后的我）。
 > **怎么读**：本文件 = "现在到哪了 + 先干什么"；长期规矩在 `AGENTS.md`（本项目）与 `~/.dsh\AGENTS.md`（平台）；
-> 每局开工照 `tts\docs\DICETHRONE_STATE.md`（现状 · 待办 · 随身卡都在这一份）——**先做 §1 的启动动作**。
+> 每局开工：`local\games\_current.md` → 该游戏 `STATE.md`（状态 · 待办）＋ `tts\docs\PLAY.md`（通用动作）——**先做 §1 的启动动作**。
 > ⚠️ **先做 §1 的启动动作，否则所有脚本会读写一个不存在的旧目录。**
 > 🛠️ **维护参考在 `tts\docs\MAINTENANCE.md`**（动手改脚本 / 改流程 / 排查怪现象前读：坑 ×13 ＋ 上下文注入与隔离）。
 
@@ -18,24 +18,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 `tts\config.ps1` 会解析到**已被搬空的旧目录**，产物写丢、`live_index` 报 `ds.ps1 not found`。
 **先验证**：`tts\play.ps1 status` 应回 `bridge=v12-callx` 且 `objs=136` 附近。
 
-## §2 现在的状态
+## §2 现在的状态 ⇒ **不在仓库里**
 
-| | |
-|---|---|
-| 项目位置 | 本仓库根（= `$DSH_HOME`）· 独立 git 仓库 · **46 文件跟踪** |
-| 旧目录 `.dsh` | **项目产物不在这里**（sessions/storages/profiles/attachments ＋ 平台 `AGENTS.md`），但 **`archive\` 还在**：`~\.dsh\archive\tts-legacy\`＝33 个旧 `.ps1` · `~\.dsh\archive\system\` |
-| 游戏 | **《王权骰铸》对局挂起中**（2026-10-08 23:46 玩家说"结束游戏"），随时可续 |
-| 盘面 | **我 26/4 · 他 40/4**（2026-10-08 结清并回读 ✅）· 物件 **136** · 桥接 `v12-callx` · 存档 `TS_Save_7.json`；细节以 `DICETHRONE_STATE.md` 的「当前」块为准 |
-| 进度 | **R4 他的回合未收**（「厄运缠身」已结清：附加骰 🌀＋✳ ⇒ 8 伤、我 👣👣 防半 ⇒ 我 30→26；他 41→40）→ 他收尾后进 **R5（我的回合）** |
-| 棋子状态 | 他 **爆裂 3/3（满）**；他该放 1 个「操控概率」token（厄运缠身的 ✳；`Infinite_Bag` 取出来的 token 没图案 ⇒ **摆放归他**） |
-| 哨兵/watcher | **都已撤停**（续局时要重挂：file 哨兵盯 `cache\front.txt` 的 `TURN=P2`，以及 `cache\chan.txt` 的 `^NEW`） |
+对局现状 · 续局步骤 · 已结清的规则 · 原始 guid 全部在 **`local\games\<游戏>\`**（`_current.md` 指到具体文件；`local\` 在 `.gitignore` 里）。
 
-## §3 续局怎么走（照 `DICETHRONE_STATE.md` 的「恢复 / 续局三步」）
-
-1. `tts\play.ps1 status` 核盘面 → 与 STATE 不一致时**以 STATE 为准复位**（`ds.ps1 -Do setCount:<guid>:<n>`）；
-2. 向玩家复述"轮到谁 ＋ 待办"，**由他决定**：① 重新宣告「厄运缠身」或改打别的 ② 放操控概率 token ③ 按「结束回合」；
-3. **重挂哨兵** ＋ 确认 watcher 心跳（`cache\front.txt` 的 mtime 秒级滚动）；
-   死了就用后台作业重启 `front_watch.ps1 -Minutes 600` / `channel_watch.ps1 -Minutes 600 -IntervalMs 12000`。
+**为什么**：本仓库只放**对任何 TTS mod 都成立**的通用工具链。
 
 ## §4 待办（按优先级）
 
@@ -56,15 +43,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
    4 个脚本修完 ✅ · **破坏性动词护栏** ✅（`roll.ps1` 明说意图 · `play.ps1 -Apply -WhatIf` ＋ 写完回读校验 · `install_save2 -DryRun`）·
    **英文 README** ✅（`README.en.md`）· **测试** ✅（`tts\tests\` 两个离线自测，且都做过阳性对照）· `validate_lua.js` 可移植 ✅。
    **还缺**：`LICENSE` —— 已选 **MIT**，**只等署名**（仓库 git 身份是 `DSH agent / agent@local`，不适合当版权行）。
-   ✅ **publish 前的隐藏信息检查已完成（2026-10-08）**：跟踪文件里**只剩指针**（`DICETHRONE_STATE.md`「我方手牌」与 §7 都指向 `local\hand\`，那目录在 `.gitignore` 里）⇒ 公开仓库看不到牌面。
-   📌 **以后的规矩**：牌、计划、任何隐藏信息**只写进 `local\hand\`**（`local\{hand,archive,scratch,backup}` 全部不进仓库）。。
+   ✅ **publish 前的隐藏信息检查已完成（2026-10-08）**：跟踪文件里**只剩指针**（本文件 §2 与 `local\games\_current.md` 指向 `local\games\<游戏>\`，那里在 `.gitignore` 里）⇒ 公开仓库看不到牌面。
+   📌 **铁律**：牌、计划、任何隐藏信息**只写进 `local\games\<游戏>\MYHAND.md`**（`local\` 整个不进仓库）。
 5. ✅ **`diff_index.ps1` 的离线自测已收进仓库**：`tts\tests\test_diff_index.ps1`（＋ `fake_live_index.ps1` 桩 ＋ `fixtures\*.csv`）
    与 `tts\tests\test_param_backfill.ps1`；`check_ps1.ps1` 已改**递归**，测试自身也受 BOM ＋ 真解析器校验。
    ⚠️ 改这两个测试**必须重跑阳性对照**（故意造一个坏探针看它是否真报错，见 §6.8/§6.9）。
 6. ✅ **效率优化（2026-10-08）**：回合开局压成**一条命令** `play.ps1 turn`（实测 **1.5s**，替代 `status`+`roll`+`tabread` 的 ~2.9s）；
    `say.ps1` 改成**单进程就地 TCP**（**0.79s** vs ~1.7s）；`income` 补上写护栏（默认只读，见 §6.11）；
    项目 `AGENTS.md` **6432 → ~2100 字节**（这份**每次请求都在计费**，所以易变的「已知状态」全部推给 STATE/HANDOFF）；
-   随身卡 **4219 → ~2100**（现已并入 `DICETHRONE_STATE.md`）；新增 **`tts\docs\USER_GUIDE.md`**（人怎么用）。
+   随身卡 **4219 → ~2100**（现在按铁律拆成两半：通用的 `tts\docs\PLAY.md` ＋ 本局的 `local\games\<游戏>\STATE.md`）；新增 **`tts\docs\USER_GUIDE.md`**（人怎么用）。
    ⇒ **下一次开局的默认动作：`tts\play.ps1 turn`，别再 status+roll 各跑一次。**
    **为什么没动 Lua**：实测往返不是瓶颈 —— 一个 PowerShell 进程启动固定 **0.35s**，而一次 TTS 往返只 ~40ms
    （`play.ps1 turn` 17 次往返仍是 1.48s）。把 17 次并成 1 次大约省 0.6s，却要**重装存档 + 请玩家重载**（改 `dsh_global.lua` 的代价）
@@ -76,34 +63,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 7. ✅ **官方规则书落地（2026-10-08）**：规则书**就在存档里** —— `guid 0f4dfd` 的 `Custom_PDF`，nick「规则书（中2.3英2.4版本）」。
    - `obj_index.ps1` 现在会记 **`CustomPDF.PDFUrl`**（新增 `src` / `pdfurl` 两列）⇒ 一眼取到 URL。
    - 已完成整条链：**取 URL → Node 下载（9.1 MB / 15 页）→ 抽整页图 → 缩略索引**；三步命令、**逐页目录**、以及"为什么必须用 Node 下载"
-     全部写在 **`tts\docs\DICETHRONE_FLOW.md（附录 A）`**。
+     全部写在 **`local\games\<游戏>\FLOW.md` 附录 A**（⛔ 不进仓库）；**技术本身通用**（见 `PRIOR_ART.md` §7.4 与本条）—— 换任何 mod 同理。
    - ⇒ **规则有争议先查它**：p05 状态效果图标表 · p08 防御/结算文本 · p09 伤害类型表 · p11 回合详解 · p15 速查表。
    - ⚠️ 它是**基础规则 ＋ 枪手示例页**，**不含**月精灵/猩红女巫的卡面数值 ⇒ 英雄专属数值仍以**桌上卡面**为准（`crop_zoom.ps1` 裁图读）。
-
-## §5 本会话已结清的规则（**别再重问玩家**）
-
-| 条目 | 结论 |
-|---|---|
-| 伤害类型 | **真实伤害 = 不可防御、但可"避免"**（卡牌/状态能挡，"防御技"不能）· 表见 `DICETHRONE_FLOW.md §4.3` |
-| 骰面 | 女巫 **1/2/3=🌀扭曲 · 4=✳混沌 · 5=🩸法术 · 6=M王冠**（玩家贴英雄板图，已核）· 月精灵 **1/2/3=🏹 · 4/5=👣 · 6=🌙✳** |
-| 骰型通用规则 | **骰型只用 4/3/2 颗时，剩余骰子任意**；只有用满 5 颗的（顺子/5 同型）才要求全中 |
-| 双重麻烦 | **对子读法成立**（🌀🌀→爆裂 / 🌀🌀🌀→2 爆裂 / ✳✳→操控概率 / 🩸🩸→终极魔法 / MM→4 伤；另可弃 1 操控概率改 1 颗骰） |
-| 厄运缠身 | 基础 6 伤 ＋ 掷 2 骰（🌀→+2 伤 / ✳→操控概率 / 🩸→扭曲现实 / M→+1 伤并**重掷该骰**）；骰型 **2🌀＋2✳（第 5 颗任意）** |
-| 心灵震撼 | 奇数 → **替换** 5 为 8 真实伤害（**不是叠加**）；偶数 → 保持 5 并得操控概率 |
-| 爆裂上限 | **3**（玩家给出） |
-| 结束回合 | 只能玩家点（点不了那个横幅是定案）；`front_watch` 写 `TURN=Pn` 配哨兵叫醒 |
 
 ## §6 ⚠️ 踩过的坑 ⇒ 已拆到 `tts\docs\MAINTENANCE.md`
 
 - **动手改 `.ps1` / 改流程 / 排查怪现象之前，先读那一份**（13 条，每条都付过真实代价）。
 - 本文件只留"现在到哪了 + 先干什么"；坑的细节不在这里重复（否则每次会话都在读参考材料）。
-
-## §7 交接时的原始数据（万一文档与实物冲突）
-
-- 关键 guid：我 HP `cdd19a` · 我 CP `675a1f` · 他 HP `ed238f` · 他 CP `5b2c43` · 我的骰 `f0738d/187cc1/656b32/e00b2e/910636` · 他的骰 `205873/26745c/aa8300/240f79/033d23`
-- 我的手牌（**隐藏信息，已移出仓库**）：见 `local\hand\DICETHRONE_MYHAND.md`（`local\` 在 `.gitignore` 里，公开仓库看不到）
-- 他挂起时的骰面：**1 / 4 / 4 / 3 / 4**
-- git：`96dba9f`（当前：脚本全修完）· `4e5637a`（加本文件）· `49e35c9` · `781fe2c` · `3fbbde9`（基线）
 
 ## §8 上下文注入（摘要 —— 细节在 `tts\docs\MAINTENANCE.md` 第二部分）
 
@@ -111,4 +78,3 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 - 想只注入一份 ⇒ 用 `start-agent.ps1` 起（`DSH_HOME` 钉到仓库根，两个槽同路径去重）。⛔ harness **没有"忽略全局那份"的开关**。
 - 注入顺序 / 两种去重 / 字节预算 / **各类工作区会注入什么** / rulesync 试点结论 ⇒ 全在 `MAINTENANCE.md`；
   回归测试 ⇒ `tts\tests\test_agents_hygiene.ps1`；"模板即源"的复制关系 ⇒ `HARNESS_HOME_AGENTS.template.md`。
-

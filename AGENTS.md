@@ -1,13 +1,17 @@
 # AGENTS.md —— TTS 代玩项目宪章（本仓库根 = `$DSH_HOME`）
 
 > 只讲**在这个仓库里怎么干活**；跨项目纪律在 `~/.dsh\AGENTS.md`。
-> ⛔ 比分/待办/规则数字**都不放这里** ⇒ 放 `tts\docs\DICETHRONE_STATE.md`（唯一真源）。
+> ⛔ **具体某一款游戏的东西**（比分/待办/规则/卡面/卡库/牌）**不进仓库** ⇒ 放 `local\games\<游戏>\`（唯一真源在那里）。
 > 📌 接手先读 `HANDOFF.md`（现状 · 待办）· **动手改东西前读 `tts\docs\MAINTENANCE.md`**（坑 ×13 ＋ 注入/隔离）。
 
-## 这个项目
+## 这个项目是什么（⭐ **开源的边界**）
 
 在 **Tabletop Simulator** 里由 AI 代打桌游：人类只做**决策** + 点「**结束回合**」，其余棋子操作全由 agent 走 TTS 消息桥接完成。
-当前《王权骰铸》：玩家 = P1 Red 猩红女巫 · 我 = P2 Blue 月精灵。
+
+⭐ **本仓库 = 对「任何 TTS mod」都适用的通用工具链**（桥接 · 脚本 · 工作流 · 纪律）—— **这才是开源的内容**。
+⛔ **某一款游戏专属的东西不进仓库**：状态/比分 · 规则与卡面 · 卡库 · 牌与计划 · 当前在玩哪款 ⇒ 一律放 **`local\games\<游戏>\`**（`local\` 在 `.gitignore` 里）。
+**一句话判据**：**换个 mod 还成立 ⇒ 留下；只对这一局成立 ⇒ 搬进 `local\`。**
+当前在玩哪款、对应文件在哪 ⇒ `local\games\_current.md`。
 
 ## 启动（**先做，否则脚本会读写错目录**）
 
@@ -18,12 +22,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 它把 `$env:DSH_HOME` 钉到本仓库根再起 dsh。环境里若残留旧值（`<用户目录>\.dsh`），脚本会静默读写一个**不存在**的目录。
 验证：`tts\play.ps1 status` 应回 `bridge=v12-*`，`objs` 与桌面相符。
 
-## 每回合只读这一份（**别整份读手册**）
+## 每回合读什么（**别整份读手册**）
 
-`tts\docs\DICETHRONE_STATE.md` —— **现在这款 ＋ 本局状态（唯一真源：HP/CP · 状态 token · 待办 · guid）＋ 随身卡（回合步骤 · 控制台动词 · 哨兵）**；原 `CURRENT.md` / `PLAY.md` 已并入。
+1. **`local\games\<当前游戏>\STATE.md`** —— **这一局的状态**（唯一真源：比分 · token · 待办 · guid）· ⛔ **不进仓库**
+2. **`tts\docs\PLAY.md`** —— **通用**每回合卡（控制台动词 · 哨兵 · 状态页维护）· ✅ 在仓库里
 
-只在需要时查：`tts\docs\DICETHRONE_FLOW.md`（规则/骰面/伤害，顶部有路由表）· `tts\docs\TTS_RULES.md`（TTS 通用坑 ＋ **§二 工具清单**）·
-`tts\docs\USER_GUIDE.md`（人怎么用）· `tts\docs\MAINTENANCE.md`（动手改东西前）。
+当前是哪款 ⇒ `local\games\_current.md`。按需查：`tts\docs\TTS_RULES.md`（**开工前一次**：通用纪律 ＋ §二 工具清单）·
+`tts\docs\BOOTSTRAP.md`（换 mod）· `tts\docs\MAINTENANCE.md`（**动手改东西前**）· `tts\docs\USER_GUIDE.md`（人怎么用）。
 
 ## ⛔ 纪律
 
@@ -33,5 +38,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 4. **改完 `.ps1` 立刻**跑 `tts\check_ps1.ps1`（递归补 BOM + 真解析器）；**解析通过 ≠ 能用** ⇒ 再跑 `tts\tests\*.ps1`（两个离线自测，不需要 TTS）。
 5. **骰子**：`roll.ps1` 必须明说 `-Roll`/`-NoRoll`（裸调用 `exit 2`，不接触 TTS）；**判定以玩家报的为准**。
 6. **响应窗口**：玩家每次宣告 = 我的出牌机会 ⇒ **必须表态「出牌 / 不出牌」**。
-7. **隐藏信息双向**：不读对手隐藏区、不拿 guid 对身份；**我自己的手牌/计划也不外传**（手牌在 gitignore 的 `local\hand\`）。
+7. **隐藏信息双向**：不读对手隐藏区、不拿 guid 对身份；**我自己的手牌/计划也不外传**（手牌在 `local\games\<游戏>\MYHAND.md`；`local\` 不进仓库）。
 8. **判"玩家在不在"看 39999 端口**（`netstat -ano | findstr :39999`；⛔ `Get-NetTCPConnection` 在本沙箱里**会假报"没人在听"**）或跑 `play.ps1 status`；⛔ 别用 `Get-Process`（沙箱里根本看不见 TTS 进程）。
