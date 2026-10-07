@@ -117,6 +117,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 12. **端口探测工具自己会撒谎**（2026-10-08）：`Get-NetTCPConnection -LocalPort 39999` 在本沙箱里**看不到明明在听的端口**
     （`netstat -ano` 和原始 `TcpClient.Connect` 都能看到）。我据此差点告诉用户"3080 空闲"，而 3080 上正跑着这个会话。
     ⇒ **判端口一律用 `netstat -ano | findstr :<port>` 或原始 TCP 连接**；别信 `Get-NetTCPConnection`。（与 §6.8/§6.9 同一课：**验证工具本身也要验**。）
+13. **这个 harness 的工具壳是 Windows PowerShell 5.1**（`$PSVersionTable` = `5.1 Desktop`，不是 PS7）⇒ 我**直接**用 `Get-Content` /
+    `Select-String` 读这些中文文件会按 **ANSI** 解码，**打印出来是乱码**（文件本身没坏，`read` 工具读同一个文件是好的）。
+    修法：`Get-Content ... -Encoding UTF8`，或 `[System.IO.File]::ReadAllText/ReadAllLines`（默认 UTF-8）。
+    ⚠️ **ASCII 模式的搜索不受影响**（`<user>`、`C:\Users\` 这类字节在 GBK 下一样）⇒ 之前的隐私扫描结论仍然有效；受影响的是**中文内容与中文模式**。
 
 ## §7 交接时的原始数据（万一文档与实物冲突）
 
@@ -124,3 +128,39 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 - 我的手牌（**隐藏信息，已移出仓库**）：见 `tts\docs\archive\DICETHRONE_MYHAND.md`（该目录在 `.gitignore` 里，公开仓库看不到）
 - 他挂起时的骰面：**1 / 4 / 4 / 3 / 4**
 - git：`96dba9f`（当前：脚本全修完）· `4e5637a`（加本文件）· `49e35c9` · `781fe2c` · `3fbbde9`（基线）
+
+## §8 上下文注入与隔离（DSH 的**实际**规则，2026-10-08 读源码确认）
+
+> 源码：`@deepseek-ai/dsh-agent-instructions/lib/index.js`。**每次请求都注入**，所以这是本项目的"固定税"。
+
+**注入什么**（按顺序）：
+1. `$DSH_HOME\AGENTS.md` —— **用户全局**；文件名是**常量**，只要存在就第一个加进来
+2. **项目链**：从**项目根**（`.git` 标记）**逐级到工作目录**，每级找 `AGENTS.md`/`CLAUDE.md`，再找 `AGENTS.local.md`/`CLAUDE.local.md`
+3. 去重只有两种：**绝对路径**去重（同一份文件不会算两次）＋ **同目录内**去掉 trim 后内容相同的兄弟文件 ——
+   源码原话：**跨目录即使内容完全相同也绝不合并**
+4. 最后按**字节预算**渲染（超预算时先丢"更宽泛的"，即离项目根更远的）
+
+**能用来"隔离"的旋钮**（`agent-instructions` 插件配置，默认值）：
+
+| 旋钮 | 默认 | 用途 |
+|---|---|---|
+| `projectRootMarkers` | `['.git']` | 决定"项目根"在哪 ⇒ 决定链从哪开始 |
+| `instructionFileCandidates` | `['AGENTS.md','CLAUDE.md']` | 只认一个名字就改这里（想彻底不读 `CLAUDE.md`） |
+| `localInstructionFileCandidates` | `['AGENTS.local.md','CLAUDE.local.md']` | **机器专属 overlay**：不进仓库（**已 gitignore**）、**不参与去重**、叠加在最上面 |
+| `maxBytes` | 由 harness 给 | 预算。⚠️ **别拿它当隔离手段** —— 它只会**截断**，会静默丢规则 |
+
+⛔ **这个版本没有"忽略用户全局那份"的开关** —— `USER_GLOBAL_FILE = "AGENTS.md"` 是常量，存在就一定先加。
+⇒ 要让全局那份不参与注入，**只有两条**：① `$DSH_HOME` 里没有 `AGENTS.md`；② **把 `DSH_HOME` 钉到本仓库根**（`start-agent.ps1` 就是这么做的）——
+此时全局槽与项目槽指向**同一个绝对路径** ⇒ 按路径去重成**一份**（实测：2960 + 3925 = 6885 B/请求 → 2960 B）。
+⚠️ 代价：`DSH_HOME` 同时是 harness 的家（sessions/凭据/profiles）⇒ **本机**要搬迁；**新机器**从一开始就这么配则没有代价。
+
+**本项目的隔离姿势**：
+
+| 内容 | 放哪 | 理由 |
+|---|---|---|
+| 项目专属纪律（骰子护栏/路径/param 规则） | 仓库的 `AGENTS.md` | 随 clone 走，人人相同（约 2.9 KB） |
+| 机器专属（本机路径/端口/偏好） | `AGENTS.local.md` | overlay，**已 gitignore**，不会误提交进公开仓库 |
+| 跨项目通用纪律 | `$DSH_HOME\AGENTS.md` | 各机器自己的事，仓库管不着 |
+
+**想跨工具统一**（Cursor / Copilot / Claude Code / Codex 各读各的规则文件）⇒ 开源方案 **[rulesync](https://rulesync.dyoshikawa.com/)**（MIT）：
+单一真源 → 按 target 生成各家文件、支持 project/global 两套作用域；它的支持表里**已列 DeepSeek Harness**。

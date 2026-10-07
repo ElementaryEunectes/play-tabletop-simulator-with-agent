@@ -35,6 +35,11 @@ tts/docs/archive/
 saves_backup_*/
 tts/docs/*_log.txt
 
+# ---- 机器专属的 agent overlay（DSH 会叠加注入，但绝不该进仓库）----
+AGENTS.local.md
+CLAUDE.local.md
+*.local.md
+
 # ---- 本机启动脚本（路径/环境相关）----
 start-dsh.cmd
 start-dsh.ps1
