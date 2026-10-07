@@ -12,6 +12,9 @@ param(
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
 if ($SavesDir -eq '') { $SavesDir = $TtsSavesDir }
+# Backfill AFTER config.ps1 (param() defaults are evaluated before the dot-source).
+# Restored 2026-10-08: the batch-replace incident had eaten this line.
+if ($Out -eq '') { $Out = (Join-Path $DshCache 'bag_contents.txt') }
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Web.Extensions
 $ser = New-Object System.Web.Script.Serialization.JavaScriptSerializer

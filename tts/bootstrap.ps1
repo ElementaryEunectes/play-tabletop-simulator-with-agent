@@ -17,6 +17,10 @@ param(
     [string]$Out   = ''
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
+# Backfills AFTER config.ps1 -- restored 2026-10-08. Without them the script exited
+# "ERR no index" (or wrote to an empty path) no matter how it was called.
+if ($Index -eq '') { $Index = (Join-Path $DshCache 'obj_index.csv') }
+if ($Out   -eq '') { $Out   = (Join-Path $DshCache 'session_map.md') }
 
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath $Index)) { Write-Host ("ERR no index; run obj_index.ps1 first ({0})" -f $Index); exit 1 }

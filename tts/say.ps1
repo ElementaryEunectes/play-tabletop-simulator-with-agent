@@ -1,4 +1,4 @@
-# say.ps1 - append ONE message to the TTS dialogue tab as a rolling window.
+﻿# say.ps1 - append ONE message to the TTS dialogue tab as a rolling window.
 #
 # WHY: the notebook tab only grows. Rewriting the whole body each turn meant every
 # later tabread paid to echo all of it. This script:

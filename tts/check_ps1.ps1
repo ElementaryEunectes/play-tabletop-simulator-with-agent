@@ -30,7 +30,11 @@ foreach ($f in $all) {
     # WriteAllText(..., UTF8Encoding(true)) then writes ANOTHER one -> the BOM multiplies
     # on every run and PowerShell finally refuses to parse `param(`. Strip it first.
     $text = $utf8.GetString($bytes).TrimStart([char]0xFEFF)
-    if ($hadBom) { [System.IO.File]::WriteAllText($f.FullName, $text, $enc) }
+    # Write back ONLY when the BOM is missing. (This condition used to read `if ($hadBom)`,
+    # i.e. it rewrote exactly the files that were already fine and never fixed the broken
+    # ones -- which is why three Chinese .ps1 kept failing to parse while this script kept
+    # reporting "BOM-FIXED". Caught 2026-10-08.)
+    if (-not $hadBom) { [System.IO.File]::WriteAllText($f.FullName, $text, $enc) }
     $errs = $null
     [void][System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$errs)
     $n = @($errs).Count

@@ -15,6 +15,10 @@ param(
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
 if ($SavesDir -eq '') { $SavesDir = $TtsSavesDir }
+# Backfill AFTER config.ps1 -- never inside param() defaults (they are evaluated before the
+# dot-source). Restored 2026-10-08: the batch-replace incident had eaten this line, so every
+# call exported the whole index to an empty path.
+if ($Out -eq '') { $Out = (Join-Path $DshCache 'obj_index.csv') }
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Web.Extensions
 $ser = New-Object System.Web.Script.Serialization.JavaScriptSerializer

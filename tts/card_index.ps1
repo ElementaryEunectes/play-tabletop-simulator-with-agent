@@ -1,4 +1,4 @@
-# card_index.ps1 - map every card in the save to its local cached image file.
+﻿# card_index.ps1 - map every card in the save to its local cached image file.
 #
 # THE POINT: this is how cards get identified without a screenshot. Each card's
 # CustomDeck.<CardID>.FaceURL flattens (strip non-alphanumerics) to a filename in

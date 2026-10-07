@@ -1,4 +1,4 @@
-# guidinfo.ps1 - extract identity fields for specific GUIDS straight out of the save text.
+﻿# guidinfo.ps1 - extract identity fields for specific GUIDS straight out of the save text.
 #
 # WHY THIS EXISTS: FaceURL alone does NOT identify a card. When a deck's face image is a
 # SHEET (NumWidth x NumHeight grid holding several different cards), every card in the deck

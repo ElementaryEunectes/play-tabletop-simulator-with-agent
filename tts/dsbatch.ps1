@@ -1,4 +1,4 @@
-# dsubatch.ps1 - run MANY TTS commands inside ONE PowerShell process.
+﻿# dsubatch.ps1 - run MANY TTS commands inside ONE PowerShell process.
 #
 # WHY
 #   The expensive part of talking to TTS was never the socket: it was spawning a fresh

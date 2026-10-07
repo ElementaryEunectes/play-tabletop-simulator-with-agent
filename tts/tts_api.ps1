@@ -3,7 +3,7 @@
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File tts_api.ps1 -Action getscripts
 #   powershell -ExecutionPolicy Bypass -File tts_api.ps1 -Action exec -Guid "-1" -Lua "print(1)"
-#   powershell -ExecutionPolicy Bypass -File tts_api.ps1 -Action setglobal -Lua "print(ChiC)"
+#   powershell -ExecutionPolicy Bypass -File tts_api.ps1 -Action setglobal -Lua "print('hi')"
 #
 # Protocol: TTS listens on 39999, editor connects as TCP client.
 # Editor also listens on 39998 to receive TTS replies:
@@ -11,6 +11,12 @@
 #   editor -> TTS: 0=GetScripts 1=SaveAndPlay 2=CustomMessage 3=ExecuteLua(needs guid)
 # Outgoing field is "messageID". Keep this file ASCII-only: PS 5.1 reads
 # BOM-less files as ANSI and non-ASCII bytes corrupt the parser.
+#
+# NOTE 2026-10-08: body repaired after the batch-replace incident. The damage pattern was:
+# "$" -> "i", ")" deleted (including in "@()"), "'" -> "C", "J" deleted (JSON -> SON), plus
+# one hardcoded C:\Users\... output path. Damage was PATCHY - clean and corrupt lines were
+# interleaved - so never "fix" this file by search/replace; audit it line by line and run
+# check_ps1.ps1 afterwards.
 
 param(
     [ValidateSet('getscripts','exec','setglobal','watch')]
@@ -22,8 +28,12 @@ param(
     [switch]$RawStdin,
     [int]$ListenSec = 15
 )
+. (Join-Path $PSScriptRoot 'config.ps1')
+# param() must stay the first statement, so the default is resolved here, after config.ps1
+# has defined $DshCache (never reference config variables inside param() defaults).
+if ($Out -eq '') { $Out = (Join-Path $DshCache 'tts_scripts_raw.json') }
 
-$ErrorActionPreference = CStopC
+$ErrorActionPreference = 'Stop'
 $TtsPort    = 39999
 $EditorPort = 39998
 
@@ -36,8 +46,8 @@ function Read-Available {
     param($Stream, [int]$WaitMs)
     $buf = New-Object byte[] 524288
     $sb  = New-Object System.Text.StringBuilder
-    $sw  = [System.Diagnostics.Stopwatch]::StartNew(
-    $stream.ReadTimeout = 1000
+    $sw  = [System.Diagnostics.Stopwatch]::StartNew()
+    $Stream.ReadTimeout = 1000
     while ($sw.ElapsedMilliseconds -lt $WaitMs) {
         try {
             if ($Stream.DataAvailable) {
@@ -50,7 +60,7 @@ function Read-Available {
             }
         } catch { break }
     }
-    return $sb.ToString(
+    return $sb.ToString()
 }
 
 function Send-Message {
@@ -58,7 +68,7 @@ function Send-Message {
     $json  = $Body | ConvertTo-Json -Compress -Depth 20
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
     $Stream.Write($bytes, 0, $bytes.Length)
-    $Stream.Flush(
+    $Stream.Flush()
     return $json
 }
 
@@ -67,7 +77,7 @@ $editor = $null
 $editorOk = $false
 try {
     $editor = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $EditorPort)
-    $editor.Start(
+    $editor.Start()
     $editorOk = $true
     Write-Host "  listening on $EditorPort OK"
 } catch {
@@ -78,7 +88,7 @@ Write-Host "=== [2] connect to TTS on $TtsPort ==="
 $client = New-Object System.Net.Sockets.TcpClient
 $client.Connect('127.0.0.1', $TtsPort)
 Write-Host "  connected to $($client.Client.RemoteEndPoint)"
-$stream = $client.GetStream(
+$stream = $client.GetStream()
 
 if ($Action -eq 'getscripts') {
     Write-Host "=== [3] send messageID 0 (Get Lua Scripts) ==="
@@ -98,7 +108,7 @@ elseif ($Action -eq 'setglobal') {
     $body = @{
         messageID = 1
         scriptStates = @(
-            @{ name = CGlobalC; guid = '-1'; script = $Lua; ui = '' }
+            @{ name = 'Global'; guid = '-1'; script = $Lua; ui = '' }
         )
     }
     $sent = Send-Message -Stream $stream -Body $body
@@ -110,7 +120,7 @@ elseif ($Action -eq 'watch') {
 
 if ($RawStdin) {
     Write-Host "=== [3b] read RAW json from stdin (no arg-quoting damage) ==="
-    $RawJson = [Console]::In.ReadToEnd(
+    $RawJson = [Console]::In.ReadToEnd()
     Write-Host "  read $($RawJson.Length) chars"
 }
 
@@ -119,22 +129,22 @@ if ($RawJson) {
     Write-Host "  -> $RawJson"
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($RawJson)
     $stream.Write($bytes, 0, $bytes.Length)
-    $stream.Flush(
+    $stream.Flush()
 }
 
 Write-Host "=== [4] waiting for TTS reply (max $ListenSec s) ==="
 $all = New-Object System.Text.StringBuilder
-$accepted = @(
+$accepted = @()
 $msgCount = 0
 if ($editorOk) {
     $deadline = (Get-Date).AddSeconds($ListenSec)
     while ((Get-Date) -lt $deadline) {
-        if ($editor.Pending() {
-            $ec = $editor.AcceptTcpClient(
+        if ($editor.Pending()) {
+            $ec = $editor.AcceptTcpClient()
             $accepted += $ec
             $msgCount++
             Write-Host "  TTS connected back on $EditorPort (connection #$msgCount)"
-            $es = $ec.GetStream(
+            $es = $ec.GetStream()
             $chunk = Read-Available -Stream $es -WaitMs 2500
             if ($chunk.Length -gt 0) {
                 [void]$all.Append($chunk)
@@ -143,7 +153,7 @@ if ($editorOk) {
             } else {
                 Write-Host "    (no data)"
             }
-            $ec.Close(
+            $ec.Close()
         } else {
             Start-Sleep -Milliseconds 100
         }
@@ -153,7 +163,7 @@ if ($editorOk) {
 $inline = Read-Available -Stream $stream -WaitMs 800
 if ($inline.Length -gt 0) { [void]$all.Append($inline) }
 
-$raw = $all.ToString(
+$raw = $all.ToString()
 if ($raw.Length -eq 0) {
     Write-Host "  NO REPLY received."
     Write-Host "  possibilities: (a) no object in this save has a Lua script, so msg 0 has nothing to report;"
@@ -161,27 +171,27 @@ if ($raw.Length -eq 0) {
     Write-Host "                 (c) channel is one-way only."
 } else {
     Write-Host "  received $($raw.Length) chars"
-    $outPath = if ($Out) { $Out } else { '':\Users\<user>\.dsh\tts_scripts_raw.jsonC }
+    $outPath = if ($Out) { $Out } else { Join-Path $DshCache 'tts_scripts_raw.json' }
     Save-Text -Path $outPath -Text $raw
     Write-Host "  saved: $outPath"
     try {
         $parsed = $raw | ConvertFrom-Json
-        Write-Host "  (SON parsed OK; messageID=$($parsed.messageID)"
+        Write-Host "  JSON parsed OK; messageID=$($parsed.messageID)"
         if ($parsed.scriptStates) {
             Write-Host "  scriptStates count: $($parsed.scriptStates.Count)"
             $parsed.scriptStates | ForEach-Object {
                 $sl = if ($_.script) { $_.script.Length } else { 0 }
                 $ul = if ($_.ui) { $_.ui.Length } else { 0 }
-                Write-Host ("    guid={0,-10} name=C{1}C script={2} ui={3}" -f $_.guid, $_.name, $sl, $ul)
+                Write-Host ("    guid={0,-10} name='{1}' script={2} ui={3}" -f $_.guid, $_.name, $sl, $ul)
             }
         }
     } catch {
-        Write-Host "  (SON parse failed: $($_.Exception.Message)"
+        Write-Host "  JSON parse failed: $($_.Exception.Message)"
         Write-Host ($raw.Substring(0, [Math]::Min(500, $raw.Length)))
     }
 }
 
-foreach ($c in $accepted) { try { $c.Close( } catch {} }
-$client.Close(
-if ($editorOk) { $editor.Stop( }
+foreach ($c in $accepted) { try { $c.Close() } catch {} }
+$client.Close()
+if ($editorOk) { $editor.Stop() }
 Write-Host "=== done ==="

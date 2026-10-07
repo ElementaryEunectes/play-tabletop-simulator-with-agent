@@ -1,4 +1,4 @@
-# grab_window.ps1 - capture a window's pixels to a PNG, trying several strategies.
+﻿# grab_window.ps1 - capture a window's pixels to a PNG, trying several strategies.
 #
 # Why this exists: screen-control tools (MAA and friends) get screen control from the OS,
 # not from the game. On Windows that means one of:

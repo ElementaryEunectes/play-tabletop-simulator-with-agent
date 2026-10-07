@@ -27,6 +27,9 @@ param(
 . (Join-Path $PSScriptRoot 'config.ps1')
 if ($Root -eq '') { $Root = $WorkspaceRoot }
 if ($SavesDir -eq '') { $SavesDir = $TtsSavesDir }
+# Backfill AFTER config.ps1. Restored 2026-10-08: the incident had eaten this line, so the
+# one script that is allowed to write a save read its Lua from an empty path.
+if ($LuaFile -eq '') { $LuaFile = (Join-Path $DshTts 'lua\dsh_global.lua') }
 $ErrorActionPreference = 'Stop'
 $log = New-Object System.Collections.ArrayList
 function L { param([string]$m) [void]$log.Add([string]$m) }

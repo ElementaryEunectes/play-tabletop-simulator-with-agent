@@ -1,4 +1,4 @@
-# diff_index.ps1 - "what did the player just do?" by diffing two object-index snapshots.
+﻿# diff_index.ps1 - "what did the player just do?" by diffing two object-index snapshots.
 #
 # WHY THIS EXISTS
 #   TTS gives us no event stream. We cannot subscribe to "the player clicked the quick
@@ -32,6 +32,12 @@ param(
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
 if ($LiveIndex -eq '') { $LiveIndex = (Join-Path $DshTts 'live_index.ps1') }
+# Backfills AFTER config.ps1 -- restored 2026-10-08. Without them BOTH modes died, because
+# Test-Path / Copy-Item were handed an empty path ("ERR missing " / "ERR no live index at ").
+# After  = the live snapshot that diff_hidden.ps1 also reads;
+# Before = the frozen baseline this script writes with -Snapshot.
+if ($After  -eq '') { $After  = (Join-Path $DshCache 'live_index.csv') }
+if ($Before -eq '') { $Before = (Join-Path $DshCache 'baseline.csv') }
 
 $ErrorActionPreference = 'Stop'
 

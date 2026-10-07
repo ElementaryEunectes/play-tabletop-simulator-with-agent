@@ -1,4 +1,4 @@
-# bag_list.ps1 - list the contents of a container (deck/bag) from the newest autosave.
+﻿# bag_list.ps1 - list the contents of a container (deck/bag) from the newest autosave.
 #
 # WHY: decks/bags nest their cards under ContainedObjects, which in-game getObjects()
 # does NOT return - so Lua sees fewer objects than the save actually holds.
