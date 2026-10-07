@@ -164,3 +164,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 
 **想跨工具统一**（Cursor / Copilot / Claude Code / Codex 各读各的规则文件）⇒ 开源方案 **[rulesync](https://rulesync.dyoshikawa.com/)**（MIT）：
 单一真源 → 按 target 生成各家文件、支持 project/global 两套作用域；它的支持表里**已列 DeepSeek Harness**。
+
+### 试点结论（2026-10-08，**实测 rulesync 27.0.0**）—— 跑通了，但**建议暂不采纳**
+
+做法：`out\rulesync_pilot\` 里放三份源 —— `00-generic.md` / `10-project.md`（都 `root: true`）＋ `90-machine.md`（`localRoot: true`），
+`rulesync generate --targets agentsmd,claudecode --features rules` ⇒ 合成**单个** `AGENTS.md`（**5555 B / 77 行**），
+顺序＝**文件名序**、段间空行分隔 ⇒ "通用 ＋ 项目"合并成一份这件事它做得对，`doctor` 与 `--dry-run` 也都能用。
+
+- ⚠️ **收益来源要说清**：今天两份注入合计 **6885 B**（项目 2960 ＋ 全局 3925），试点产物 **5555 B（−19%）** ——
+  但**省下来的不是 rulesync 的功劳，是我把"通用那半"写瘦了**（砍掉 §4 索引/加载机制与 §5）。
+  ⇒ **不引入 rulesync 也能拿到这 19%**，只要把全局那份压瘦。
+- 三条硬事实（都实测）：
+  1. **rulesync 没有"DSH 用户全局"target**：global 模式只支持 Claude Code / Copilot / OpenCode
+     ⇒ **`$DSH_HOME\AGENTS.md` 它生成不了**，得额外一步复制（那路径还在工作区之外 ⇒ 需提权）。
+  2. **`localRoot: true` 必须配同 target 的 `root: true`**，否则直接报错：
+     `localRoot: true requires a root: true rule to exist for target 'claudecode' (found in .rulesync\rules\90-machine.md)`
+     ⇒ 想隔离出一份 `.local.md`，就得顺带生成那个工具的根文件。
+  3. **它会往产物里塞自家样板**：`agentsmd` target 在开头插
+     `# Additional Conventions Beyond the Built-in Functions` ＋ 一句英文说明（≈150 B，**每次请求都付**），并且**挪走了我们的 H1 位置**。
+- **结论**：对本项目（Windows / PowerShell / 单一消费者只 DSH）⇒ **不引入**（Node 工具链 ＋ 目标样板 ＋ 复制步骤，换不到东西）。
+  **但照抄它的"三份源"纪律**（就是本节上面那张表）；真要跨工具时（Cursor/Copilot/Codex）再上它。
+  它最值钱的是 `generate --check`（CI 防漂移）—— 我们要的话，一条"AGENTS.md 体积上限 ＋ 必含小节"的检查就能替代。
