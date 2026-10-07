@@ -25,7 +25,7 @@ param(
     [int]$DryRun = 0
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
-if ($Root -eq '') { $Root = $DshHome }
+if ($Root -eq '') { $Root = $WorkspaceRoot }
 if ($SavesDir -eq '') { $SavesDir = $TtsSavesDir }
 $ErrorActionPreference = 'Stop'
 $log = New-Object System.Collections.ArrayList

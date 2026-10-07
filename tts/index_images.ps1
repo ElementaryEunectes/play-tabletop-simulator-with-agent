@@ -1,4 +1,4 @@
-﻿# index_images.ps1 - build a searchable index of the TTS image cache.
+# index_images.ps1 - build a searchable index of the TTS image cache.
 #
 # WHY: every card in the save carries CustomDeck.<CardID>.FaceURL, and TTS caches the
 # downloaded image under Mods\Images with the URL flattened. So a card can be turned
@@ -8,10 +8,11 @@
 # Card art is 600x850 (portrait); board/tile art has other shapes. Recording the
 # dimensions lets us filter "is this a card" cheaply.
 param(
-    [string]$ImgCache = $TtsImagesDir,
+    [string]$ImgCache = '',
     [string]$Out = ''
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
+if ($ImgCache -eq '') { $ImgCache = $TtsImagesDir }
 if ($Out -eq '') { $Out = (Join-Path $DshCache 'image_index.csv') }
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing

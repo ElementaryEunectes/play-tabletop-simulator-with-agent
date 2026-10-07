@@ -1,47 +1,67 @@
-# AGENTS.md —— 平台宪章（**跨项目不变**的东西）
+# AGENTS.md —— **TTS 代玩项目宪章**（`C:\Users\<user>\projects\tts-agent`）
 
-> ⛔ **本文件不放任何单一项目的领域知识**（某项工作怎么做、某局游戏的规则/坐标/状态，都在各自的文档里，按下面 §4 索引去读）。
-> 放在这里的东西**每次会话都会自动注入**并计费 ⇒ 只留"放之四海皆准"的几条。
+> 这是**项目**级宪章：只讲"在这个项目里怎么干活"。
+> 跨项目纪律在 `~/.dsh\AGENTS.md`（自动注入，别在这里重复）。
+> ⛔ 具体某局游戏的规则/比分**不放这里** —— 放 `tts\docs\<游戏>_*.md`。
 
-## 1. 语言与文件约定
+## 这个项目是什么
 
-- **含中文的 `.ps1` 必须存成 UTF-8 带 BOM**：PS 5.1 读到无 BOM 的文件会按 ANSI 解释 ⇒ 中文注释变乱码 ⇒ **语法报错、脚本"秒挂"**。
-  编辑工具重写文件常常**悄悄丢掉 BOM** ⇒ **改完任何 `.ps1` 都跑一次语法校验**（本项目例：`tts\check_ps1.ps1`，会补 BOM 并用真解析器校验）。
-- 新写的一次性脚本，**注释与输出尽量用 ASCII**，最省事。
-- 改配置/脚本前先 **read** 现状；**一次编辑只动一处**，改完回读确认。
+在 **Tabletop Simulator** 里由 AI 代打桌游：**玩家（人类）= 只做决策 + 点「结束回合」**；其余棋子操作全部由 agent 通过
+TTS 消息桥接完成。当前在打**《王权骰铸》（Dice Throne）**，与 **P1（玩家，Red/猩红女巫）** 对局，我 = **P2（Blue/月精灵）**。
 
-## 2. 执行约定（本机 Windows/PowerShell）
+## 怎么启动（**先做这一步，否则脚本会读错目录**）
 
-- **直接 `& xxx.ps1` 可能被执行的策略挡下** ⇒ 一律走：
-  `powershell -NoProfile -ExecutionPolicy Bypass -File '<绝对路径>'`。
-- 需要**提权**的操作（写系统目录、写游戏存档等）**只做一次、并且预期会弹审批**；能避免就避免。
-- 长任务用**后台作业**跑，别阻塞；不要用 `sleep`/轮询等它，**靠通知或哨兵**。
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<user>\projects\tts-agent\start-agent.ps1
+# 它会把 $env:DSH_HOME 钉到项目根，再启动 dsh web
+```
+**为什么必须**：`$env:DSH_HOME` 有双重含义 —— ① harness 自己的 home ② 本项目的 `tts\config.ps1` 解析出的工作区根
+（`cache\ out\ logs\ shots\` 都在那）。若环境里还留着**旧值**（例如 `C:\Users\<user>\.dsh`），脚本会静默读写一个**不存在**的目录。
 
-## 3. 操作纪律（这几条真的每次都省钱/省事）
+## 一局的固定读法（**别整份读手册**）
 
-1. **写操作前先打印目标值/坐标**并核对，再把命令发出去。
-2. **被中断的工具调用 ≠ 没执行** ⇒ 中断后**必须重读状态再重跑**。
-3. **一次工具调用干完一组事**（能合并的命令就合并）。
-4. **不轮询、不 sleep**：等外部事件用哨兵/通知，别反复查。
-5. **大文档外包**：几万字的规则书、陌生代码库、长调研 ⇒ 交给**子代理**读，只把结论带回主线。
-6. **回复尽量短**：先说结论和下一步，细节按需展开。
-7. **失败就是失败**：非零退出、报错、验证不一致 ⇒ **查清再往下走**，别把"看起来成了"当成成了。
+| 顺序 | 读什么 | 作用 |
+|---|---|---|
+| 1 | `tts\docs\CURRENT.md` | 现在在玩哪款 + 指向哪份 STATE/FLOW（1 行） |
+| 2 | `tts\docs\DICETHRONE_STATE.md` | ⭐ **唯一真源**：HP/CP · 状态 token · 手牌 · **待办** |
+| 3 | `tts\docs\PLAY.md` | **每局随身卡**：本局控制台动词 + 每回合步骤 + 哨兵/STATE 约定 |
+| 4 | 按需查小节 | `tts\docs\DICETHRONE_FLOW.md`（规则/技能/骰面/伤害类型） · `cache\dicethrone_cards.md`（卡面文本） |
 
-## 4. 文档索引（**要做什么 ⇒ 读哪份**）
+**TTS 通用规则**（工具地图 · 「结束回合」按钮 · 桥接坑 · 隐藏信息纪律 · 换局流程）在 **`tts\docs\TTS_RULES.md`** —— 开工读一次。
+**脚本清单**（哪个能改、哪个休眠、跨脚本引用图）在 **`tts\SCRIPTS.md`**。
 
-| 要干什么 | 读什么 |
-|---|---|
-| 在 **Tabletop Simulator 里代玩桌游**（任何一款） | **`~/.dsh\tts\docs\TTS_RULES.md`** → 再按它指的 `CURRENT.md` / `<游戏>_STATE.md` / `PLAY.md` 走 |
-| TTS 换局 / 冷启动 / 换模组 | `~/.dsh\tts\docs\BOOTSTRAP.md` |
-| TTS 文档与目录全索引 | `~/.dsh\tts\docs\README.md` |
-| **其它项目** | **该项目自己目录下的 `AGENTS.md`**（以及 `AGENTS.local.md` overlay）——从**项目目录**启动会话即可自动加载 |
+## 目录怎么分
 
-- 加载机制（DSH）：每次请求注入 **`$DSH_HOME/AGENTS.md`（本文件）＋ 从项目根到工作目录的项目链**；
-  候选名 `AGENTS.md` / `CLAUDE.md`（基础）＋ `AGENTS.local.md` / `CLAUDE.local.md`（叠加 overlay，不参与去重）；
-  项目根由 `.git` 标记；预算 64 KB（超了先丢"更宽泛的"）。
-- ⇒ **想让某项目不被别的东西干扰**：① 本文件保持通用、精简 ② 该项目目录里放自己的 `AGENTS.md`，并从该目录启动。
+```
+tts-agent\                      ← 项目根 = 工作区根（$DSH_HOME）
+├── AGENTS.md                   本文件（项目宪章）
+├── README.md                   对外说明（含路径配置与改码规矩）
+├── start-agent.ps1             启动器：钉好 DSH_HOME 再起 dsh
+├── tts\
+│   ├── config.ps1              ⭐ 唯一的路径解析层（其余脚本只引用它的变量）
+│   ├── *.ps1                   现役工具（清单见 tts\SCRIPTS.md）
+│   ├── lua\dsh_global.lua      TTS 模组的桥接脚本（install_save2.ps1 依赖，别动）
+│   └── docs\                   全部文档（索引 docs\README.md；归档 docs\archive\）
+└── cache\ logs\ shots\ out\    运行时产物（不进 git；由脚本重建）
+```
 
-## 5. 边界
+## ⛔ 项目专属纪律
 
-- 每个项目把**领域知识**写在自己目录的文档里；本文件只在"**所有项目都适用**"时才加一条。
-- 发现本文件里混进了某项目的专属内容 ⇒ **立刻搬走**（那里每次会话都在重复计费）。
+1. **改任何 `.ps1` 之前先 `git commit`**（本仓库已初始化；`git checkout -- <file>` 就是后悔药）。
+2. **`param()` 必须是脚本第一条语句**：`config.ps1` 的 dot-source 要放在**它之后**；
+   **不要在 `param()` 默认值里引用 config 变量**（那时还没求值）—— 正确写法是默认 `''`，dot-source 之后再 `if ($X -eq '') { $X = ... }` 回填。
+3. **路径一律走 `config.ps1`**（`$WorkspaceRoot` / `$DshTts` / `$DshCache` / `$DshOut` / `$DshLogs` / `$DshShots` / `$TtsSavesDir` / `$TtsImagesDir`）；
+   ⛔ **不许再出现 `C:\Users\<名字>` 这种硬编码**。
+4. **改完立刻** `powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1`（补 BOM + 真解析器全量校验）。
+5. **骰子读数**：`roll.ps1 -Tray <seat>` **不带 `-NoRoll` 就是"重新掷"**；只想看当前骰面必须加 `-NoRoll`。
+   **对局判定以玩家报的为准**，工具读数只是复核。
+6. **响应窗口**：玩家每次宣告动作 = 给我一次出牌机会 ⇒ **必须表态**（"出牌 / 不出牌"），不能当他已定型直接结算。
+7. **隐藏信息双向**：不读对手隐藏区、不拿 guid 对身份；**我自己的手牌/计划也不说**。
+
+## 已知状态（2026-10-07）
+
+- **对局：挂起中**（玩家说"先结束游戏"）。续局照 `tts\docs\DICETHRONE_STATE.md` 的「恢复打法」三步；
+  当前盘面：**我 27/4 · 玩家 41/40（见 STATE）** · 物件 136 · 桥接 `v12-callx`。
+- **脚本：24/28 可用**。待修 4 个：`tts\diff_index.ps1`（常用：快照差异）· `tts\card_index.ps1` · `tts\index_images.ps1`（一次性）· `tts\tts_api.ps1`（39999 API 退路）。
+  它们是被一次"批量替换"事故打坏的（见 `~/.dsh\AGENTS.md` §3.8），**头部说明与用法都还在，照着重写即可**；修完请跑 `check_ps1.ps1` 并提交。
+- **工作区已从 `~/.dsh` 迁出**：`~/.dsh` 现在只放 harness 自己的东西（sessions/storages/profiles/attachments），项目与它的产物都在本项目根。

@@ -1,4 +1,4 @@
-﻿# diff_index.ps1 - "what did the player just do?" by diffing two object-index snapshots.
+# diff_index.ps1 - "what did the player just do?" by diffing two object-index snapshots.
 #
 # WHY THIS EXISTS
 #   TTS gives us no event stream. We cannot subscribe to "the player clicked the quick
@@ -24,13 +24,14 @@
 param(
     [string]$Before  = '',
     [string]$After   = '',
-    [string]$LiveIndex = (Join-Path $DshTts 'live_index.ps1'),
+    [string]$LiveIndex = '',
     [double]$MoveTol = 0.30,     # world units; below this it is physics jitter, not a move
     [double]$RotTol  = 25.0,     # degrees
     [int]$MaxRows    = 40,
     [switch]$Snapshot
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
+if ($LiveIndex -eq '') { $LiveIndex = (Join-Path $DshTts 'live_index.ps1') }
 
 $ErrorActionPreference = 'Stop'
 

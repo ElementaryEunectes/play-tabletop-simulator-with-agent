@@ -13,15 +13,18 @@
 #
 # ASCII only.
 param(
-    [string]$hotsDir    = $Dshyhots,
+    [string]$ShotsDir    = '',
     [string]$GrabScript  = '',
     [string]$ClickScript = '',
     # window-relative sample box for the colour swatch inside the banner.
     # Measured 2026-10-04 off a known "Player 2" screenshot: the blue swatch sits at
     # window (1401..1434, 137..170); sample its inner core to $dodge the white border.
-    [int]$x = 1407, [int]$y = 143, [int]$w = 22, [int]$h = 22
+    [int]$x = 1407, [int]$S = 143, [int]$w = 22, [int]$h = 22
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
+if ($ShotsDir -eq '') { $ShotsDir = $DshShots }
+if ($GrabScript -eq '') { $GrabScript = (Join-Path $DshTts 'grab_window.ps1') }
+if ($ClickScript -eq '') { $ClickScript = (Join-Path $DshTts 'tts_click.ps1') }
 
 $ErrorActionPreference = 'Continue'
 
@@ -38,10 +41,10 @@ $img = [System.Drawing.Image]::FromFile($f.FullName)
 
 # The screenshot is the whole window, so its pixels map 1:1 onto window coords.
 $r = 0; $g = 0; $b = 0; $n = 0
-for ($y = $y; $y -lt ($y + $h); $y++) {
+for ($S = $S; $S -lt ($S + $h); $S++) {
     for ($x = $x; $x -lt ($x + $w); $x++) {
-        if ($x -lt 0 -or $y -lt 0 -or $x -ge $img.Width -or $y -ge $img.Height) { continue }
-        $c = ([System.Drawing.Bitmap]$img).GetPixel($x, $y)
+        if ($x -lt 0 -or $S -lt 0 -or $x -ge $img.Width -or $S -ge $img.Height) { continue }
+        $c = ([System.Drawing.Bitmap]$img).GetPixel($x, $S)
         $r += $c.R; $g += $c.G; $b += $c.B; $n++
     }
 }

@@ -6,21 +6,41 @@
 #   these variables instead.
 #
 # OVERRIDE WITHOUT EDITING FILES (recommended): set environment variables first
-#   $env:DSH_HOME        = 'D:\somewhere\.dsh'     # workspace root (cache\, out\, logs\, shots\)
-#   $env:TTS_SAVES_DIR   = 'D:\...\Saves'          # Tabletop Simulator saves folder
-#   $env:TTS_IMAGES_DIR  = 'D:\...\Mods\Images'    # TTS image cache
+#   $env:DSH_HOME        = 'D:\somewhere\tts-agent'  # workspace root = this project (holds cache\, out\, logs\, shots\)
+#   $env:TTS_SAVES_DIR   = 'D:\...\Saves'            # Tabletop Simulator saves folder
+#   $env:TTS_IMAGES_DIR  = 'D:\...\Mods\Images'      # TTS image cache
 # Everything has a sane fallback, so no variable is required.
 
-if (-not $DshHome) {
-    if ($env:DSH_HOME) { $DshHome = $env:DSH_HOME }
-    elseif (Test-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'tts')) { $DshHome = Split-Path -Parent $PSScriptRoot }  # tts\ lives inside the workspace
-    else { $DshHome = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dsh' }
+# NOTE: these vars are rebuilt from scratch on every dot-source. If a caller already had
+# a stale value in scope (an earlier dot-source of another copy of config.ps1), the old
+# code silently kept it -> scripts resolved paths to a directory that no longer existed.
+# Clear first, then decide.
+#
+# RESOLUTION ORDER (this exact order matters, it cost a whole debugging round):
+#   1. a directory from $env:DSH_HOME that ACTUALLY holds this project (tts\config.ps1)
+#   2. this file's own location: <workspace>\tts\config.ps1 -> the workspace is its parent
+#   3. $env:DSH_HOME as-is (harness home that has no tts\ yet)
+#   4. <user profile>\.dsh (last-resort legacy default)
+# Step 1 before 2 is what lets a moved project keep working even when the environment
+# still points at an older DSH_HOME.
+Remove-Variable WorkspaceRoot -ErrorAction SilentlyContinue
+Remove-Variable TtsSavesDir   -ErrorAction SilentlyContinue
+Remove-Variable TtsImagesDir  -ErrorAction SilentlyContinue
+$SelfRoot = Split-Path -Parent $PSScriptRoot          # <workspace> (this file is <workspace>\tts\config.ps1)
+if ($env:DSH_HOME -and (Test-Path (Join-Path $env:DSH_HOME 'tts\config.ps1'))) {
+    $WorkspaceRoot = $env:DSH_HOME
+} elseif (Test-Path (Join-Path $SelfRoot 'tts\config.ps1')) {
+    $WorkspaceRoot = $SelfRoot
+} elseif ($env:DSH_HOME) {
+    $WorkspaceRoot = $env:DSH_HOME
+} else {
+    $WorkspaceRoot = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dsh'
 }
-$DshTts   = Join-Path $DshHome 'tts'
-$DshCache = Join-Path $DshHome 'cache'
-$DshOut   = Join-Path $DshHome 'out'
-$DshLogs  = Join-Path $DshHome 'logs'
-$DshShots = Join-Path $DshHome 'shots'
+$DshTts   = Join-Path $WorkspaceRoot 'tts'
+$DshCache = Join-Path $WorkspaceRoot 'cache'
+$DshOut   = Join-Path $WorkspaceRoot 'out'
+$DshLogs  = Join-Path $WorkspaceRoot 'logs'
+$DshShots = Join-Path $WorkspaceRoot 'shots'
 
 $Docs = [Environment]::GetFolderPath('MyDocuments')
 if (-not $TtsSavesDir) {
