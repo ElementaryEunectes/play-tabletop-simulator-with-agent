@@ -7,6 +7,7 @@
 #   one process, and prints at most a few lines per command.
 #
 # USAGE (ASCII only on the command line; Chinese lives in the data file)
+#   play.ps1 turn                       # ONE call per turn: board + my dice (read-only) + notebook tail
 #   play.ps1 status
 #   play.ps1 income  -Seat moon
 #   play.ps1 roll    -Seat moon [-Roll] [-NoRoll] [-Lock 1,3] [-Tries 1]
@@ -36,7 +37,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('status', 'income', 'roll', 'attack', 'defense', 'say')]
+    [ValidateSet('turn', 'status', 'income', 'roll', 'attack', 'defense', 'say')]
     [string]$Action = 'status',
 
     [ValidateSet('moon', 'scar')]
@@ -92,7 +93,7 @@ function Err-Code([string]$e) {
 }
 
 # One bridge command object -> the customMessage object, or die with the right code.
-function Bridge($Cmd, [int]$TimeoutSec = 15) {
+function Bridge($Cmd, [int]$TimeoutSec = 15, [switch]$Soft) {
     $env = @{ messageID = 2; customMessage = $Cmd } | ConvertTo-Json -Depth 8 -Compress
     $r = $null
     for ($i = 1; $i -le 3; $i++) {
@@ -100,9 +101,12 @@ function Bridge($Cmd, [int]$TimeoutSec = 15) {
         if ($r.err -ne 'LISTENERBUSY') { break }
         Start-Sleep -Milliseconds 500
     }
-    if ($r.err) { Fail (Err-Code $r.err) ("cmd=" + $Cmd.cmd + " (" + $r.err + ")") }
-    if ($null -eq $r.custom) { Fail 'BAD DATA' ("reply from TTS was not JSON (cmd=" + $Cmd.cmd + ")") }
+    # -Soft: a cosmetic read (the notebook tail) must not kill the whole command, so it
+    # returns $null instead of exiting. Every other call keeps the hard failure.
+    if ($r.err) { if ($Soft) { return $null }; Fail (Err-Code $r.err) ("cmd=" + $Cmd.cmd + " (" + $r.err + ")") }
+    if ($null -eq $r.custom) { if ($Soft) { return $null }; Fail 'BAD DATA' ("reply from TTS was not JSON (cmd=" + $Cmd.cmd + ")") }
     if ($r.custom.ok -ne $true) {
+        if ($Soft) { return $null }
         $e = 'unknown'
         if ($null -ne $r.custom.err) { $e = [string]$r.custom.err }
         Fail 'BAD DATA' ("cmd=" + $Cmd.cmd + " rejected by bridge: " + $e)
@@ -555,9 +559,25 @@ function Cmd-Status {
 
 # ---------------------------------------------------------- command: income ------
 function Cmd-Income {
+    # Income is a WRITE (+1 CP), so it takes the same guard as attack/defense: -Apply to commit,
+    # -WhatIf to preview. A read-only default is not pedantry here -- a baseline benchmark once
+    # called this verb while meaning to "look at the board" and silently added 1 CP to a
+    # suspended match.
     $cp = (Seat-Obj $Seat).cp_counter
-    $r = Set-Counter $cp (((Get-Counter $cp ($Seat + ' CP')) + 1)) ($Seat + ' CP')
+    $before = Get-Counter $cp ($Seat + ' CP')
+    $want = $before + 1
+    if (-not $Apply) {
+        Write-Host ("income {0} CP {1} -> {2} (READ-ONLY: pass -Apply to write)" -f $Seat, $before, $want)
+        return
+    }
+    Write-Host ("WILL WRITE  CP {0} {1} -> {2}" -f $Seat, $before, $want)
+    if ($WhatIfPreference) {
+        Write-Host ("WHATIF: nothing written, {0} CP stays {1}" -f $Seat, $before)
+        return
+    }
+    $r = Set-Counter $cp $want ($Seat + ' CP')
     Write-Host ("income {0} CP {1}->{2} (read back {2}, counter {3})" -f $Seat, $r.before, $r.after, $cp)
+    if ([int]$r.after -ne [int]$want) { Fail 'BAD DATA' ("read-back mismatch: asked for {0} CP {1}, the table says {2}" -f $Seat, $want, $r.after) }
 }
 
 # ------------------------------------------------------------ command: roll ------
@@ -733,6 +753,38 @@ function Cmd-Say {
     Write-Host ("say ok (" + (($out | Select-Object -Last 1).ToString().Trim()) + ")")
 }
 
+# ------------------------------------------------------------ command: turn ------
+# ONE call to open a turn, instead of status + roll + tabread. Every invocation of this file
+# costs a fresh PowerShell start (~0.35s) plus its TTS round trips, so folding the three reads
+# together is the cheapest per-turn saving there is. It is strictly READ-ONLY: the dice are
+# read, never thrown (see the -Roll/-NoRoll guardrail in roll.ps1), and the notebook is only
+# echoed, never written.
+function Cmd-Turn {
+    Cmd-Status
+    $g = Roll-Dice 'moon' @() $true                    # NoRoll = touch nothing
+    $faces = $g.faces
+    $num = @(); $sym = @()
+    foreach ($i in 1..5) {
+        if (-not $faces.ContainsKey($i)) { $num += ("{0}=?" -f $i); continue }
+        $f = [int]$faces[$i]
+        $num += ("{0}={1}" -f $i, $f)
+        $sym += (Symbol-Of 'moon' $f)
+    }
+    Write-Host ("moon dice {0}  symbols {1}" -f ($num -join ' '), ($sym -join ''))
+    $res = Top-Abilities 'moon' $faces 3
+    if (@($res.top).Count -eq 0) { Write-Host "  (no matching skill)" }
+    else { foreach ($a in @($res.top)) { Write-Host ("  -> " + (Ability-Line $a $res.counts)) } }
+    $t = Bridge @{ cmd = 'tabread' } 10 -Soft
+    if ($null -ne $t) {
+        $body = ''
+        if ($null -ne $t.PSObject.Properties['body']) { $body = [string]$t.body }
+        if ($body.Trim() -ne '') {
+            $tail = $body.Substring([Math]::Max(0, $body.Length - 160))
+            Write-Host ("notebook> " + (($tail -replace '\s+', ' ').Trim()))
+        } else { Write-Host "notebook> (empty)" }
+    } else { Write-Host "notebook> (unreadable, ignored)" }
+}
+
 function Cmd-SelfTest {
     Write-Host "selftest (offline, no TTS contact)"
     $tally = @{ bad = 0 }
@@ -793,6 +845,7 @@ function Cmd-SelfTest {
 
 # ------------------------------------------------------------------- dispatch ----
 switch ($Action) {
+    'turn' { Cmd-Turn }
     'status' { Cmd-Status }
     'income' { Cmd-Income }
     'roll' { Cmd-Roll }

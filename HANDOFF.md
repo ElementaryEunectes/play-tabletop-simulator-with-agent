@@ -60,6 +60,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 5. ✅ **`diff_index.ps1` 的离线自测已收进仓库**：`tts\tests\test_diff_index.ps1`（＋ `fake_live_index.ps1` 桩 ＋ `fixtures\*.csv`）
    与 `tts\tests\test_param_backfill.ps1`；`check_ps1.ps1` 已改**递归**，测试自身也受 BOM ＋ 真解析器校验。
    ⚠️ 改这两个测试**必须重跑阳性对照**（故意造一个坏探针看它是否真报错，见 §6.8/§6.9）。
+6. ✅ **效率优化（2026-10-08）**：回合开局压成**一条命令** `play.ps1 turn`（实测 **1.5s**，替代 `status`+`roll`+`tabread` 的 ~2.9s）；
+   `say.ps1` 改成**单进程就地 TCP**（**0.79s** vs ~1.7s）；`income` 补上写护栏（默认只读，见 §6.11）；
+   项目 `AGENTS.md` **6432 → ~2100 字节**（这份**每次请求都在计费**，所以易变的「已知状态」全部推给 STATE/HANDOFF）；
+   `PLAY.md` **4219 → ~2100**；新增 **`tts\docs\USER_GUIDE.md`**（人怎么用）。
+   ⇒ **下一次开局的默认动作：`tts\play.ps1 turn`，别再 status+roll 各跑一次。**
 
 ## §5 本会话已结清的规则（**别再重问玩家**）
 
@@ -97,6 +102,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
    ⇒ **判据不是 `check_ps1.ps1` 通过，而是"每个 `''` 默认值都有回填"**；`diff_index.ps1` 的桩脚本自测是现成阳性对照（§4.5）。
 10. **整篇重写会顺带把行尾改成 LF，把 diff 撑爆**：本仓库是 **CRLF**（无 `.gitattributes`，个别文件是 LF）。
     30 行的修复会显示成 200+ 行（`git diff --ignore-cr-at-eol` 可确认）⇒ 重写后按原样存回 CRLF + 单个 BOM。
+11. **"只读"的基准脚本也会写游戏**（2026-10-08）：我写性能基线时把 `play.ps1 income` 当只读测了一次 ⇒ **悄悄给玩家 +1 CP**
+    （已 `setCount` 复位并回读 ✅）。教训两层：① 任何"跑一遍看看"的脚本，先确认每个动词是读还是写 —— **`income` 是写动词**；
+    ② **写动词一律要有显式开关**：现在 `income` 与 `attack`/`defense` 一致，默认只读、必须 `-Apply` 才写、`-WhatIf` 可预览。
 
 ## §7 交接时的原始数据（万一文档与实物冲突）
 

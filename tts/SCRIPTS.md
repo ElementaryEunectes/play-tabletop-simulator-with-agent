@@ -9,12 +9,12 @@
 
 | 脚本 | 干什么 |
 |---|---|
-| **`play.ps1`** | **本局控制台**（骰铸专用）：`status` / `income` / `roll` / `attack` / `defense` / `say` —— 一条命令一个阶段。**别 read 它的本体**（~10k token） |
+| **`play.ps1`** | **本局控制台**（骰铸专用）：⭐`turn`（**回合开局一条命令**：盘面＋骰面＋招式＋笔记本尾条，全只读）/ `status` / `income` / `roll` / `attack` / `defense` / `say` —— 一条命令一个阶段。写动词要显式开关（`-Apply` / `-Roll`）且支持 `-WhatIf`。**别 read 它的本体**（35KB ≈ 10k token） |
 | **`roll.ps1`** | 掷/读骰面：`-Tray moon\|scar` —— **必须明说意图**：`-Roll` 才掷、`-NoRoll` 只读；**裸调用 `exit 2`（不接触 TTS）** |
 | **`ds.ps1`** | **跟 TTS 说话的高层入口**：`-Do 'ping / tabread / getState:<g> / setCount:<g>:<n> / act:<g>:<verb> / move:… / draw:… / all:<n> / read:<g>'` |
 | `dsbatch.ps1` | 一条进程跑多条 `ds.ps1` 命令（`-Commands 'a;;b'`）；⚠️ 两层子进程会被沙箱掐网络，优先 `ds.ps1` 逐条 |
 | `ttsx.ps1` · `ttslib.ps1` | 原始通道（只回 `customMessage`）＋ **唯一的 TCP 传输层**（`ttslib` **dot-source，别 spawn**） |
-| `say.ps1` | 往笔记本对话频道发一条（**中文走 `-MessageFile`**） |
+| `say.ps1` | 往笔记本对话频道发一条（**中文走 `-MessageFile`**）；**单进程就地 TCP**（2026-10-08 去掉两次子进程 `ds.ps1`，每条消息省 ~0.9s） |
 | `live_index.ps1` · `diff_index.ps1` | 整桌**实时**快照（CSV）· 差异（`-Snapshot` 冻结基线） |
 | **`diff_hidden.ps1`** | **带隐藏区遮蔽的 diff —— 对外显示一律用它**（规则在 `cache\hidden_zones.csv`） |
 | `card.ps1` | 查卡面文本库 `cache\dicethrone_cards.md`（`-Q '<名字>'`） |

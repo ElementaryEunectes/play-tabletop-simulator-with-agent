@@ -19,6 +19,7 @@ through a message bridge into the running game. The current game is **Dice Thron
 | This game's rules, skills and dice faces | `tts\docs\DICETHRONE_FLOW.md` · card text in `cache\dicethrone_cards.md` |
 | Script inventory (core / dormant / rename-time reference graph) | `tts\SCRIPTS.md` |
 | New game, cold start | `tts\docs\BOOTSTRAP.md` |
+| **How a human uses it** (hand this to the player) | `tts\docs\USER_GUIDE.md` (Chinese) |
 | Doc and directory index | `tts\docs\README.md` |
 | **How to verify an edit** | `tts\check_ps1.ps1` (recursive BOM + real parser) → `tts\tests\test_*.ps1` (**no TTS needed**) |
 
@@ -92,6 +93,11 @@ the dot-source, and `tts\tests\test_param_backfill.ps1` enforces exactly that.
 - ✅ **Guardrails** on `roll.ps1`, `play.ps1 -Apply` and `install_save2.ps1 -DryRun`.
 - ✅ **No personal paths** anywhere in the tree: `tts\config.ps1` is the only resolver.
 - ⏸ The Dice Throne match is **suspended**; how to resume is in `tts\docs\DICETHRONE_STATE.md`.
+- ⚡ **Per-turn cost** (measured 2026-10-08): open a turn with the single command
+  `tts\play.ps1 turn` — about **1.5s**, replacing the ~2.9s of `status` + `roll` + `tabread`.
+  `say.ps1` costs **0.79s** per message (was ~1.7s, two child processes fewer). **Starting one
+  PowerShell process costs a flat ~0.35s, so merging commands is what saves time** — TTS round
+  trips are not the bottleneck.
 - 🧾 `LICENSE` = **MIT** (see below).
 
 ## License and third parties

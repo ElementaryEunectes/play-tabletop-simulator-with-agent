@@ -17,6 +17,7 @@
     卡面文本 `cache\dicethrone_cards.md`（`cache\` 不入库，脚本会重建/手抄） |
 | 脚本清单（⭐常用 / 💤休眠 / 改名前必读的引用图） | `tts\SCRIPTS.md` |
 | 换局 / 冷启动 | `tts\docs\BOOTSTRAP.md` |
+| **人怎么用（拿给玩家看）** | `tts\docs\USER_GUIDE.md` |
 | 文档与目录总索引 | `tts\docs\README.md` |
 | **改完怎么验证** | `tts\check_ps1.ps1`（递归补 BOM ＋ 真解析器）→ `tts\tests\test_*.ps1`（**不需要 TTS**） |
 
@@ -67,6 +68,8 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
   `tts\tests\test_param_backfill.ps1`（每个 `''` 默认值都必须被回填或判空）。
 - ✅ **无个人路径**：树里已无 `C:\Users\<名字>` 之类硬编码（`tts\config.ps1` 是唯一解析层）。
 - ⏸ 对局处于**挂起**态，续局步骤写在 `tts\docs\DICETHRONE_STATE.md` 的「恢复 / 续局三步」一节。
+- ⚡ **每回合成本**（2026-10-08 实测）：回合开局用**一条** `tts\play.ps1 turn` ≈ **1.5s**，替代原来 `status`+`roll`+`tabread` 三条的 ~2.9s；
+  `say.ps1` 每条消息 **0.79s**（原 ~1.7s，少了两次子进程）。**每个 PowerShell 进程启动固定 ~0.35s ⇒ 合并命令就是省时间**，TTS 往返不是瓶颈。
 - 🧾 `LICENSE` = **MIT**（见下）。
 
 ## 许可与第三方

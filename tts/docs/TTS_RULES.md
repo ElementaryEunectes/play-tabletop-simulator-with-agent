@@ -25,17 +25,19 @@
 | 多命令一次跑 | `dsbatch.ps1 -Commands 'a;;b'`（⚠️ 两层子进程会被沙箱掐网络 ⇒ 优先 `ds.ps1` 逐条） |
 | 看桌面变化 | `live_index.ps1`（实时快照 CSV）· `diff_index.ps1 [-Snapshot]` · **`diff_hidden.ps1 -Game <游戏>`（对外一律用这个）** |
 | 认牌 / 查牌 | `card.ps1 -Q '<名字>'`（卡库 `cache\dicethrone_cards.md`）· `guidinfo.ps1 -Guid a,b`（CardID）· `obj_index.ps1`（存档索引，滞后 ~5 min） |
-| 发消息 | `say.ps1 -MessageFile <utf8.txt>`（**中文走文件**） |
-| 叫醒 / 判活 | `front_watch.ps1` → `cache\front.txt`（`TURN=Pn`）· `channel_watch.ps1` → `cache\chan.txt`（`NEW`）→ 配 **file 哨兵** |
+| 发消息 | `say.ps1 -MessageFile <utf8.txt>`（**中文走文件**；单进程就地 TCP） |
+| 人（玩家）怎么用 | **`USER_GUIDE.md`** —— 开局 · 你只做两件事 · AI 何时请人帮忙 · 在哪说话 · 常见问题 · 什么会动桌面/存档 |
+| 叫醒 / 判活 | `front_watch.ps1` → `cache\front.txt`（`TURN=Pn`）· `channel_watch.ps1` → `cache\chan.txt`（`NEW`）→ 配 **file 哨兵** `sentinel_watch kind=file target=<绝对路径> pattern=<正则>`（**新会话必须重挂**，编号每会话不同）。判活 = 两个 txt 的 **mtime 秒级滚动**（`OTHER <时:分:秒>` 也算）；停了才后台重启：`front_watch.ps1 -Minutes 600` / `channel_watch.ps1 -Minutes 600 -IntervalMs 12000`。收工：`sentinel_cancel` + kill 后台作业 |
 | 读"轮到谁" | `read_turn.ps1`（采样横幅色块）；TTS 不在前台 = `NOTFOREGROUND`，**不给假数据** |
 | 换局 / 冷启动 | `BOOTSTRAP.md` ＋ `bootstrap.ps1` · `install_save2.ps1`（写存档唯一通道）· `crop_zoom.ps1`（裁图读牌面） |
-| 改完脚本 | `check_ps1.ps1`（补 BOM ＋ 真解析器校验全部 `.ps1`）· `validate_lua.js`（改 Lua 前跑，并同时改 `DSH_VERSION`） |
+| 改完脚本 | `check_ps1.ps1`（**递归**补 BOM ＋ 真解析器校验全部 `.ps1`）· **`tts\tests\test_*.ps1`**（离线自测，**不需要 TTS**）· `validate_lua.js`（改 Lua 前跑，并同时改 `DSH_VERSION`） |
 
 ## 三、一回合怎么走
 
-1. 读**该局自己的文档链**：`tts\docs\CURRENT.md`（在玩哪款）→ `tts\docs\<游戏>_STATE.md`（**唯一真源**：比分/资源/待办）
-   → `tts\docs\PLAY.md`（**每局随身卡**：本局控制台动词 ＋ 每回合步骤）。
-2. **核对盘面**：一条 `status` 类命令拿实测值（HP/CP/状态/物件数）——别靠记忆。
+1. 读**该局自己的文档链**：`tts\docs\<游戏>_STATE.md`（**唯一真源**：比分/资源/待办）→ `tts\docs\PLAY.md`（**随身卡**：本局控制台动词 ＋ 每回合步骤）。
+   `CURRENT.md` 只在需要时看一眼（现在玩哪款）。
+2. **核对盘面**：**一条命令**拿实测值 —— 骰铸就是 **`play.ps1 turn`**（盘面 ＋ 我的骰面 ＋ 可打招式 ＋ 笔记本尾条，**全只读**）；
+   别的游戏用 `status` 类命令。**别靠记忆**。（每次调用都要付一个 PowerShell 进程启动 ≈0.35s ⇒ 合并命令就是省时间）
 3. **该我走**：按 STATE 待办 ＋ `<游戏>_FLOW.md` 的技能表，**一条命令一个阶段**。
 4. 摆玩家的选项；我自己的行动直接执行。
 5. 写回 STATE（**只改"当前"块与待办**）→ 报一行公开事实 → **等哨兵叫醒**（不轮询）。
