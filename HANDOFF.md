@@ -21,8 +21,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<user>\projects\tts
 
 | | |
 |---|---|
-| 项目位置 | `C:\Users\<user>\projects\tts-agent`（独立 git 仓库，**45 文件跟踪**，最新提交 `49e35c9`） |
-| 旧目录 `.dsh` | **只剩 harness 自己的东西**（sessions/storages/profiles/attachments ＋ 平台 `AGENTS.md`）；项目产物**不在这里** |
+| 项目位置 | `C:\Users\<user>\projects\tts-agent`（独立 git 仓库，**46 文件跟踪**，最新提交 `96dba9f`） |
+| 旧目录 `.dsh` | **项目产物不在这里**（sessions/storages/profiles/attachments ＋ 平台 `AGENTS.md`），但 **`archive\` 还在**：`~\.dsh\archive\tts-legacy\`＝33 个旧 `.ps1` · `~\.dsh\archive\system\` |
 | 游戏 | **《王权骰铸》对局挂起中**（玩家说"先结束游戏"），随时可续 |
 | 盘面 | **我（Blue/月精灵）27 HP / 4 CP** · **玩家（Red/猩红女巫）40 HP / 4 CP** · 物件 **136** · 桥接 `v12-callx` · 存档 `TS_Save_7.json` |
 | 进度 | **R4 他的回合未收**（他重掷后骰面 1/4/4/3/4 = 🌀✳✳🌀✳ 命中「厄运缠身」但**尚未重新宣告**）→ 收完进 **R5（我的回合）** |
@@ -38,22 +38,26 @@ powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<user>\projects\tts
 
 ## §4 待办（按优先级）
 
-1. 🔴 **修 4 个脚本**（都被一次批量替换事故打坏，**头部说明与用法都还在，照着重写即可**）：
-   | 脚本 | 用途 | 优先级 |
+1. ✅ **脚本已全部修完**（2026-10-08，提交 `96dba9f`）。原来只当"4 个语法坏脚本"，实际有**两层**：
+   | 层 | 脚本 | 真相 |
    |---|---|---|
-   | `tts\diff_index.ps1` | 快照差异（**常用**） | **最高** |
-   | `tts\card_index.ps1` | 卡片→本地图映射（建卡库时用） | 中 |
-   | `tts\index_images.ps1` | TTS 图缓存索引（一次性） | 低 |
-   | `tts\tts_api.ps1` | External Editor API（39999）退路 | 低 |
-   ⛔ **修法**：逐个 `read` → 精确 `edit`（**不许任何批量字符串替换**）→ 每个改完跑 `tts\check_ps1.ps1` → `git commit`。
+   | 语法 | `tts\diff_index.ps1` · `tts\card_index.ps1` | **只是丢了 BOM**（中文被当 ANSI 读 ⇒ 一堆假语法错）。**根因在 `check_ps1.ps1` 本身**，见 §6.8 |
+   | 语法 | `tts\index_images.ps1` · `tts\tts_api.ps1` | 真被改写坏（`$`→`i`、`)` 被删、`'`→`C`、`J` 被吃；`@()`→`@(`；一处硬编码输出路径）。**逐行手工重写** |
+   | 运行 | `tts\obj_index.ps1` · `tts\bags_dump.ps1` · `tts\install_save2.ps1` · `tts\bootstrap.ps1` · `tts\diff_index.ps1` | 少了"dot-source 之后回填默认路径"那行 ⇒ **解析 0 错误、一跑就写空路径**。已按 `SCRIPTS.md`/文档补回原文件名 |
+   ⇒ 现在 28/28 通过真解析器。**下次动 `.ps1` 照旧**：逐个 `read` → 精确 `edit`（⛔ 不许批量字符串替换）→ `check_ps1.ps1` → `git commit`。
 2. 🔴 **仍有 5 条规则冲突等玩家拍板**（板面 vs 卡面不一致，**别自行合并**）：
    `打不到我`（板面 👣👣 防半 ＋ 每 2🏹 反 1 ／ 卡面 II 箭+月 防 14 ＋ 1×🏹 反伤）·
    `长弓 III`（卡面 5/7/9 ／ 板面 4/5/7）· `致命魔法`（9 vs 2）· `爆炸射击`（骰型未读）· `星蚀`（月×4/×5）。
 3. 🔴 **卡面文本待补**（读不到不许编）：我的 `噩梦(MOON 28)`、`终极：群星陨落(MOON 32)`；
    玩家**英雄板基础档**（魔法弹/诅咒弹/噩梦之爪/吸取/混乱冲击/黑暗冲击/心灵震撼/究极/绝对混沌/终极：混沌之怒）。
    ⇒ 最省事：**请他摊牌到桌上或贴图**（桥接读不到容器里的牌）。
-4. 🟡 **开源准备**：`.gitignore` ✅ · 路径去硬编码 ✅（`tts\config.ps1` 是唯一解析层）· `README.md` ✅ ·
-   **还缺**：`LICENSE`（选 MIT/Apache-2.0）· 4 个脚本修完 · 破坏性动词的 `-Apply` 护栏（`roll.ps1` 默认会掷骰，`play.ps1 -Apply` 直接写 HP）· 英文 README · 测试（socket 层可注入假回复）。
+4. 🟡 **开源准备**：`.gitignore` ✅ · 路径去硬编码 ✅（`tts\config.ps1` 是唯一解析层）· `README.md` ✅ · 4 个脚本修完 ✅ ·
+   **还缺**：`LICENSE`（选 MIT/Apache-2.0）· 破坏性动词的 `-Apply` 护栏（`roll.ps1` 默认会掷骰，`play.ps1 -Apply` 直接写 HP）· 英文 README · 测试（socket 层可注入假回复）。
+5. 🟡 **把 `diff_index.ps1` 的离线自测收进仓库**：现在脚手架只在 `out\_selftest\`（**`out\` 被 gitignore，会被清掉**）。
+   值得提交成正式测试（注意 `check_ps1.ps1` 只扫 `tts\*.ps1`、**非递归** ⇒ 测试要么放平级、要么给它加 `-Recurse`）。重做只要三步：
+   ① 从 `cache\live_index.csv` 造两份 fixture（移动/翻面/换容器/改 GMNotes/删除/新增各 1）；
+   ② 写个只认 `-Out` 的**桩脚本冒充 `live_index.ps1`**；③ `diff_index.ps1 -Before b.csv -After a.csv -LiveIndex stub.ps1`
+   ⇒ 期望 `SUMMARY added=1 removed=1 moved=1 flipped=1 reparented=1 state=1`（`exit 0`）。**这是唯一能在 TTS 不开时验证 diff 链的办法。**
 
 ## §5 本会话已结清的规则（**别再重问玩家**）
 
@@ -80,10 +84,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<user>\projects\tts
 5. **旧路径会静默生效**：`DSH_HOME` 残留旧值时，脚本读写"看起来正常"但其实是空目录 ⇒ **启动先跑 `start-agent.ps1`**。
 6. **`Infinite_Bag` 里取出的 token 没有图案** ⇒ 状态 token 的摆放**交给玩家**。
 7. **沙箱只允许写工作区**：写项目目录（工作区之外）会报 `[sandbox: file access denied]` ⇒ 一次性提权重试，别硬绕。
+8. **校验工具自己坏了整整一轮**（2026-10-08 才发现）：`check_ps1.ps1` 的回写条件写成 `if ($hadBom)`（应为 `if (-not $hadBom)`）
+   ⇒ **它只回写本来就正常的文件，缺 BOM 的永远补不上，却照样打印 `BOM-FIXED`**。
+   于是 3 个中文脚本"修"了几次仍报语法错，而我一直在怀疑脚本本身。⇒ **教训：校验器要有阳性对照**（故意造一个缺 BOM 的文件，看它是否真被改）。
+9. **"能解析" ≠ "能用"**：事故还吃掉了 5 个脚本的 `param` 回填行 ⇒ 解析 0 错误，但 `Test-Path ''` / 空路径导出必挂。
+   ⇒ **判据不是 `check_ps1.ps1` 通过，而是"每个 `''` 默认值都有回填"**；`diff_index.ps1` 的桩脚本自测是现成阳性对照（§4.5）。
+10. **整篇重写会顺带把行尾改成 LF，把 diff 撑爆**：本仓库是 **CRLF**（无 `.gitattributes`，个别文件是 LF）。
+    30 行的修复会显示成 200+ 行（`git diff --ignore-cr-at-eol` 可确认）⇒ 重写后按原样存回 CRLF + 单个 BOM。
 
 ## §7 交接时的原始数据（万一文档与实物冲突）
 
 - 关键 guid：我 HP `cdd19a` · 我 CP `675a1f` · 他 HP `ed238f` · 他 CP `5b2c43` · 我的骰 `f0738d/187cc1/656b32/e00b2e/910636` · 他的骰 `205873/26745c/aa8300/240f79/033d23`
 - 我的手牌（我方隐藏信息，**不外传**）：`长弓 III`(3CP) · `月光魔法!`(1CP) · `月影袭人!`(2CP) · `隐匿射击 II`(1CP) · `噩梦`(2CP)
 - 他挂起时的骰面：**1 / 4 / 4 / 3 / 4**
-- git：`49e35c9`（当前）· `781fe2c` · `3fbbde9`（基线）
+- git：`96dba9f`（当前：脚本全修完）· `4e5637a`（加本文件）· `49e35c9` · `781fe2c` · `3fbbde9`（基线）

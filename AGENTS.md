@@ -59,10 +59,19 @@ tts-agent\                      ← 项目根 = 工作区根（$DSH_HOME）
 6. **响应窗口**：玩家每次宣告动作 = 给我一次出牌机会 ⇒ **必须表态**（"出牌 / 不出牌"），不能当他已定型直接结算。
 7. **隐藏信息双向**：不读对手隐藏区、不拿 guid 对身份；**我自己的手牌/计划也不说**。
 
-## 已知状态（2026-10-07）
+## 已知状态（2026-10-08）
 
 - **对局：挂起中**（玩家说"先结束游戏"）。续局照 `tts\docs\DICETHRONE_STATE.md` 的「恢复打法」三步；
   当前盘面：**我 27/4 · 玩家 41/40（见 STATE）** · 物件 136 · 桥接 `v12-callx`。
-- **脚本：24/28 可用**。待修 4 个：`tts\diff_index.ps1`（常用：快照差异）· `tts\card_index.ps1` · `tts\index_images.ps1`（一次性）· `tts\tts_api.ps1`（39999 API 退路）。
-  它们是被一次"批量替换"事故打坏的（见 `~/.dsh\AGENTS.md` §3.8），**头部说明与用法都还在，照着重写即可**；修完请跑 `check_ps1.ps1` 并提交。
-- **工作区已从 `~/.dsh` 迁出**：`~/.dsh` 现在只放 harness 自己的东西（sessions/storages/profiles/attachments），项目与它的产物都在本项目根。
+  ⚠️ **续局前先确认 Tabletop Simulator 进程真的在跑**（进程不在 = 玩家不在，别空跑工具）。
+- **脚本：28/28 全部通过真解析器（0 错误）**。2026-10-08 把"批量替换"事故的**两层**损坏都修完了（提交 `96dba9f`）：
+  1. **语法层**：`diff_index` · `card_index` · `index_images` · `tts_api`。
+     其中前两个其实**只是丢了 BOM**（中文被当 ANSI 读 ⇒ 报一堆假语法错）；
+     **根因是 `check_ps1.ps1` 的 BOM 回写条件写反了**（只在已有 BOM 时才回写 ⇒ 它嘴上说 `BOM-FIXED`，实际什么也没做）。**已修**。
+  2. **运行层（更隐蔽）**：`obj_index` · `bags_dump` · `install_save2` · `bootstrap` · `diff_index`
+     少了"dot-source 之后回填默认路径"那一行 ⇒ **能解析、能启动，一跑就写向空路径**。
+  ⇒ **新纪律：`check_ps1.ps1` 通过只证明语法对，不证明脚本能用。** 改完 `.ps1` 要确认默认值真被回填
+     （每个 `''` 默认值都得有 `if ($X -eq '') { $X = ... }`）；`diff_index.ps1` 有离线自测，见 `HANDOFF.md` §6.9。
+- **工作区已从 `~/.dsh` 迁出**（项目 + `cache\ out\ logs\ shots\` 都在本项目根），
+  但 **`~/.dsh` 里仍留着 `archive\`**：`~\.dsh\archive\tts-legacy\`（33 个旧 `.ps1` + 各自的 README）·
+  `~\.dsh\archive\system\`。⛔ 别再写"`.dsh` 只剩 harness 自己的东西"——旧脚本归档还在那儿。
