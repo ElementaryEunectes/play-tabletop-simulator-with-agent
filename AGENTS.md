@@ -11,16 +11,16 @@
 ⭐ **本仓库 = 对「任何 TTS mod」都适用的通用工具链**（桥接 · 脚本 · 工作流 · 纪律）—— **这才是开源的内容**。
 ⛔ **某一款游戏专属的东西不进仓库**：状态/比分 · 规则与卡面 · 卡库 · 牌与计划 · 当前在玩哪款 ⇒ 一律放 **`local\games\<游戏>\`**（`local\` 在 `.gitignore` 里）。
 **一句话判据**：**换个 mod 还成立 ⇒ 留下；只对这一局成立 ⇒ 搬进 `local\`。**
-当前在玩哪款、对应文件在哪 ⇒ `local\games\_current.md`。
 
-## 启动（**先做，否则脚本会读写错目录**）
+## 启动（**在本仓库目录里起 dsh**）
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 ```
 
-它把 `$env:DSH_HOME` 钉到本仓库根再起 dsh。环境里若残留旧值（`<用户目录>\.dsh`），脚本会静默读写一个**不存在**的目录。
-验证：`tts\play.ps1 status` 应回 `bridge=v12-*`，`objs` 与桌面相符。
+它：**把会话 cwd 钉在本仓库**（否则项目链不注入本文件）＋ **把 `$DSH_HOME` 钉到仓库根**（两份 `AGENTS.md` 同路径去重，每请求省 ~2.9 KB）。
+⚠️ 不做的代价：cwd 在仓库外 ⇒ **本文件不注入**；未钉 `DSH_HOME` ⇒ 每请求多付通用那份。**路径不会写错**（`tts\config.ps1` 自愈）。
+验证：`tts\play.ps1 status` 回 `bridge=v12-*` 且 `objs` 与桌面相符。
 
 ## 每回合读什么（**别整份读手册**）
 
@@ -34,9 +34,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 
 1. **改任何 `.ps1` 前先 `git commit`**；⛔ **绝不用批量字符串替换改活代码**（本仓库就这么连坏过 22 个脚本）。
 2. **`param()` 必须是第一条语句**；**默认值里不许引用 config 变量**（那时还没求值）⇒ 默认 `''`，dot-source 之后 `if ($X -eq '') { $X = ... }` 回填。
-3. **路径一律走 `tts\config.ps1`**（`$WorkspaceRoot/$DshTts/$DshCache/$DshOut/$DshLogs/$DshShots/$TtsSavesDir/$TtsImagesDir`）；⛔ 不许出现 `C:\Users\<名字>`。
+3. **路径一律走 `tts\config.ps1`**（`$WorkspaceRoot` / `$DshCache` / `$DshGameRules` / `$DshGameCards` … 全在那份文件里）；⛔ 不许出现 `C:\Users\<名字>`。
 4. **改完 `.ps1` 立刻**跑 `tts\check_ps1.ps1`（递归补 BOM + 真解析器）；**解析通过 ≠ 能用** ⇒ 再跑 `tts\tests\*.ps1`（两个离线自测，不需要 TTS）。
 5. **骰子**：`roll.ps1` 必须明说 `-Roll`/`-NoRoll`（裸调用 `exit 2`，不接触 TTS）；**判定以玩家报的为准**。
 6. **响应窗口**：玩家每次宣告 = 我的出牌机会 ⇒ **必须表态「出牌 / 不出牌」**。
 7. **隐藏信息双向**：不读对手隐藏区、不拿 guid 对身份；**我自己的手牌/计划也不外传**（手牌在 `local\games\<游戏>\MYHAND.md`；`local\` 不进仓库）。
-8. **判"玩家在不在"看 39999 端口**（`netstat -ano | findstr :39999`；⛔ `Get-NetTCPConnection` 在本沙箱里**会假报"没人在听"**）或跑 `play.ps1 status`；⛔ 别用 `Get-Process`（沙箱里根本看不见 TTS 进程）。
+8. **判"玩家在不在"**：`netstat -ano | findstr :39999` 或 `tts\play.ps1 status`。⛔ `Get-NetTCPConnection` 会**假报"没人在听"**；⛔ `Get-Process` 看不见 TTS。
