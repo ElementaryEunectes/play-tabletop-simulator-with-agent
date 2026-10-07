@@ -1,0 +1,1605 @@
+-- DSH command layer (persistent, lives in the Global script slot)
+-- Receives commands via onExternalMessage (messageID 2) and replies with
+-- sendExternalMessage, so we do not have to re-inject Lua every turn.
+-- ASCII only: this text gets JSON-escaped and piped through PowerShell.
+--
+-- Verified against https://api.tabletopsimulator.com/object/ and /base/
+--   Object: getGUID, getName, getGMNotes, setGMNotes, getDescription,
+--           setDescription, getPosition, setPosition, getValue, setValue, getData
+--   Base:   getObjects, getObjectFromGUID, getAllObjects (deprecated)
+-- There is NO getNickname/setNickname on Object, and no WriteDirectory global.
+--
+-- Commands:
+--   {cmd="ping"}
+--   {cmd="selftest"}                       -- which globals/fields actually exist
+--   {cmd="count"}                          -- object count + name histogram (top N)
+--   {cmd="find", filter="<name substring>", limit=20}
+--   {cmd="read", guid="0a7a77"}
+--   {cmd="write", guid="0a7a77", value="0"}
+--   {cmd="move", guid="...", x=0, y=1, z=0}
+--   {cmd="setval", guid="...", value=3}
+--   {cmd="getval", guid="..."}
+--   {cmd="index", limit=50}                -- guid + name + position for many objects
+
+-- Directory the panel file can be loaded from, if loadfile is available.
+DSH_DIR = DSH_DIR or "C:/Users/<user>/.dsh"
+
+function onLoad()
+    -- broadcastToAll does not exist in this sandbox (see diag), so guard it instead
+    -- of raising an error on every load. It is kept for builds that do have it.
+    if type(broadcastToAll) == "function" then
+        pcall(broadcastToAll, "[DSH] command layer loaded")
+    end
+    DSH_LOADS = (DSH_LOADS or 0) + 1
+    -- The XML panel is NOT drawn on load: setUI is absent in this sandbox, and the
+    -- notebook (tab 12) is the dialogue channel now.
+end
+
+local function S(v)
+    if v == nil then return nil end
+    return tostring(v)
+end
+
+-- Readable serialisation of an arbitrary Lua value.
+--
+-- WHY: act() originally did `JSON.encode(res)` for tables and `tostring(res)`
+-- otherwise. tostring() on a table yields "table: 0x...", and when JSON.encode
+-- failed the error path also collapsed to a useless string - so getRotation
+-- appeared to return something boolean-ish and getValue returned nothing at all,
+-- making every successful call look broken. This walks the value instead.
+local function VS(v, depth)
+    depth = depth or 0
+    if depth > 4 then return "..." end
+    local t = type(v)
+    if t == "nil" then return "nil" end
+    if t == "boolean" then if v then return "true" else return "false" end end
+    if t == "number" then
+        if v == math.floor(v) then return string.format("%d", v) end
+        return string.format("%.4f", v)
+    end
+    if t == "string" then return v end
+    if t == "table" then
+        local parts = {}
+        local n = 0
+        for k, val in pairs(v) do
+            n = n + 1
+            if n > 24 then parts[#parts + 1] = "..."; break end
+            parts[#parts + 1] = tostring(k) .. "=" .. VS(val, depth + 1)
+        end
+        return "{" .. table.concat(parts, ",") .. "}"
+    end
+    return t
+end
+
+local function objs()
+    local all = getObjects()
+    local out = {}
+    if not all then return out end
+    for i = 1, #all do
+        if all[i] ~= nil then out[#out + 1] = all[i] end
+    end
+    return out
+end
+
+local function ping()
+    return { ok = true, pong = true, v = DSH_VERSION, objects = #objs(), loads = DSH_LOADS or 0, at = os.date("%H:%M:%S") }
+end
+
+local function selftest()
+    local g = {}
+    for _, n in ipairs({ "getObjects", "getAllObjects", "getObjectFromGUID", "getSeatedPlayers",
+                         "broadcastToAll", "sendExternalMessage", "JSON", "os", "io",
+                         "WriteDirectory", "writeFile", "spawnObject", "getObjectsWithTag" }) do
+        g[n] = (type(_G[n]) ~= "nil")
+    end
+    -- probe one real object's methods
+    local m = {}
+    local all = getObjects()
+    if all and #all > 0 then
+        local o = all[1]
+        for _, n in ipairs({ "getName", "getGUID", "getGMNotes", "setGMNotes", "getDescription",
+                             "setDescription", "getPosition", "setPosition", "getValue", "setValue",
+                             "getData", "getLock", "getQuantity", "getStateId", "getNickname" }) do
+            local ok = pcall(function() return o[n] end)
+            m[n] = ok
+        end
+    end
+    return { ok = true, globals = g, objectMethods = m, objectCount = all and #all or 0 }
+end
+
+local function count(topN)
+    local all = objs()
+    local hist = {}
+    local names = {}
+    for i = 1, #all do
+        local n = "?"
+        local ok, v = pcall(function() return all[i].getName() end)
+        if ok and v then n = v end
+        if hist[n] == nil then hist[n] = 0; names[#names + 1] = n end
+        hist[n] = hist[n] + 1
+    end
+    table.sort(names, function(a, b) return hist[a] > hist[b] end)
+    topN = tonumber(topN) or 30
+    local out = {}
+    for i = 1, math.min(topN, #names) do
+        out[#out + 1] = { name = names[i], qty = hist[names[i]] }
+    end
+    return { ok = true, total = #all, distinct = #names, top = out, at = os.date("%H:%M:%S") }
+end
+
+local function find(filter, limit)
+    local all = objs()
+    limit = tonumber(limit) or 20
+    local needle = filter
+    if needle == "" then needle = nil end
+    local out = {}
+    for i = 1, #all do
+        local o = all[i]
+        local nm = "?"
+        local ok, v = pcall(function() return o.getName() end)
+        if ok and v then nm = v end
+        local hit = true
+        if needle then hit = (string.find(nm, needle, 1, true) ~= nil) end
+        if hit then
+            local pos = { 0, 0, 0 }
+            pcall(function() local p = o.getPosition(); pos = { p.x, p.y, p.z } end)
+            out[#out + 1] = {
+                guid = o.getGUID(), name = nm,
+                x = math.floor(pos[1] * 100) / 100,
+                y = math.floor(pos[2] * 100) / 100,
+                z = math.floor(pos[3] * 100) / 100
+            }
+            if #out >= limit then break end
+        end
+    end
+    return { ok = true, count = #out, items = out }
+end
+
+local function read(guid)
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object with guid " .. S(guid) } end
+    local r = { ok = true, guid = guid }
+    pcall(function() r.name = o.getName() end)
+    pcall(function() r.gm = o.getGMNotes() end)
+    pcall(function() r.desc = o.getDescription() end)
+    pcall(function() r.value = o.getValue() end)
+    pcall(function() local p = o.getPosition(); r.x = p.x; r.y = p.y; r.z = p.z end)
+    return r
+end
+
+local function write(guid, value)
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object with guid " .. S(guid) } end
+    local ok, err = pcall(function() o.setGMNotes(tostring(value)) end)
+    if not ok then return { ok = false, err = "setGMNotes failed: " .. S(err) } end
+    return { ok = true, guid = guid, set = tostring(value) }
+end
+
+-- Rotation / flip, deliberately written to mirror the WORKING moveTo() above.
+--
+-- WHY IT LOOKS LIKE THIS: the generic act() command uses
+--   fn(o, { tonumber(m.x) or 0, ... })
+-- and every setPosition/setRotation through it failed with
+--   "cannot convert a userdata to a clr type UnityEngine.Vector3"
+-- while the older moveTo() uses
+--   o.setPosition({ tonumber(x), tonumber(y), tonumber(z) })
+-- with plain positional arguments and succeeds. The proven shape wins: dedicated
+-- commands that call the method straight off the object with a plain table.
+--
+-- `flip` adds 180 to the current Z angle, which is what turns a card over.
+local function rotateTo(guid, x, y, z, add)
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object with guid " .. S(guid) } end
+    local cur = o.getRotation()
+    local nx, ny, nz = tonumber(x), tonumber(y), tonumber(z)
+    if add then
+        nx = cur.x + (nx or 0)
+        ny = cur.y + (ny or 0)
+        nz = cur.z + (nz or 0)
+    end
+    if nx == nil then nx = cur.x end
+    if ny == nil then ny = cur.y end
+    if nz == nil then nz = cur.z end
+    local ok, err = pcall(function() o.setRotation({ nx, ny, nz }) end)
+    if not ok then return { ok = false, err = "setRotation failed: " .. S(err) } end
+    local r = o.getRotation()
+    return { ok = true, guid = guid,
+             x = math.floor(r.x * 100) / 100,
+             y = math.floor(r.y * 100) / 100,
+             z = math.floor(r.z * 100) / 100 }
+end
+
+local function moveTo(guid, x, y, z)    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object with guid " .. S(guid) } end
+    local ok, err = pcall(function() o.setPosition({ tonumber(x), tonumber(y), tonumber(z) }) end)
+    if not ok then return { ok = false, err = "setPosition failed: " .. S(err) } end
+    local p = o.getPosition()
+    return { ok = true, guid = guid, x = p.x, y = p.y, z = p.z }
+end
+
+-- Reflection probe. This sandbox has no load()/eval() (both nil), so there is no
+-- way to explore the Object API from outside. Walking the userdata metatable with
+-- __index + pairs() is the remaining route: it enumerates every method name, and
+-- calling the no-argument getters tells us what metadata the game exposes.
+-- That matters because card NAMES are generic ("Card") - the art is the only way
+-- to tell one enterprise board from another, so we need the image URL.
+local function probe(guid)
+    if guid == nil or guid == "" then return { ok = false, err = "no guid" } end
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object with guid " .. S(guid) } end
+
+    local r = { ok = true, guid = guid }
+    local mt = getmetatable(o)
+    r.metatable = type(mt)
+    local idx = nil
+    if type(mt) == "table" then
+        for k, v in pairs(mt) do
+            if k == "__index" then idx = v end
+        end
+    end
+    r.indexType = type(idx)
+
+    local names = {}
+    local n = 0
+    if type(idx) == "table" then
+        for k, v in pairs(idx) do
+            n = n + 1
+            if n <= 400 then names[#names + 1] = tostring(k) end
+        end
+    end
+    r.methodCount = n
+    table.sort(names)
+    r.methods = table.concat(names, ",")
+
+    -- Call the metadata getters. Only these are attempted: they are read-only and
+    -- are known to exist on every object. Failures are recorded, not raised.
+    local getters = { "getName", "getDescription", "getGMNotes", "getGUID",
+                      "getPosition", "getRotation", "getScale", "getValue",
+                      "getStateId", "getStates", "getTags", "getLock",
+                      "getImageURL", "getImage", "getCustomObject",
+                      "getCustomMesh", "getCustomImage", "getMemo",
+                      "getAltImage", "getFogColor", "getColorTint",
+                      "getQuantity", "getRepositioning", "getTable" }
+    r.getters = {}
+    if type(idx) == "table" then
+        for _, g in ipairs(getters) do
+            local fn = idx[g]
+            if type(fn) == "function" then
+                local ok, v = pcall(function() return fn(o) end)
+                if ok then
+                    if type(v) == "table" then
+                        local enc = JSON.encode(v)
+                        r.getters[g] = enc
+                    else
+                        r.getters[g] = tostring(v)
+                    end
+                else
+                    r.getters[g] = "ERR " .. S(v)
+                end
+            end
+        end
+    end
+    -- A few properties are plain values, not functions.
+    r.props = {}
+    for _, k in ipairs({ "name", "guid", "position", "rotation", "scale",
+                         "value", "description", "gm_notes", "nickname",
+                         "image", "imageURL", "memo", "tags" }) do
+        local ok, v = pcall(function() return o[k] end)
+        if ok and v ~= nil then
+            if type(v) == "table" then
+                local enc = JSON.encode(v)
+                r.props[k] = enc
+            else
+                r.props[k] = tostring(v)
+            end
+        end
+    end
+    return r
+end
+
+-- Compact batch lookup. `index` returns every object with position, which is big
+-- enough that the reply can be dropped entirely (observed: "no reply from TTS").
+-- This asks about specific GUIDs and returns only the fields that identify a card,
+-- so it stays small enough to actually arrive.
+--   {cmd="whose", guids="abc123,def456"}
+local function whose(guids)
+    if guids == nil or guids == "" then return { ok = false, err = "no guids" } end
+    local out = {}
+    local n = 0
+    for g in string.gmatch(tostring(guids), "[^,%s]+") do
+        n = n + 1
+        if n > 60 then break end
+        local o = getObjectFromGUID(g)
+        local e = { guid = g }
+        if not o then
+            e.err = "not found"
+        else
+            pcall(function() e.name = o.getName() end)
+            pcall(function() e.nick = o.getNickname() end)
+            pcall(function() e.desc = o.getDescription() end)
+            pcall(function() local p = o.getPosition(); e.x = p.x; e.y = p.y; e.z = p.z end)
+            -- The whole point: the image URL is the only thing that names a card
+            -- whose getName() is just "Card".
+            local mt = getmetatable(o)
+            local idx = nil
+            if type(mt) == "table" then idx = mt.__index end
+            if type(idx) == "table" then
+                for _, gname in ipairs({ "getImageURL", "getImage", "getCustomObject",
+                                         "getCustomImage", "getMemo", "getStates" }) do
+                    local fn = idx[gname]
+                    if type(fn) == "function" then
+                        local ok, v = pcall(function() return fn(o) end)
+                        if ok and v ~= nil then
+                            if type(v) == "table" then e[gname] = JSON.encode(v)
+                            else e[gname] = tostring(v) end
+                        end
+                    end
+                end
+            end
+        end
+        out[#out + 1] = e
+    end
+    return { ok = true, asked = n, items = out }
+end
+
+-- Generic object action, restricted to a whitelist.
+--
+-- WHY: reading was never the bottleneck - acting was. Previously the only verbs
+-- were `move` (position) and `setval` (value), so flipping a card, rotating a
+-- piece, locking a token or shuffling/drawing from a deck were all impossible.
+-- TTS exposes those as methods on the object, and this sandbox has no load()/eval()
+-- to build calls dynamically, so each verb is dispatched through an explicit table.
+--
+--   {cmd="act", guid="abc123", verb="flip"}
+--   {cmd="act", guid="abc123", verb="setRotation", x=0, y=0, z=180}
+--   {cmd="act", guid="abc123", verb="setLock", value=true}
+--   {cmd="act", guid="abc123", verb="deal", value=1, player="Blue"}
+--   {cmd="act", guid="abc123", verb="getRotation"}
+--
+-- Only methods in `verbs` may be reached, so a typo cannot call something
+-- arbitrary on the object.
+local function act(m)
+    local guid = m.guid
+    if guid == nil or guid == "" then return { ok = false, err = "no guid" } end
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object with guid " .. S(guid) } end
+
+    local verb = tostring(m.verb or "")
+
+    -- Safety boundary: only these methods may ever be reached, so a typo or a
+    -- prompt-injected instruction cannot call something arbitrary on the object.
+    local verbs = {
+        -- rotation / orientation: the actual "flip a card" primitive
+        setRotation = true, getRotation = true,
+        setPosition = true, getPosition = true,
+        setScale = true,     getScale = true,
+        -- board geometry: the only way to learn the map board's real world size,
+        -- which is what turns a pixel on its artwork into a table coordinate.
+        getBounds = true,    getBoundsNormalized = true,
+        getVisualBoundsNormalized = true,
+        -- artwork -> table mapping (see positionToLocal branch below)
+        positionToLocal = true, positionToWorld = true,
+        -- state / identity
+        setLock = true,      getLock = true,
+        setValue = true,     getValue = true,
+        setState = true,     getStateId = true,
+        setName = true,      getName = true,
+        setDescription = true, getDescription = true,
+        setGMNotes = true,   getGMNotes = true,
+        setScriptState = true, getScriptState = true,
+        setNickname = true,  getNickname = true,
+        setColorTint = true, getColorTint = true,
+        -- deck operations: the actual "draw / shuffle" primitives
+        shuffle = true, deal = true, dealToAll = true,
+        -- clone: the only way to put a copy of a resource-point indicator on a new
+        -- point. The indicators live in supply stacks, so moving one takes it out of
+        -- the stack; cloning leaves the supply intact.
+        clone = true,        getQuantity = true, getStates = true, getTags = true,
+        flip = true, setInvisibleTo = true,
+        -- 2026-10-07: 骰子。装到《王权骰铸》(Dice Throne) 这类模组上必须能掷骰。
+        -- roll() 无参数、无返回值，走的就是 flip 那条路径。
+        roll = true,
+    }
+    if not verbs[verb] then
+        return { ok = false, err = "verb not allowed: " .. verb, cmd = "act" }
+    end
+
+    -- Some verbs are MEMBER VARIABLES, not methods. They must be recognised
+    -- BEFORE the method lookup below, because that lookup fails on them (there is
+    -- no o.getScriptState function, so fn stays nil) and the generic
+    -- "object has no method" early-return then fires - which is exactly why
+    -- getScriptState reported "object has no method getScriptState" even though
+    -- the branch handling it exists further down. Only script_state is reachable
+    -- this way; a container object has no such member and reports nil.
+    local memberVerbs = { getScriptState = true, setScriptState = true }
+    local isMember = memberVerbs[verb] == true
+
+    -- Metatable introspection does NOT work on these objects: walking mt.__index
+    -- reported "no method getRotation" for a Custom_Tile, which certainly has it.
+    -- TTS's object proxy resolves methods through the userdata itself, so the
+    -- method is simply indexed straight off the object. Verify that, and keep the
+    -- metatable path only as a fallback.
+    local fn = nil
+    if not isMember then
+        local okIdx, direct = pcall(function() return o[verb] end)
+        if okIdx and type(direct) == "function" then
+            fn = direct
+        else
+            local mt = getmetatable(o)
+            if type(mt) == "table" and type(mt.__index) == "table" then
+                local cand = mt.__index[verb]
+                if type(cand) == "function" then fn = cand end
+            end
+        end
+        if type(fn) ~= "function" then
+            return { ok = false, err = "object has no method " .. verb, cmd = "act" }
+        end
+    end
+
+    -- Argument shapes differ per verb, so build them per family rather than
+    -- guessing a single generic form.
+    local call
+    if verb == "setPosition" then
+        call = function() return fn(o, { tonumber(m.x) or 0, tonumber(m.y) or 0, tonumber(m.z) or 0 }) end
+    elseif verb == "setRotation" then
+        call = function() return fn(o, { tonumber(m.x) or 0, tonumber(m.y) or 0, tonumber(m.z) or 0 }) end
+    elseif verb == "setScale" then
+        local sx = tonumber(m.x); if sx == nil then sx = 1 end
+        local sy = tonumber(m.y); if sy == nil then sy = sx end
+        local sz = tonumber(m.z); if sz == nil then sz = sx end
+        call = function() return fn(o, { sx, sy, sz }) end
+    elseif verb == "setLock" then
+        call = function() return fn(o, m.value == true or m.value == "true") end
+    elseif verb == "setState" then
+        call = function() return fn(o, tonumber(m.value) or 1) end
+    elseif verb == "setValue" then
+        call = function() return fn(o, tonumber(m.value) or 0) end
+    elseif verb == "setScriptState" then
+        -- object.script_state is a MEMBER VARIABLE, not a method, so this bypasses fn().
+        -- Validate the JSON first: a malformed script_state makes the object's own
+        -- onLoad fail on the next load, which is how a counter silently dies.
+        call = function()
+            local v = tostring(m.value or "")
+            if v ~= "" then
+                local okj, dec = pcall(function() return JSON.decode(v) end)
+                if not okj or dec == nil then
+                    error("script_state is not valid JSON: " .. v)
+                end
+            end
+            o.script_state = v
+            return o.script_state
+        end
+    elseif verb == "getScriptState" then
+        call = function() return o.script_state end
+    elseif verb == "positionToLocal" then
+        -- The one reliable way to learn how the board's artwork maps onto the
+        -- table: feed it a world point and read back the board-local coordinate,
+        -- whose range is the board's actual local size. Guessing that size from
+        -- the image resolution produced a mapping that put known cities off the
+        -- board, so measure it instead.
+        call = function() return fn(o, { tonumber(m.x) or 0, tonumber(m.y) or 0, tonumber(m.z) or 0 }) end
+    elseif verb == "positionToWorld" then
+        call = function() return fn(o, { tonumber(m.x) or 0, tonumber(m.y) or 0, tonumber(m.z) or 0 }) end
+    elseif verb == "setName" or verb == "setDescription" or verb == "setGMNotes" or verb == "setNickname" then
+        call = function() return fn(o, tostring(m.value or "")) end
+    elseif verb == "setColorTint" then
+        call = function() return fn(o, { r = tonumber(m.r) or 1, g = tonumber(m.g) or 1, b = tonumber(m.b) or 1 }) end
+    elseif verb == "deal" then
+        call = function() return fn(o, tonumber(m.value) or 1, tostring(m.player or "")) end
+    elseif verb == "setInvisibleTo" then
+        call = function() return fn(o, tostring(m.player or "")) end
+    else
+        call = function() return fn(o) end
+    end
+
+    local ok, res = pcall(call)
+    if not ok then return { ok = false, err = verb .. " failed: " .. S(res), cmd = "act" } end
+    local out = { ok = true, guid = guid, verb = verb, cmd = "act" }
+    -- Always report something, so "the call succeeded but returned nothing" is
+    -- distinguishable from "the call silently failed".
+    out.result = VS(res)
+    return out
+end
+
+-- Full object dump: every top-level object with the fields needed to know what it
+-- is (guid, type, nickname, position, rotation, lock, value, quantity, and up to
+-- `states` child entries). `index` used to be enough for names but returned
+-- positions only, which cannot identify a card - so this adds rotation and value,
+-- i.e. exactly the state a card game is played through.
+local function all(limit, wantStates)
+    local objs = objs()
+    limit = tonumber(limit) or 600
+    local out = {}
+    for i = 1, math.min(limit, #objs) do
+        local o = objs[i]
+        local e = {}
+        -- Deliberately terse. The reply travels through the daemon's HTTP bridge,
+        -- which times out at 8s, and an earlier verbose version (desc + rotation
+        -- quaternion + per-state list, times 449 objects) was dropped entirely -
+        -- the caller just saw "no reply from TTS". Keep every field short and
+        -- bounded so the payload always arrives.
+        pcall(function() e.g = o.getGUID() end)
+        pcall(function() e.n = o.getName() end)
+        pcall(function() e.k = o.getNickname() end)
+        pcall(function()
+            local p = o.getPosition()
+            e.x = math.floor(p.x * 100) / 100
+            e.y = math.floor(p.y * 100) / 100
+            e.z = math.floor(p.z * 100) / 100
+        end)
+        pcall(function() local q = o.getRotation(); e.r = string.format("%.2f,%.2f,%.2f", q.x, q.y, q.z) end)
+        pcall(function() local l = o.getLock(); if l then e.L = 1 end end)
+        pcall(function() local v = o.getValue(); if v and v ~= 0 then e.v = v end end)
+        pcall(function() local q = o.getQuantity(); if q and q ~= 1 then e.q = q end end)
+        if wantStates then
+            pcall(function()
+                local st = o.getStates()
+                local n = 0
+                if type(st) == "table" then for _ in pairs(st) do n = n + 1 end end
+                if n > 0 then e.s = n end
+            end)
+        end
+        out[#out + 1] = e
+    end
+    return { ok = true, total = #objs, returned = #out, items = out }
+end
+
+-- Hand operations. Holding a card in a player's hand is how TTS models "in hand",
+-- and it is a different mechanism from position, so it needs its own verbs.
+local function hand(m)
+    local player = tostring(m.player or "")
+    if player == "" then return { ok = false, err = "no player colour" } end
+    local pl = Player[player]
+    if pl == nil then return { ok = false, err = "no player colour " .. player } end
+    local action = tostring(m.action or "get")
+    if action == "get" then
+        local out = {}
+        local ok, h = pcall(function() return pl.getHandObjects() end)
+        if not ok then return { ok = false, err = "getHandObjects failed: " .. S(h) } end
+        for i, o in ipairs(h or {}) do
+            local e = {}
+            pcall(function() e.guid = o.getGUID() end)
+            pcall(function() e.name = o.getName() end)
+            pcall(function() e.nick = o.getNickname() end)
+            out[#out + 1] = e
+        end
+        return { ok = true, player = player, count = #out, items = out }
+    elseif action == "take" then
+        local o = getObjectFromGUID(tostring(m.guid or ""))
+        if not o then return { ok = false, err = "no object" } end
+        local ok = pcall(function() pl.takeObject({ guid = o.getGUID(), smooth = false }) end)
+        return { ok = ok, player = player, guid = m.guid }
+    end
+    return { ok = false, err = "unknown hand action: " .. action }
+end
+
+-- Metatable diagnostic. `act` kept reporting "object has no method X" for objects
+-- that certainly have it (a Custom_Tile always has getRotation), which means the
+-- lookup path is wrong rather than the object being unusual. Rather than guess at
+-- the table shape again, report it:
+--   * type() of the metatable and of every key inside it
+--   * whether __index is a table or a function
+--   * whether the object itself is indexable directly (o.getRotation)
+--   * the first N names found on whichever table actually holds them
+local function meta(guid)
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object with guid " .. S(guid) } end
+    local r = { ok = true, guid = guid }
+    local mt = getmetatable(o)
+    r.mtType = type(mt)
+    r.mtKeys = {}
+    local idx = nil
+    if type(mt) == "table" then
+        for k, v in pairs(mt) do
+            r.mtKeys[#r.mtKeys + 1] = tostring(k) .. ":" .. type(v)
+            if k == "__index" then idx = v end
+        end
+    end
+    r.indexType = type(idx)
+    -- Case A: the object is indexable itself (methods hang off o directly).
+    local direct = 0
+    local directNames = {}
+    local okA, errA = pcall(function()
+        for k, v in pairs(o) do
+            direct = direct + 1
+            if direct <= 60 then directNames[#directNames + 1] = tostring(k) end
+        end
+    end)
+    r.directOk = okA
+    r.directErr = S(errA)
+    r.directCount = direct
+    -- keep the name lists short: a long reply is dropped by the HTTP bridge
+    r.directNames = table.concat(directNames, ",", 1, math.min(#directNames, 25))
+    -- Case B: __index is a table of methods.
+    local idxCount = 0
+    local idxNames = {}
+    if type(idx) == "table" then
+        for k, v in pairs(idx) do
+            idxCount = idxCount + 1
+            if idxCount <= 25 then idxNames[#idxNames + 1] = tostring(k) end
+        end
+    end
+    r.idxCount = idxCount
+    r.idxNames = table.concat(idxNames, ",")
+    -- Case C: __index is a function -> the real table may be upvalue-hidden, but
+    -- try indexing the object directly for a specific method name.
+    local probes = {}
+    for _, name in ipairs({ "getRotation", "getPosition", "getValue", "getName", "flip", "setRotation" }) do
+        local ok, v = pcall(function() return o[name] end)
+        probes[#probes + 1] = name .. "=" .. type(v) .. (ok and "" or "(err)")
+    end
+    r.methodProbe = table.concat(probes, " ")
+    return r
+end
+
+-- Environment probe: list the GLOBAL functions and tables visible to this script.
+--
+-- WHY: the run/eval escape hatch does not exist in this sandbox (eval is nil), so
+-- there is no way to introspect the environment from outside. But the mod's turn
+-- system must be a Lua global (there is no other way for a mod to add a button),
+-- so enumerating _G answers the important question directly: can "end turn" be
+-- triggered from Lua instead of by clicking a UI button?
+local function env(filter, limit)
+    if type(_G) ~= "table" then return { ok = false, err = "_G is " .. type(_G) } end
+    limit = tonumber(limit) or 400
+    filter = filter and tostring(filter) or ""
+    local out = {}
+    local n = 0
+    for k, v in pairs(_G) do
+        n = n + 1
+        if n > limit then break end
+        local name = tostring(k)
+        if filter == "" or string.find(name, filter, 1, true) then
+            out[#out + 1] = name .. ":" .. type(v)
+        end
+    end
+    table.sort(out)
+    return { ok = true, total = n, returned = #out, names = table.concat(out, ",") }
+end
+
+local function setval(guid, value)
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object with guid " .. S(guid) } end
+    local ok, err = pcall(function() o.setValue(tonumber(value) or 0) end)
+    if not ok then return { ok = false, err = "setValue failed: " .. S(err) } end
+    return { ok = true, guid = guid, value = o.getValue() }
+end
+
+local function getval(guid)
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object with guid " .. S(guid) } end
+    return { ok = true, guid = guid, value = o.getValue() }
+end
+
+local function index(limit)
+    local all = objs()
+    limit = tonumber(limit) or 50
+    local out = {}
+    for i = 1, math.min(limit, #all) do
+        local o = all[i]
+        local nm, pos = "?", { 0, 0, 0 }
+        pcall(function() nm = o.getName() end)
+        pcall(function() local p = o.getPosition(); pos = { p.x, p.y, p.z } end)
+        out[#out + 1] = {
+            guid = o.getGUID(), name = nm,
+            x = math.floor(pos[1] * 100) / 100,
+            y = math.floor(pos[2] * 100) / 100,
+            z = math.floor(pos[3] * 100) / 100
+        }
+    end
+    return { ok = true, total = #all, returned = #out, items = out }
+end
+
+-- Escape hatch. This TTS Lua sandbox has NO load/loadstring (both nil), so code
+-- cannot be compiled at runtime with the standard functions. TTS ships its own
+-- eval() for exactly this purpose; whether it exists, and whether it can see
+-- locally scoped parameters, is verified by the `diag` command rather than assumed.
+--
+-- Usage: {cmd="run", code="return 41+1"}
+local function run(m, code)
+    if code == nil then return { ok = false, err = "no code" } end
+    if type(eval) ~= "function" then
+        return { ok = false, err = "no eval() in this sandbox; use the static commands instead" }
+    end
+    local ok, res = pcall(function()
+        return eval(code)
+    end)
+    if not ok then return { ok = false, err = "runtime: " .. S(res) } end
+    if type(res) == "table" then
+        local enc, eerr = pcall(function() return JSON.encode(res) end)
+        if enc then return { ok = true, result = enc } end
+        return { ok = true, result = "table (encode failed: " .. S(eerr) .. ")" }
+    end
+    return { ok = true, result = S(res) }
+end
+
+-- Environment inspection. Needs no loader, so it always works.
+local function diag()
+    local function t(n) return type(_G[n]) end
+    return {
+        ok = true,
+        load = t("load"),
+        loadstring = t("loadstring"),
+        eval = t("eval"),
+        setUI = t("setUI"),
+        UI = t("UI"),
+        Notes = t("Notes"),
+        Player = t("Player"),
+        JSON = t("JSON"),
+        os = t("os"),
+        io = t("io"),
+        loadfile = t("loadfile"),
+        DSH_buildUI = t("DSH_buildUI"),
+        DSH_log_n = #(DSH_LOG or {}),
+        loads = DSH_LOADS or -1,
+        objects = #objs(),
+        at = os.date("%H:%M:%S"),
+    }
+end
+
+-- ------------------------------------------------------------------ panel -----
+-- The in-game dialogue panel. These functions MUST live at file scope: the Global
+-- script runs onLoad right after this file is evaluated, and onLoad calls
+-- DSH_buildUI. When they were nested inside panelEnsure() the global never existed
+-- at that moment, so the panel was never drawn (and the stale XmlUI in the save was
+-- all the player saw).
+--
+-- A panel file at DSH_DIR/dsh_panel.lua may override these; it is optional.
+
+DSH_LOG = DSH_LOG or {}
+if DSH_INPUT == nil then DSH_INPUT = "" end
+
+function DSH_panelGet()
+    return {
+        n = #DSH_LOG,
+        pending = DSH_INPUT,
+        last = (DSH_LOG[#DSH_LOG] or ""),
+        log = table.concat(DSH_LOG, "\n"),
+    }
+end
+
+function DSH_buildUI()
+    local h = "(no messages yet)"
+    if #DSH_LOG > 0 then
+        local first = math.max(1, #DSH_LOG - 5)
+        local out = {}
+        for i = first, #DSH_LOG do out[#out + 1] = tostring(DSH_LOG[i]) end
+        h = table.concat(out, "\n")
+    end
+    local shown = DSH_INPUT
+    if shown == nil or shown == "" then shown = "[empty]" end
+    if #shown > 30 then shown = string.sub(shown, 1, 30) .. "..." end
+    local xml =
+        '<Panel id="dshRoot" width="420" height="320" color="#0F0F0FEE" position="0 0 -10">' ..
+        '<Text id="dshTitle" color="#66CCFF" fontSize="18" alignment="MiddleCenter">DSH  TO  P1</Text>' ..
+        '<InputField id="dshInput" width="390" height="60" color="#FFFFFF" textColor="#101010" fontSize="15" ' ..
+        'lineType="MultiLineNewLine" onValueChanged="DSH_onInput" onEndEdit="DSH_onInput" />' ..
+        '<Button id="dshSend" text="SEND" width="130" height="32" colors="#2E7D32|#1B5E20|#A5D6A7|#333333" ' ..
+        'textColor="#FFFFFF" fontSize="15" textAlignment="MiddleCenter" onClick="DSH_onClick(send)" />' ..
+        '<Button id="dshClear" text="CLEAR" width="120" height="32" colors="#455A64|#263238|#90A4AE|#333333" ' ..
+        'textColor="#FFFFFF" fontSize="14" textAlignment="MiddleCenter" onClick="DSH_onClick(clear)" />' ..
+        '<Button id="dshHide" text="HIDE" width="100" height="32" colors="#5D4037|#3E2723|#BCAAA4|#333333" ' ..
+        'textColor="#FFFFFF" fontSize="14" textAlignment="MiddleCenter" onClick="DSH_onClick(hide)" />' ..
+        '<Text id="dshStatus" color="#FFD54F" fontSize="13" alignment="MiddleCenter">' ..
+        'panel ready  log:' .. #DSH_LOG .. '  typed:' .. tostring(shown) .. '</Text>' ..
+        '<Text id="dshHist" color="#EEEEEE" fontSize="12" alignment="LowerLeft">' .. h .. '</Text>' ..
+        '</Panel>'
+    local ok, err = pcall(setUI, xml)
+    if not ok then
+        -- last-ditch visible failure: put the reason in chat
+        pcall(broadcastToAll, "[DSH] panel setUI failed: " .. tostring(err))
+        return false
+    end
+    return true
+end
+
+local function panelEnsure()
+    if type(DSH_buildUI) == "function" then return true end
+    local d = DSH_DIR or "."
+    local f = loadfile(d .. "/dsh_panel.lua")
+    if f then pcall(f) end
+    return (type(DSH_buildUI) == "function")
+end
+
+-- Input handlers. TTS invokes these as f(player_color, value, id); some UI paths
+-- pass only the value. Scan every argument so the action is found either way.
+function DSH_onInput(player, value, id)
+    local v = nil
+    for _, a in ipairs({ value, id, player }) do
+        if type(a) == "string" then v = a break end
+    end
+    if v ~= nil then DSH_INPUT = v end
+end
+
+-- Single place that writes the status line, so every path through the panel gives
+-- the user visible feedback and proves which handler actually fired.
+function DSH_status(msg)
+    local n = 0
+    if DSH_LOG then n = #DSH_LOG end
+    local s = "[nil]"
+    if DSH_INPUT ~= nil and DSH_INPUT ~= "" then s = DSH_INPUT end
+    pcall(function()
+        UI.setAttribute("dshStatus", "text", tostring(msg) .. "  in:" .. tostring(s) .. "  log:" .. n)
+    end)
+end
+
+local function DSH_looksLikeAction(s)
+    if type(s) ~= "string" then return nil end
+    if s == "send" or s == "sync" or s == "clear" or s == "hide" then return s end
+    return nil
+end
+
+function DSH_onClick(player, value, id)
+    local act = DSH_looksLikeAction(value) or DSH_looksLikeAction(id) or DSH_looksLikeAction(player)
+    if act == nil then
+        for _, a in ipairs({ value, id, player }) do
+            if type(a) == "string" and #a <= 12 and a:match("^[%a]+$") then act = a break end
+        end
+    end
+    local msg = "click:" .. tostring(act)
+    if act == "send" then
+        local v = tostring(DSH_INPUT or ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if v ~= "" then
+            DSH_LOG = DSH_LOG or {}
+            DSH_LOG[#DSH_LOG + 1] = "[P1] " .. v
+            DSH_INPUT = ""
+            msg = "SENT"
+        else
+            msg = "empty input"
+        end
+    elseif act == "clear" then
+        DSH_INPUT = ""
+        msg = "cleared"
+    elseif act == "hide" then
+        pcall(setUI, '<Panel id="dshHidden" width="1" height="1" color="#00000000" position="0 0 -10" />')
+        pcall(broadcastToAll, "[DSH] panel hidden - use panelShow to bring it back")
+        return
+    end
+    if type(DSH_buildUI) == "function" then pcall(DSH_buildUI) end
+    DSH_status(msg)
+end
+
+local function panelGet()
+    local have = panelEnsure()
+    if type(DSH_panelGet) ~= "function" then
+        return { ok = false, err = "panel not loaded", panelLoaded = have }
+    end
+    local r = DSH_panelGet()
+    r.ok = true
+    return r
+end
+
+local function panelPush(text)
+    panelEnsure()
+    if type(DSH_push) ~= "function" then
+        -- fallback append
+        DSH_LOG = DSH_LOG or {}
+        DSH_LOG[#DSH_LOG + 1] = "[DSH] " .. S(text)
+        if type(DSH_buildUI) == "function" then pcall(DSH_buildUI) end
+        return { ok = true, pushed = true, fallback = true, text = S(text) }
+    end
+    local done = DSH_push("DSH", text)
+    if type(DSH_buildUI) == "function" then pcall(DSH_buildUI) end
+    return { ok = true, pushed = done, text = S(text) }
+end
+
+local function panelShow()
+    panelEnsure()
+    if type(DSH_buildUI) == "function" then pcall(DSH_buildUI) end
+    return { ok = true, shown = (type(DSH_buildUI) == "function") }
+end
+
+-- The first version of the panel could not be closed, which was a real complaint.
+-- HIDE clears the global UI; SHOW (the new button, or the panelHide command) brings
+-- it back. setUI with a single harmless element is used because there is no
+-- documented "clear global UI" call.
+local function panelHide()
+    local ok = pcall(setUI, '<Panel id="dshHidden" width="1" height="1" color="#00000000" position="0 0 -10" />')
+    return { ok = true, hidden = ok }
+end
+
+-- ------------------------------------------------------------------ notes -----
+-- With setUI absent (see diag), the on-screen Notes area is the only remaining way
+-- to put text in front of the player without a save/reload. These commands verify
+-- and use it.
+
+local function notesRead()
+    local ok, v = pcall(function() return Notes.getNotes() end)
+    if not ok then return { ok = false, err = S(v) } end
+    return { ok = true, notes = S(v), chars = #S(v) }
+end
+
+-- ---------------------------------------------------------------- notebook -----
+-- The dialogue channel. If the external API stays open while the game is merely
+-- running (verified: it does), this reads what the player typed WITHOUT a save.
+--
+-- The edit index. editNotebookTab's index is the tab's POSITION in the list that
+-- getNotebookTabs() returns, counting from 0 -- NOT the save file's TabStates key,
+-- and NOT the `index` field that list reports. Using those was the source of a long
+-- bug in which every write landed on the wrong tab (and once renamed it "Black").
+-- So the position is resolved at call time instead of being hard-coded.
+DSH_VERSION = 'v12-callx'
+DSH_TAB_TITLE = DSH_TAB_TITLE or "DSH"
+
+-- Returns the 0-based position of the dialogue tab, plus the tab itself.
+local function findDialoguePos()
+    local ok, tabs = pcall(function() return Notes.getNotebookTabs() end)
+    if not ok then return nil, nil, "getNotebookTabs threw: " .. S(tabs) end
+    if type(tabs) ~= "table" then return nil, nil, "tabs is " .. type(tabs) end
+    local titled, contented = nil, nil
+    for i = 1, #tabs do
+        local ti = tostring(tabs[i].title or "")
+        if ti:find(DSH_TAB_TITLE, 1, true) or ti:find("对话", 1, true) then
+            titled = i
+            break
+        end
+        if contented == nil then
+            local b = tostring(tabs[i].body or "")
+            if b:find("DSH", 1, true) or b:find("对局记录", 1, true) then contented = i end
+        end
+    end
+    local pos = titled or contented
+    if pos == nil then
+        return nil, nil, "no dialogue tab (title marker '" .. DSH_TAB_TITLE .. "') among " .. #tabs .. " tabs"
+    end
+    return pos, tabs[pos], nil
+end
+
+local function tabRead()
+    if type(Notes) ~= "userdata" and type(Notes) ~= "table" then
+        return { ok = false, err = "Notes is " .. type(Notes) }
+    end
+    local pos, t, err = findDialoguePos()
+    if pos == nil then return { ok = false, err = err } end
+    local body = tostring(t.body or "")
+    return {
+        ok = true,
+        editIndex = pos - 1,          -- what editNotebookTab expects
+        listPos = pos,
+        title = tostring(t.title or ""),
+        chars = #body,
+        body = body,
+    }
+end
+
+local function tabWrite(text)
+    if text == nil then return { ok = false, err = "no text" } end
+    local pos, t, err = findDialoguePos()
+    if pos == nil then return { ok = false, err = err } end
+    -- USE THE TAB'S OWN `index` FIELD.
+    --
+    -- The old code used pos-1 and every write landed on the wrong tab. Evidence:
+    -- consecutive calls returned wildly different positions for the SAME tab
+    -- (1, then 4, then 2), so getNotebookTabs() order is not stable and pos-1 is
+    -- meaningless. The API documents getNotebookTabs() as returning
+    --   { index=N, title=..., body=..., color=... }
+    -- and editNotebookTab as taking that same index, so take it from the tab.
+    local idx = t.index
+    if idx == nil then idx = pos - 1 end
+    local ok, e2 = pcall(function()
+        Notes.editNotebookTab({ index = idx, body = tostring(text) })
+    end)
+    if not ok then return { ok = false, err = "editNotebookTab threw: " .. S(e2) } end
+    local r = tabRead()
+    return {
+        ok = true,
+        usedIndex = idx,
+        listPos = pos,
+        sentChars = #tostring(text),
+        readbackChars = r.chars,
+        titleAfter = r.title,
+        verified = (r.chars == #tostring(text) and tostring(r.title or ""):find(DSH_TAB_TITLE, 1, true) ~= nil),
+    }
+end
+
+-- List every tab with the index that actually edits it (position-1), so a future
+-- write cannot target the wrong page.
+local function tabList()
+    local ok, tabs = pcall(function() return Notes.getNotebookTabs() end)
+    if not ok then return { ok = false, err = S(tabs) } end
+    local out = {}
+    local dshPos = (findDialoguePos())   -- take only the first return value
+    for i = 1, #tabs do
+        local ti = tostring(tabs[i].title or "")
+        out[#out + 1] = {
+            editIndex = i - 1,          -- the number editNotebookTab wants
+            listPos = i,
+            reportedIndex = tabs[i].index,
+            chars = #tostring(tabs[i].body or ""),
+            title = ti,
+            isDialogue = (i == dshPos),
+        }
+    end
+    return { ok = true, count = #tabs, dialoguePos = dshPos, tabs = out }
+end
+
+-- Can Lua touch the filesystem at all? (io and loadfile are nil, so this is checked
+-- rather than assumed -- if any path works, note reading becomes unnecessary.)
+-- notepush - put a message in front of the player. Three modes:
+--   "notes" -> Notes.setNotes (the on-screen note pad)
+--   "tab"   -> the notebook dialogue tab, located by title
+--   "auto"  -> notes, and if that fails the notebook tab
+-- Reports what it actually did and reads the result back, so a mis-targeted write
+-- is visible immediately instead of looking like a success.
+local function notesPush(m)
+    if type(m) == "string" then m = { text = m } end
+    if type(m) ~= "table" then m = {} end
+    local text = m.text
+    if text == nil then text = "DSH" end
+    text = tostring(text)
+    local mode = tostring(m.mode or "auto")
+    local r = { ok = true, mode = mode, sentChars = #text }
+
+    if mode == "notes" or mode == "auto" then
+        if type(Notes) == "userdata" or type(Notes) == "table" then
+            local ok, e = pcall(function() return Notes.setNotes(text) end)
+            r.setNotes = ok and "ok" or S(e)
+            if ok then
+                local rok, back = pcall(function() return Notes.getNotes() end)
+                r.notesVerified = (rok and S(back) == text)
+            end
+        else
+            r.setNotes = "Notes is " .. type(Notes)
+        end
+        if r.notesVerified and mode == "auto" then r.done = "notes"; return r end
+    end
+
+    if mode == "tab" or mode == "auto" or (mode == "notes" and not r.notesVerified) then
+        local pos, t, err = findDialoguePos()
+        if pos == nil then
+            r.tabErr = err
+        else
+            local idx = t.index
+            if idx == nil then idx = pos - 1 end
+            local ok, e = pcall(function()
+                Notes.editNotebookTab({ index = idx, body = text })
+            end)
+            r.tabIndex = idx
+            r.tabListPos = pos
+            r.tabTitle = tostring(t.title or "")
+            if ok then
+                local r2 = tabRead()
+                r.tabReadbackChars = r2.chars
+                r.tabVerified = (r2.chars == #text)
+            else
+                r.tabErr = S(e)
+            end
+        end
+    end
+    return r
+end
+local function fsProbe()
+    local r = { ok = true, io = type(io), loadfile = type(loadfile), os = type(os) }
+    if type(os) == "table" and type(os.getenv) == "function" then
+        local ok, v = pcall(os.getenv, "APPDATA")
+        r.appdata = ok and S(v) or ("err:" .. S(v))
+    end
+    return r
+end
+
+local function opening()
+    local msg =
+        "[DSH] Nomad City -- first turn, P1 (red)\n" ..
+        "1. Choose your starting resource node (the node on the green event card).\n" ..
+        "2. Put the red moving city on that node's docking point.\n" ..
+        "3. Write your choice in the notebook tab 'DSH dialogue channel'.\n" ..
+        "Order: P1 (you) -> P2 -> P3 -> P4."
+    local nres = notesPush({ text = msg, mode = "auto" })
+    return {
+        ok = true,
+        notes = nres,
+        broadcast = "not attempted (broadcastToAll is absent in this sandbox)",
+    }
+end
+
+-- ------------------------------------------------------------------ probe -----
+-- editNotebookTab's index does NOT match the `index` field that getNotebookTabs
+-- reports, so the mapping has to be discovered empirically. This walks the index
+-- space with a unique marker, reports which tab each index actually edits, and
+-- restores the original body of every tab, flagging any body that no longer matches
+-- what it started as (evidence that an earlier blind write damaged it).
+local function runLoop()
+    local MARK = "DSHPROBE"
+    local ok, tabs = pcall(function() return Notes.getNotebookTabs() end)
+    if not ok then return { ok = false, err = "getNotebookTabs: " .. S(tabs) } end
+
+    -- snapshot: pos -> {index, title, body}
+    local snap = {}
+    local dshPos, dshIndex = nil, nil
+    for i = 1, #tabs do
+        snap[i] = {
+            title = tostring(tabs[i].title or ""),
+            body = tostring(tabs[i].body or ""),
+            index = tabs[i].index,
+        }
+        local ti = tostring(tabs[i].title or "")
+        if ti:find("DSH", 1, true) or ti:find("对话", 1, true) then
+            dshPos, dshIndex = i, tabs[i].index
+        end
+    end
+
+    local results = {}
+    local maxIdx = #tabs + 3
+
+    -- 1. walk candidate indices
+    for idx = 0, maxIdx do
+        local okw = pcall(function()
+            Notes.editNotebookTab({ index = idx, body = MARK .. "_i" .. idx })
+        end)
+        if okw then
+            local ok2, t2 = pcall(function() return Notes.getNotebookTabs() end)
+            local editedPos, editedTitle = nil, "?"
+            if ok2 and type(t2) == "table" then
+                for j = 1, #t2 do
+                    local b = tostring(t2[j].body or "")
+                    if b == MARK .. "_i" .. idx then
+                        editedPos, editedTitle = j, tostring(t2[j].title or "")
+                    end
+                end
+            end
+            results[#results + 1] = {
+                idx = idx,
+                editedPos = editedPos,
+                editedTitle = editedTitle,
+                isDsh = (editedPos == dshPos),
+            }
+        else
+            results[#results + 1] = { idx = idx, editedPos = -1, editedTitle = "CALL FAILED" }
+        end
+    end
+
+    -- 2. restore every position's original body, working off the snapshot
+    local restored, problems = 0, {}
+    for i = 1, #snap do
+        local s = snap[i]
+        if s.body ~= "" then
+            local okr, er = pcall(function()
+                Notes.editNotebookTab({ index = s.index, body = s.body })
+            end)
+            if okr then restored = restored + 1 else problems[#problems + 1] = s.title .. ":restore:" .. S(er) end
+        end
+    end
+
+    -- 3. verify: did every non-empty body come back?
+    local ok3, t3 = pcall(function() return Notes.getNotebookTabs() end)
+    local damaged, verified = {}, 0
+    if ok3 and type(t3) == "table" then
+        for i = 1, #snap do
+            local want = snap[i].body
+            if want ~= "" then
+                -- find a current tab with the same title
+                local found = false
+                for j = 1, #t3 do
+                    if tostring(t3[j].title or "") == snap[i].title then
+                        if tostring(t3[j].body or "") == want then found = true; verified = verified + 1 end
+                    end
+                end
+                if not found then damaged[#damaged + 1] = snap[i].title end
+            end
+        end
+    end
+
+    return {
+        ok = true,
+        tabCount = #tabs,
+        dshPos = dshPos,
+        dshIndex = dshIndex,
+        snapshot = (function()
+            local o = {}
+            for i = 1, #snap do o[i] = { pos = i, title = snap[i].title, index = snap[i].index, chars = #snap[i].body } end
+            return o
+        end)(),
+        probe = results,
+        restored = restored,
+        verified = verified,
+        damaged = damaged,
+        problems = problems,
+    }
+end
+
+-- tabWriteProbe - find which editNotebookTab index actually edits which tab.
+--
+-- WHY: tabwrite reports ok but the target's body is unchanged (readback still shows
+-- the old text). Either the index mapping is wrong or the write lands elsewhere. So
+-- this writes a unique marker to EVERY index in turn, records where each marker
+-- showed up, then restores every original body. Self-restoring, so it is safe to run.
+local function tabWriteProbe()
+    local ok, before = pcall(function() return Notes.getNotebookTabs() end)
+    if not ok or type(before) ~= "table" then return { ok = false, err = "getNotebookTabs: " .. S(before) } end
+    local snap = {}
+    for i = 1, #before do
+        snap[i] = {
+            index = before[i].index,
+            title = tostring(before[i].title or ""),
+            body  = tostring(before[i].body or ""),
+            color = before[i].color,
+        }
+    end
+    local results = {}
+    for idx = 0, #before - 1 do
+        local mark = "ZQMARK_" .. idx
+        local okw, ew = pcall(function()
+            Notes.editNotebookTab({ index = idx, body = mark })
+        end)
+        local landedPos, landedTitle = nil, nil
+        if okw then
+            local ok2, t2 = pcall(function() return Notes.getNotebookTabs() end)
+            if ok2 and type(t2) == "table" then
+                for j = 1, #t2 do
+                    if tostring(t2[j].body or "") == mark then
+                        landedPos = j
+                        landedTitle = tostring(t2[j].title or "")
+                    end
+                end
+            end
+        end
+        results[#results + 1] = {
+            wrote = idx,
+            landedPos = landedPos,          -- nil = the write had NO effect anywhere
+            landedTitle = landedTitle,
+            reportedIndex = (landedPos and before[landedPos] and before[landedPos].index) or nil,
+            err = (not okw) and S(ew) or nil,
+        }
+    end
+    -- restore every original body by the index it USED to report
+    local restored = 0
+    for i = 1, #snap do
+        local s = snap[i]
+        local okr = pcall(function()
+            Notes.editNotebookTab({ index = s.index, body = s.body, title = s.title })
+        end)
+        if okr then restored = restored + 1 end
+    end
+    local after = {}
+    local ok3, t3 = pcall(function() return Notes.getNotebookTabs() end)
+    if ok3 and type(t3) == "table" then
+        for j = 1, #t3 do
+            after[#after + 1] = { p = j, index = t3[j].index, title = tostring(t3[j].title or ""), chars = #tostring(t3[j].body or "") }
+        end
+    end
+    local s0 = {}
+    for i = 1, #snap do
+        s0[#s0 + 1] = { p = i, index = snap[i].index, title = snap[i].title, chars = #snap[i].body }
+    end
+    return { ok = true, count = #before, before = s0, probe = results, restored = restored, after = after }
+end
+local DSH_PROBE_ONCE = nil
+local function tabProbeOnce()
+    if DSH_PROBE_ONCE ~= nil then return DSH_PROBE_ONCE end
+    local ok, tabs = pcall(function() return Notes.getNotebookTabs() end)
+    if not ok or type(tabs) ~= "table" then
+        DSH_PROBE_ONCE = { ok = false, err = "getNotebookTabs: " .. S(tabs) }
+        return DSH_PROBE_ONCE
+    end
+    -- describe every tab exactly as the API reports it
+    local desc = {}
+    for i = 1, #tabs do
+        local ti = tostring(tabs[i].title or "")
+        desc[#desc + 1] = {
+            pos = i,
+            index = tabs[i].index,
+            title = ti,
+            chars = #tostring(tabs[i].body or ""),
+            isDsh = (ti:find("DSH", 1, true) ~= nil),
+        }
+    end
+    -- find the dialogue tab and read its own index field
+    local target, targetPos = nil, nil
+    for i = 1, #tabs do
+        local ti = tostring(tabs[i].title or "")
+        if ti:find("DSH", 1, true) or ti:find("对话", 1, true) then target, targetPos = tabs[i], i break end
+    end
+    local out = { ok = true, count = #tabs, tabs = desc, targetPos = targetPos }
+    if target == nil then
+        out.note = "no DSH tab"
+        DSH_PROBE_ONCE = out
+        return out
+    end
+    out.targetIndex = target.index
+    out.targetCharsBefore = #tostring(target.body or "")
+
+    -- ONE write, to the index the tab itself reports
+    local before = tostring(target.body or "")
+    local mark = "ZQMARK_PROBE"
+    local okw, ew = pcall(function()
+        Notes.editNotebookTab({ index = target.index, body = mark })
+    end)
+    out.writeOk = okw
+    out.writeErr = (not okw) and S(ew) or nil
+
+    local ok2, t2 = pcall(function() return Notes.getNotebookTabs() end)
+    out.landedPos = nil
+    if ok2 and type(t2) == "table" then
+        for j = 1, #t2 do
+            if tostring(t2[j].body or "") == mark then
+                out.landedPos = j
+                out.landedIndex = t2[j].index
+                out.landedTitle = tostring(t2[j].title or "")
+            end
+        end
+    end
+    -- restore
+    pcall(function() Notes.editNotebookTab({ index = target.index, body = before }) end)
+    DSH_PROBE_ONCE = out
+    return out
+end
+-- ---------------------------------------------------------------------------
+-- geom: one call, all the geometry that matters for putting something at a
+-- chosen spot on a board.
+--
+-- WHY: the board's artwork resolution says nothing about its size on the table.
+-- A 5000x5000 Custom_Board at scale 3 could be 50 units wide or 500, and the two
+-- give completely different answers - an earlier pixel->table mapping derived
+-- from the artwork's printed ruler put known cities off the board entirely. The
+-- fix is not a cleverer guess: it is to ask positionToLocal/positionToWorld what
+-- the mapping actually is, and to ask for it once so the reply cannot be dropped.
+--
+--   {cmd="geom", guids="957019"}
+local function geom(guids)
+    if guids == nil or guids == "" then return { ok = false, err = "no guids" } end
+    local out = {}
+    local n = 0
+    for g in string.gmatch(tostring(guids), "[^,%s]+") do
+        n = n + 1
+        if n > 20 then break end
+        local o = getObjectFromGUID(g)
+        if o then
+            local e = { g = g }
+            pcall(function() local p = o.getPosition(); e.px = p.x; e.py = p.y; e.pz = p.z end)
+            pcall(function() local s = o.getScale(); e.sx = s.x; e.sy = s.y; e.sz = s.z end)
+            pcall(function() local r = o.getRotation(); e.ry = r.y end)
+            pcall(function() local b = o.getBounds(); e.bx = b.x; e.by = b.y; e.bz = b.z end)
+            -- world origin expressed in the object's own local frame: this is the
+            -- offset between the board's local space and the table's.
+            pcall(function()
+                local l = o.positionToLocal({ 0, 0, 0 })
+                e.lx = l.x; e.lz = l.z
+            end)
+            -- and the object's own centre converted back, which must round-trip
+            pcall(function()
+                local w = o.positionToWorld({ 0, 0, 0 })
+                e.wx = w.x; e.wz = w.z
+            end)
+            -- The screen coordinate of the object's centre. This is the missing
+            -- link for calibration: a screenshot gives pixel positions of visual
+            -- features, world coordinates give table positions, and only
+            -- getScreenPosition ties the two together without a hand-measured
+            -- anchor that can be misread by a whole tile.
+            pcall(function()
+                local sp = o.getScreenPosition()
+                if sp then e.spx = math.floor(sp.x + 0.5); e.spy = math.floor(sp.y + 0.5) end
+            end)
+            out[#out + 1] = e
+        else
+            out[#out + 1] = { g = g, err = "not found" }
+        end
+    end
+    return { ok = true, items = out }
+end
+
+-- callFn: invoke a named function that lives in an object's own Lua script.
+--
+-- NOTE on the API shape: you CANNOT read the function off the object
+-- (`o.customSet` raises "cannot access field customSet of userdata<LuaObject>"),
+-- and `o[fname]` is no better. The supported route is Object.call(fnName), which
+-- looks the name up inside that object's own script and runs it. Optional args go
+-- in a second table.
+local function callFn(guid, fname, args)
+    if guid == nil or guid == "" then return { ok = false, err = "no guid" } end
+    if fname == nil or fname == "" then return { ok = false, err = "no fn" } end
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object " .. S(guid) } end
+    local ok, res
+    if args ~= nil and type(args) == "table" and #args > 0 then
+        ok, res = pcall(function() return o.call(tostring(fname), args) end)
+    else
+        ok, res = pcall(function() return o.call(tostring(fname)) end)
+    end
+    if not ok then return { ok = false, err = "call failed: " .. S(res), cmd = "call" } end
+    return { ok = true, guid = guid, fn = tostring(fname), result = tostring(res), cmd = "call" }
+end
+
+-- setCount: force a 哥伦比亚金券 counter to show a given number.
+--
+-- Recipe (reverse-engineered from the counter's own script, MrStump
+-- "Universal Counter Tokens"):
+--   1. setDescription("<n>")   -- customSet() reads the description as the new value
+--   2. call customSet()        -- sets the Lua local `count` and calls updateDisplay()
+--   3. sync script_state       -- so onSave() persists the same number
+--
+-- Step 3 matters: script_state is what onSave writes to disk, and if it disagrees
+-- with `count` the displayed number reverts on the next load. I learnt this the hard
+-- way - setting script_state alone changed nothing on screen.
+local function setCount(guid, value)
+    if guid == nil or guid == "" then return { ok = false, err = "no guid" } end
+    local n = tonumber(value)
+    if n == nil then return { ok = false, err = "value not a number: " .. S(value) } end
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, err = "no object " .. S(guid) } end
+    local out = { ok = true, guid = guid, want = n, cmd = "setcount" }
+    local ok1, e1 = pcall(function() o.setDescription(tostring(math.floor(n))) end)
+    out.desc = ok1 and tostring(math.floor(n)) or ("ERR " .. S(e1))
+    -- customSet() reads the description and repaints the display button.
+    local ok2, e2 = pcall(function() return o.call("customSet") end)
+    out.customSet = ok2 and ("ok " .. tostring(e2)) or ("ERR " .. S(e2))
+    local ok3, e3 = pcall(function() o.script_state = JSON.encode({ saved_count = math.floor(n) }) end)
+    out.state = ok3 and o.script_state or ("ERR " .. S(e3))
+    return out
+end
+
+-- Draw cards OFF a deck and lay them out on the table.
+--
+-- WHY THIS EXISTS: a card inside a Deck is NOT a separate object. getObjectFromGUID
+-- cannot find it and `move:` cannot reach it - verified the hard way when 6 cards were
+-- stacked into a pile and all 7 old guids vanished. TTS's only primitive for "take the
+-- top card off a deck" is Deck.takeObject(), so without this handler a deck can never be
+-- drawn from. Needed for 游城拓荒's "翻开一张事件牌" (city move / explore onto an unmarked
+-- resource point).
+--
+-- rotZ is what makes a card face up or face down when it lies flat:
+--     rotZ ~   0 -> face UP    (verified: the 企业板 and a player-flipped 事件牌 sit at ~0.08)
+--     rotZ ~ 180 -> face DOWN  (verified: every card still held in a hand sits at ~180)
+--
+-- setRotation/setPosition take POSITIONAL tables here on purpose: the named-table form
+-- ({x=..,y=..,z=..}) is what made the generic act() path fail with
+-- "cannot convert a userdata to a clr type UnityEngine.Vector3".
+local function draw(m)
+    local deckGuid = tostring(m.guid or "")
+    local deck = getObjectFromGUID(deckGuid)
+    if not deck then return { ok = false, err = "no object with guid " .. S(deckGuid) } end
+    local n = tonumber(m.n) or 1
+    local x = tonumber(m.x) or 0
+    local y = tonumber(m.y) or 2.2
+    local z = tonumber(m.z) or 0
+    local step = tonumber(m.step) or 2.4
+    local faceup = tostring(m.faceup or "1") == "1"
+    local rz = 180
+    if faceup then rz = 0 end
+    local guids = {}
+    for i = 1, n do
+        local px = x + ((i - 1) * step)
+        local ok, taken = pcall(function()
+            return deck.takeObject({ position = { px, y, z }, smooth = false })
+        end)
+        if not ok then
+            return { ok = false, err = "takeObject failed: " .. S(taken), taken = #guids, guids = guids }
+        end
+        if taken == nil then
+            return { ok = false, err = "deck empty after " .. tostring(#guids) .. " card(s)",
+                     taken = #guids, guids = guids }
+        end
+        -- Rotate and re-place AFTER the take: takeObject's own `flip` flag is not
+        -- dependable, and rotZ is the entire difference between face up and face down.
+        pcall(function() taken.setRotation({ 0, 180, rz }) end)
+        pcall(function() taken.setPosition({ px, y, z }) end)
+        local g = nil
+        pcall(function() g = taken.getGUID() end)
+        guids[#guids + 1] = g
+    end
+    local left = nil
+    pcall(function() left = deck.getQuantity() end)
+    return { ok = true, deck = deckGuid, n = #guids, guids = guids, remaining = left }
+end
+
+local handlers = {
+    ping = function(m) return ping() end,
+    -- call a function that lives in an OBJECT's own script.
+    --
+    -- WHY THIS EXISTS: the 哥伦比亚金券 counters are MrStump "Universal Counter
+    -- Tokens". Their visible number comes from a Lua local `count` pushed to a UI
+    -- button by updateDisplay(). Writing object.script_state only changes the SAVED
+    -- value - the on-screen number does not move, because the running script never
+    -- re-reads it. So the only correct way to change the displayed count is to invoke
+    -- one of the script's own functions:
+    --     customSet()  reads self.getDescription() as a number, sets count, repaints
+    -- So: setDescription("<n>") then call customSet().
+    call = function(m) return callFn(m.guid, m.fn) end,
+    -- 2026-10-07 新增：callx —— **带参数**调用物件脚本里的函数（我的 call 只有无参版本，
+    -- 而模组"选英雄"按钮的回调签名是 fn(obj, color, alt_click)，缺 color 就什么都不做）。
+    -- 用法：{cmd="callx", guid="285719", fn="moon", args={"", "Blue", false}}
+    -- TTS 的 Object.call(fn, table) 会把 table 的内容**展开**成位置参数，所以这里直接传 args。
+    callx = function(m)
+        local o = getObjectFromGUID(tostring(m.guid or ""))
+        if not o then return { ok = false, err = "no object " .. tostring(m.guid) } end
+        local list = m.args
+        if type(list) ~= "table" then list = {} end
+        local ok, res = pcall(function() return o.call(tostring(m.fn or ""), list) end)
+        if not ok then return { ok = false, err = tostring(res), fn = tostring(m.fn) } end
+        return { ok = true, fn = tostring(m.fn), res = VS(res) }
+    end,
+    setcount = function(m) return setCount(m.guid, m.value) end,
+    geom = function(m) return geom(m.guids) end,
+    opening = function(m) return opening() end,
+    notepush = function(m) return notesPush(m) end,
+    noteread = function(m) return notesRead() end,
+    tabread = function(m) return tabRead() end,
+    tabwrite = function(m) return tabWrite(m.text) end,
+    tablist = function(m) return tabList() end,
+    tabprobe = function(m) return tabProbeOnce() end,
+    runloop = function(m) return runLoop() end,
+    fsprobe = function(m) return fsProbe() end,
+    diag = function(m) return diag() end,
+    panelGet = function(m) return panelGet() end,
+    panelPush = function(m) return panelPush(m.text) end,
+    panelShow = function(m) return panelShow() end,
+    panelHide = function(m) return panelHide() end,
+    selftest = function(m) return selftest() end,
+    count = function(m) return count(m.limit) end,
+    find = function(m) return find(m.filter, m.limit) end,
+    read = function(m) return read(m.guid) end,
+    probe = function(m) return probe(m.guid) end,
+    whose = function(m) return whose(m.guids) end,
+    act = function(m) return act(m) end,
+    env = function(m) return env(m.filter, m.limit) end,
+    meta = function(m) return meta(m.guid) end,
+    all = function(m) return all(m.limit, m.states == true or m.states == "true") end,
+    hand = function(m) return hand(m) end,
+    draw = function(m) return draw(m) end,
+    write = function(m) return write(m.guid, m.value) end,
+    move = function(m) return moveTo(m.guid, m.x, m.y, m.z) end,
+    rotate = function(m) return rotateTo(m.guid, m.x, m.y, m.z, m.add == true or m.add == "true") end,
+    flip = function(m) return rotateTo(m.guid, 0, 0, 180, true) end,
+    setval = function(m) return setval(m.guid, m.value) end,
+    getval = function(m) return getval(m.guid) end,
+    index = function(m) return index(m.limit) end,
+    run = function(m) return run(m, m.code) end,
+}
+
+-- ============================ THE SILENT-REPLY BUG ============================
+-- `sendExternalMessage` CANNOT serialise a reply that contains a NESTED table.
+-- It raises, and because the call below was not inside a pcall, the whole
+-- onExternalMessage died and NOTHING was sent back. The caller then saw
+-- "no reply in 25s" and could not tell it apart from "TTS is not running".
+--
+-- That is why every list-returning handler was silently dead:
+--     find  -> items{}      hand -> items{}      draw -> guids{}
+--     geom / all / whose   (same shape, presumably all dead too)
+-- while every handler that returns only scalars worked fine:
+--     ping / act / setcount / getState / tabread ...
+--
+-- THE TELL: an UNKNOWN command still answers ("no handler for cmd=X"), because
+-- that reply is flat. So "known command + no reply at all" == this bug.
+--
+-- FIX (two parts, both needed):
+--   1. flatten nested tables to JSON STRINGS before sending - a flat table of
+--      strings/numbers/booleans always serialises;
+--   2. keep a pcall around the send, so that if anything still refuses to
+--      serialise we get a visible error instead of silence.
+
+local function flattenReply(v, depth)
+    depth = depth or 0
+    local t = type(v)
+    if t == "string" or t == "number" or t == "boolean" then return v end
+    if t ~= "table" then return tostring(v) end
+    if depth > 0 then return tostring(v) end
+    local ok, s = pcall(function() return JSON.encode(v) end)
+    if ok and type(s) == "string" then return s end
+    return tostring(v)
+end
+
+function onExternalMessage(data)
+    local cmd = data and data.cmd
+    local reply = { ok = false, err = "no handler for cmd=" .. S(cmd) }
+    if cmd and handlers[cmd] then
+        local ok, res = pcall(handlers[cmd], data)
+        if ok then
+            reply = res
+            if type(reply) == "table" then reply.cmd = cmd end
+        else
+            reply = { ok = false, err = "handler error: " .. S(res), cmd = cmd }
+        end
+    end
+    local flat = {}
+    if type(reply) == "table" then
+        for k, v in pairs(reply) do flat[k] = flattenReply(v, 0) end
+    else
+        flat = { ok = true, value = tostring(reply), cmd = tostring(cmd) }
+    end
+    local sent, serr = pcall(function() sendExternalMessage(flat) end)
+    if not sent then
+        pcall(function()
+            sendExternalMessage({ ok = false, cmd = tostring(cmd),
+                                  err = "sendExternalMessage failed: " .. S(serr) })
+        end)
+    end
+end

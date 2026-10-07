@@ -1,0 +1,181 @@
+# 冷启动 / 换局 / 换模组 —— **唯一一份**工作流（2026-10-07 合并）
+
+> 以前分成两份（《游城拓荒》的"换局流程" 与 `NEWMOD_DEPLOY.md` 的"异地部署"），
+> **本质是同一件事**：让"我"在一个（可能陌生的）桌面状态里重新获得"能读 + 能操作"的能力。
+> 所以合并成这一份，按**三种情形**走，前 4 步是**共同核心**。
+
+## 情形判断
+| 情形 | 特征 | 走法 |
+|---|---|---|
+| **A. 同一模组 · 接着上一局** | 桥接还在（`ping` 通）、只是新回合/新一天 | 直接 §1 的 C 步：读状态页开工 |
+| **B. 同一模组 · 重开一局** | 桥接还在、要摆回开局 | §1 全流程（C 步用 `archive\tts-legacy\init.ps1` 重建认知） |
+| **C. 换新模组（异地部署）** | 桥接不通（`ping` 无回执） | §1 全流程 + §2 的"带桥接进存档" |
+
+---
+
+## §1 共同核心：冷启动四步
+
+**A. 让桌面有一个存档（只有情形 C 必须新存）**
+- 玩家 `Menu → Save & Load → Save Game`，或挂机等自动存档（`TS_AutoSave*.json`，约 5 分钟）。
+- ⚠️ 载入列表显示的是存档里的 **`SaveName`**，不是文件名（文件名是 TTS 编的槽位 TS_Save_N）。
+
+**B. 确认桥接**（我 → TTS 的唯一通道 = 局内 Global 脚本 `tts\lua\dsh_global.lua`，收 `onExternalMessage` 回话）
+```powershell
+ds.ps1 -Do ping        # 期望 ok v=<DSH_VERSION> objs=<n> loads=<n>
+```
+- 版本号 = **"新桥接有没有真的进去"的唯一凭据**。`no reply` ⇒ 桥接不在（走 §2）。
+- ⚠️ TTS 只接收、不吃合成输入 ⇒ 我**不能点按钮**；连「结束回合」都是玩家点。
+
+**C. 盘点与重认**（guid 每局/每模组都变，**只认 hash + nick + scale + 坐标关系**）
+```powershell
+obj_index.ps1          # 存档侧全量（含 url hash / 容器）—— 滞后 ~5 分钟
+live_index.ps1         # 实时全表（guid/name/x/z）
+ds.ps1 -Do count       # 名称直方图
+# 同一模组重开（《游城拓荒》专用旧入口，已归档）：archive\tts-legacy\init.ps1（面板核对 + 拼图 + cache\init_report.md）
+```
+- **顶层物件数 ≪ 真实件数**：组件多在 Bag/Deck 里 ⇒ `act:<guid>:getQuantity` / `read:<guid>` 深入看。
+- 通用做法：**直接从存档 JSON 里读模组的脚本**（§2 D 步）。
+- ⚠️ **状态袋是 TTS `Infinite_Bag`（无限袋）⇒ 取走 token 后 `getQuantity` 不会减少**，验证要看**物件总数**
+  （`ping` 的 `objects` / `count` 的 `total`）。
+
+**D. 更新状态页**（见 §3：一个游戏一份，别共用）
+
+> ### ⚠️ 环境坑：`ERR TTS unreachable` 的两种情况（2026-10-07 实测）
+> 1. **沙箱有时会掐掉「嵌套子进程」的网络**：`dsbatch.ps1` 内部还会再 spawn `ds.ps1` = **两层** ⇒ **整批**每条都
+>    `ERR TTS unreachable`（约 2 秒超时）；而 **直接用 `ds.ps1`（一层）或"本进程内联发送"完全正常**。
+> 2. ⇒ 看到 `ERR TTS unreachable`，**先探端口 39999 是否 OPEN**；OPEN 就说明是**沙箱网络/嵌套问题，不是 TTS 没开**，
+>    换内联发送或直接调 `ds.ps1` 再试 —— **别再向玩家误报"TTS 没开"**。
+> 3. ⇒ **绝不能用 `Get-Process` 判断"TTS 开没开"**：沙箱里只看得到十几个进程（连 `TabletopSimulator` 都看不见）。
+>
+> **内联发送最小骨架**（本进程内发 + 收，不 spawn 任何子进程）
+> —— 协议表见 `tts_api.ps1` 文件头：**发包 `messageID` = 命令类型**（`2`=自定义消息 / `3`=对某物件执行 Lua，**选 3 时必须带 `guid`**）；
+> **收包 `messageID` = 事件类型**（`1`=scriptStates `2`=print `3`=error **`4`=custom（命令层回包走这个）** `5`=returnValue `6`=saved `7`=objectCreated）。
+> ⚠️ **TTS 会主动推无关事件** ⇒ **循环读、只认 `messageID == 4` 的包**，别把 `5`/`6` 当成回包。
+> ```powershell
+> $l = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 39998); $l.Start()
+> $c = [System.Net.Sockets.TcpClient]::new(); $c.Connect('127.0.0.1', 39999)
+> $cmd = '{"messageID":2,"script":"ping()"}'    # 2=自定义消息（改成 3 + "guid":"<g>" 就是对某物件执行 Lua）
+> $b = [Text.Encoding]::UTF8.GetBytes($cmd)
+> $c.GetStream().Write($b, 0, $b.Length); $c.GetStream().Flush()
+> $c.ReceiveTimeout = 3000
+> $buf = New-Object byte[] 8192
+> try {
+>   do {                                                            # 循环读直到拿到 messageID == 4 的回包
+>     $n = $c.GetStream().Read($buf, 0, $buf.Length)
+>     $s = [Text.Encoding]::UTF8.GetString($buf, 0, $n)
+>   } while ($s -notmatch '"messageID"\s*:\s*4')
+>   $s
+> } catch { 'ERR no reply' }
+> $c.Close(); $l.Stop()
+> ```
+
+**D. 唤醒机制（每个游戏都要重新确认）**
+- **通用（跨游戏都成立）**：`channel_watch.ps1 -IntervalMs 5000` 轮询**笔记本对话页**（`tabread`），
+  把状态写进 `cache\chan.txt`，格式 `<TAG> <chars> <时间> | <尾部内容>`；**TAG 见下**。
+  配 **file 哨兵**（pattern `^NEW \d`）⇒ **玩家在笔记本里写字就能叫醒我**。
+  - `NEW` = 尾部内容变了（**按内容判，不是按字数** —— 旧版只看字数增长，我发言裁剪笔记本后玩家再写就永不触发，2026-10-05 已修）
+  - `INIT` = 本轮第一次读；`SAME` = 没变；`ERR-<原因>` = 没读到，原因已内联（见下）
+  - ⚠️ `channel_watch.ps1` **不再 spawn `ds.ps1`**（2026-10-07 改）：它是后台作业 ⇒ 再 spawn 就是**两层**嵌套子进程
+    ⇒ 沙箱掐网络 ⇒ **整个监听静默失效**。现在它 **dot-source `ttslib.ps1` 在自身进程内直接 TCP**（与 `ttsx.ps1` 同一份代码）。
+- **《游城拓荒》专用（换游戏即失效，别指望）**：`front_watch.ps1` 写 `cache\front.txt` = 前台状态 + `TURN=Pn`
+  （靠**读 TTS 横幅的颜色方块**判断轮到谁）⇒ 那是那一局的机制。**王权骰铸没有那个横幅**，该文件永远出不了 `TURN=`。
+- **换游戏后必做三步**：① 确认新存档里有**对话笔记本页**（没有就用 `install_save2.ps1` 的 `-KeepTabs` 加一页
+  「DSH 对话频道」）；② **重启 `channel_watch`**（旧进程还指着旧存档/已退出）；③ 确认 **file 哨兵还注册着**
+  （pattern `^NEW \d`，指向 `cache\chan.txt`）——哨兵不跨会话持久，**每次开工重新注册**。
+- ⚠️ 换游戏后**先跑一次 `ttsx.ps1 -Cmd '{"cmd":"tabread"}'`** 手工确认笔记本读得到，再去信哨兵。
+
+---
+
+## §2 只有"换新模组"才需要的三步
+
+**A. 把桥接烤进存档**（我；写 TTS 存档目录在工作区之外 ⇒ **会弹一次批准/提权**）
+```powershell
+& powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\<user>\.dsh\tts\install_save2.ps1' `
+    -SourceFile 'TS_Save_6.json' `      # 不填 = 最新 TS_AutoSave*.json
+    -KeepLua `                          # 保留模组自带 Global 脚本，桥接拼在其后
+    -KeepTabs `                         # 完整保留模组笔记本页，只新增一页「DSH 对话频道」
+    -SaveNameFile 'C:\Users\<user>\.dsh\cache\save_name.txt' `   # UTF-8 一行 = 载入列表显示名
+    -SlotName 'TS_Save_7.json'
+```
+- 三个必踩的坑（已修，别再踩）：① 模组笔记页 body 全空 ⇒ 旧"找最长页当对话频道"逻辑会抛异常；
+  ② **Global 槽只有一份，后定义的 `onLoad` 会盖掉模组自己的**（安装器已用 shim：桥接前抓住、桥接后再调）；
+  ③ **中文名必须走文件**（命令行参数过控制台代码页会乱码）。
+- 改完 `.ps1` 必跑 `check_ps1.ps1`；改 `.lua` 必跑 `node tts\validate_lua.js` **并改 `DSH_VERSION`**。
+- 玩家载入烤好的存档 → 回到 §1 B 验版本号。
+
+**B. 读懂这个陌生模组**（三步）
+1. **读脚本**：存档 JSON 里**每个物件都带 `LuaScript`**，主键 `LuaScript` = Global 脚本。
+   用 `JavaScriptSerializer` 解析 → 递归 `ObjectStates` / `States[*].ObjectStates` / `ContainedObjects`
+   → 打印带脚本的物件 + **它定义的所有 `function xxx(` 名字**。
+2. **找入口**：从函数名/按钮 `click_function` 反推"玩家平时点哪儿"；预设坐标表（如 `blue_postable`）也在脚本里。
+3. **没有 eval 也能"替玩家按按钮"**：这个 TTS 沙箱**没有 `eval`/`load`/`loadstring`**（桥接的 `run` 因此不可用），
+   但 **External Editor API（端口 39999，回执在 39998）** 可以 ExecuteLua，且**代码跑在该物件的脚本环境里**
+   ⇒ 能直接调用模组的按钮回调：
+```powershell
+tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物件guid>'), 'Blue', false)"
+```
+- ⚠️ **无回执**（常报 NO REPLY）⇒ **必须用状态验证**（例：前后各读一次 `ping` 的 objs，看物件数是否增加；
+  后面的 `objs 101 → 119`＝**举例，数值以当时实际为准**）。
+- ⚠️ 与后台 `channel_watch` 抢 **39998** ⇒ 撞 "listener busy" 就重试。
+- ⚠️ 需要 TTS 开着 **External Editor**（本机已开：`ds.ps1` 走的也是 39999）。
+
+**C. 找规则书，只读"开局必需"的部分**（**新模组必做，别跳过**）
+1. **先定位**：`find:规则` / `find:Rule` / `find:说明` / `find:手册`，或从 `count` 直方图里挑名字可疑的物件。
+   （例：王权骰铸桌上就有「规则书（中2.3英2.4版本）」，`0f4dfd` @ (190,−0.01)。）
+2. **先判形态，再决定怎么读**（省 token 的关键）：
+   - `Custom_Model`/`Custom_Tile` 贴图 ⇒ 用「附录A / TTS_WORKFLOW §2b」的图素↔世界换算**裁图读**，只裁要用的区域；
+   - `Deck`/`Bag`（一叠卡）⇒ `act:<guid>:getQuantity` 看几张，再决定逐张 `draw` 或按 hash 认；
+   - 有纯文本（`getGMNotes`/`getDescription` 非空）⇒ 直接 `read`。
+3. **只读"开局必需"的四件事**：① 起始 HP/CP（或等价资源）② 回合/阶段流程 ③ 胜负与终局条件 ④ 手牌/牌堆的初始设置。
+   **其余（英雄 FAQ、细则、变体）等到真要用时再回去查**。
+4. **抄进文件**：把 ①②③④ 写进该游戏的 `_FLOW.md`（规则常量）与 `<游戏>_STATE.md`（本局设置）——
+   **以后不再重读规则书**，这本身就是最大的一笔节省。
+
+⚠️ 规则书是**公开信息**（不是谁的手牌）⇒ 读它没有隐藏信息问题；但**读法要省**：先定位 → 先判形态 → 只读必需页。
+
+---
+
+## §3 状态页规范（**一个游戏一份，绝不共用**）
+> 规则/边界全在 `AGENTS.md`（常驻宪章）；本节只讲**换局时怎么落状态页**。
+- **`tts\docs\CURRENT.md`** = 当前在玩哪个游戏 → 指向哪份状态页（**先读它**）。
+- 每局/每游戏一份 `<游戏>_STATE.md`（例：`DICETHRONE_STATE.md`；旧局 `archive\NOMADCITY_STATE_final.md`），内容=**只写"现在是什么"**：
+  比分/资源/位置/**待办** + 本局 guid 对照。**规则、坐标、工具用法、纪律都不放这里**（规则→`<游戏>_FLOW.md`，纪律→`AGENTS.md`）。
+- 一局结束 ⇒ 归档到 `tts\docs\archive\`，状态页重置或另开新的。
+- ⛔ **不要把 A 游戏的坐标/guid/规则写进 B 游戏的状态页**（《游城拓荒》的"本局…"数据换模组即作废）。
+- ⭐ **看 diff 一律走 `tts\diff_hidden.ps1 -Game <游戏>`**（隐藏区规则在 `cache\hidden_zones.csv`，换游戏只加一行）。
+- ⛔ **STATE 同一时刻只允许一个写入者**（多子代理并发编辑会互相覆盖/留下过期行；改前先 read、改后回报字节数）。
+- ⚠️ **改完任何 `.ps1` 都要跑 `tts\check_ps1.ps1`**（补 BOM ＋ 真解析器校验）；死脚本一律移进 `archive\tts-legacy\`，别留在 `tts\`。
+
+## §4 跨模组都成立的铁律
+> **全文在 `AGENTS.md` 的「⛔ 铁律」一节 —— 这里只留换局相关的三条，别在这儿抄一遍。**
+1. 换模组后**上一局坐标/guid 全作废**，只保留"方法"（识别靠 hash + nick + scale + 坐标关系）。
+2. 隐藏信息：对手隐藏区不读、**也不拿 guid 去对身份**（`diff_hidden.ps1` 已强制遮蔽）。
+3. 中断过的工具调用 ≠ 没执行 ⇒ 重跑前先重读状态。
+
+## §5 已知空白（待补，诚实清单）
+- `exec` 的边界：已知对"带脚本的物件"有效；**无脚本物件 / 反复调用 / 并发**未验证。
+- 桥接的 `callx`（带参数调用）**加了但未实测**（本次走的是 `exec`）。
+- 部分模组的**规则书就在桌上**（如王权骰铸的「规则书（中2.3英2.4版本）」物件）⇒ 新模组应先读它再开局。
+
+## §6 新游戏初始化清单（可勾选）
+
+> **什么时候读我**：换局 / 换模组时**照单走一遍**。
+> 每条括号里给两个实例（`骰`=王权骰铸 2026-10-07 · `城`=游城拓荒 2026-10-04），用来判断"这一步长什么样"。
+
+- [ ] **1. 有存档**（`Menu → Save & Load → Save Game`，或等 `TS_AutoSave*.json`）〔骰=`TS_Save_7.json`；城=`TS_Save_6.json`〕
+- [ ] **2. 烤桥接**：`install_save2.ps1 -KeepLua -KeepTabs -SaveNameFile … -SlotName …`〔骰/城 同〕
+- [ ] **3. `ping` 验版本**：回 `ok v=<DSH_VERSION> objs=<n> loads=<n>` ⇒ 桥接真进去了〔骰=`v12-callx`；城=旧版本号〕
+- [ ] **4. 盘点**：`obj_index.ps1`（存档侧）+ `live_index.ps1`（实时）+ `ds.ps1 -Do count`（直方图）〔骰=顶层 **119** 件；城=跑 `init.ps1`〕
+- [ ] **5. 读模组脚本**：存档 JSON 里每个物件都带 `LuaScript` ⇒ 拿 `function` 名 + 按钮 `click_function` + **预设坐标表**
+      〔骰=`blue_postable`(14 摆位) + 英雄入口函数；城=城市面板/资源点脚本〕
+- [ ] **6. 找规则书，只读开局必需四件事**（起始 HP/CP · 阶段流程 · 胜负条件 · 初始设置）
+      ⚠️ **先判形态**：贴图 ⇒ 裁图；`Custom_PDF`/远端 ⇒ **读不了就直说，请玩家念**〔骰=远端 PDF，靠标准规则补；城=面板贴图〕
+- [ ] **7. 找状态载体**（HP/资源到底存在哪）〔骰=**`getScriptState.saved_count`**（`read`/`getGMNotes` 全空！）；
+      城=资源计数器在 `GMNotes` + `call:plusOne`〕
+- [ ] **8. 在桌上生成自己的座位**（**用模组自己的入口函数**，`-Exec <guid> -Lua "..."`，**靠物件数前后差验证**）
+      〔骰=`moon(getObjectFromGUID('285719'),'Blue',false)` ⇒ 101→119；城=`init.ps1` 链〕
+- [ ] **9. 确认唤醒机制**（§1 D：`channel_watch` 起没起 · 对话页在不在 · 哨兵注册没有）〔骰=`cache\chan.txt`；
+      城=`chan.txt` + `front_watch.ps1` 的 `TURN=Pn`〕
+- [ ] **10. 定先手 → 第 1 回合**〔骰=**未定**（FLOW §5 待确认）；城=按规则定〕
+- [ ] **11.（收尾）写状态页**：`<游戏>_STATE.md` 只写"现在是什么"，规则进 `<游戏>_FLOW.md`〔骰=`DICETHRONE_*.md`〕
+

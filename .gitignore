@@ -1,0 +1,48 @@
+# .gitignore —— 工作区私有/生成物一律不进仓库（开源时直接拿这份当模板）
+# 原则：只提交"人和 agent 写的源码与文档"，其余全部忽略。
+
+# ---- 凭据与会话（最要紧）----
+.credentials.yaml
+.anonymous-user-id
+*.credentials
+*.token
+.env
+.env.*
+
+# ---- DSH 运行时会话/统计（含完整对话记录）----
+sessions/
+logs/
+storages/
+profiles/
+attachments/
+llm-deepseek/
+whale-audio/
+whale-roles/
+sentinel.jsonl
+sentinel.lease
+.dshw-*.json
+*.lease
+
+# ---- 缓存与生成物 ----
+cache/
+out/
+shots/
+*.log
+
+# ---- 归档：体积大、且是历史包袱（要开源自建仓库时按需挑选）----
+archive/
+tts/docs/archive/
+saves_backup_*/
+tts/docs/*_log.txt
+
+# ---- 本机启动脚本（路径/环境相关）----
+start-dsh.cmd
+start-dsh.ps1
+package.json
+package-lock.json
+
+# ---- 系统垃圾 ----
+Thumbs.db
+desktop.ini
+*.tmp
+*.swp
