@@ -2,7 +2,12 @@
 
 A work area for having an AI play a board game **inside Tabletop Simulator**. The human only
 makes **decisions** and clicks **End Turn**; every other piece movement is done by the agent
-through a message bridge into the running game. The current game is **Dice Throne**.
+through a message bridge into the running game.
+
+This repository is the **game-agnostic toolkit** (bridge, scripts, workflow, discipline) - that is
+what is open source. Anything true of only one game (state, rules, card text, card library, hands)
+is **not** shipped; which game is being played right now is local information, see
+`local\games\_current.md`.
 
 > ⚠️ This repository holds **what you need to run it** — no credentials, sessions, logs, caches
 > or archives (all of that is in `.gitignore`).

@@ -1,4 +1,4 @@
-# test_agents_hygiene.ps1 - the three instruction slots must stay in their lanes.
+﻿# test_agents_hygiene.ps1 - the three instruction slots must stay in their lanes.
 #
 # WHY
 #   Isolation is a discipline, not a feature. Nothing in the harness stops the project charter

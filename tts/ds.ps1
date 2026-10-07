@@ -42,42 +42,20 @@ $ED = 39998
 # It ALSO pushes unrelated events to 39998 (messageID 6 on every autosave), so a
 # reply must be identified by messageID 4 - taking the first message that arrives
 # is what made earlier runs look like "no reply from TTS".
+. "$PSScriptRoot\ttslib.ps1"   # the ONE TCP transport (see ttslib.ps1)
+
 function Send-TTS([string]$payload, [int]$timeout) {
-    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $ED)
-    try { $listener.Start() } catch { return @{ err = "listener busy on $ED" } }
-
-    $c = [System.Net.Sockets.TcpClient]::new()
-    try {
-        $c.Connect('127.0.0.1', $TTS)
-        $b = [System.Text.Encoding]::UTF8.GetBytes($payload)
-        $s = $c.GetStream(); $s.Write($b, 0, $b.Length); $s.Flush()
-    } catch { $listener.Stop(); return @{ err = "TTS unreachable" } }
-    # NO fixed sleep here. $s.Flush() already pushed the bytes (NetworkStream.Flush is a
-    # no-op, so nothing is buffered), and the old `Start-Sleep 200` was pure dead time on
-    # EVERY round trip -- measured ~205 ms per call. Keep the socket OPEN instead of
-    # closing it early: that removes both the sleep and the "closed before TTS read it"
-    # race. The poll below starts at t=0 and uses a 15 ms tick.
-
-    $deadline = (Get-Date).AddSeconds($timeout)
-    $skipped = 0
-    while ((Get-Date) -lt $deadline) {
-        if ($listener.Pending()) {
-            $rc = $listener.AcceptTcpClient(); $rs = $rc.GetStream(); $rs.ReadTimeout = 4000
-            $ms = [System.IO.MemoryStream]::new()
-            try {
-                $buf = New-Object byte[] 65536
-                while ($true) { $n = $rs.Read($buf, 0, $buf.Length); if ($n -le 0) { break }; $ms.Write($buf, 0, $n) }
-            } catch {}
-            $msg = [System.Text.Encoding]::UTF8.GetString($ms.ToArray()); $rc.Close()
-            $id = -1
-            try { $id = [int](($msg | ConvertFrom-Json).messageID) } catch {}
-            if ($id -eq 4 -or $id -eq -1) { $listener.Stop(); $c.Close(); return @{ ok = $true; json = $msg; skipped = $skipped } }
-            $skipped++          # broadcast (save/load) - ignore
-        }
-        Start-Sleep -Milliseconds 15
+    # Transport lives in ttslib.ps1, dot-sourced just above. This used to be a second
+    # implementation of the same ~30 lines -- same 15 ms poll, same "identify the reply by
+    # messageID 4" rule, same keep-the-socket-open reasoning -- but WITHOUT the busy-retry.
+    # The three error strings are what callers already match on, so they stay verbatim.
+    $r = Invoke-Tts -Envelope $payload -TimeoutSec $timeout -TtsPort $TTS
+    switch ($r.err) {
+        'LISTENERBUSY' { return @{ err = "listener busy on $ED" } }
+        'PORTCLOSED'   { return @{ err = "TTS unreachable" } }
+        'NOREPLY'      { return @{ err = "no reply in ${timeout}s (skipped $($r.skipped) broadcasts)" } }
     }
-    $listener.Stop(); $c.Close()
-    return @{ err = "no reply in ${timeout}s (skipped $skipped broadcasts)" }
+    return @{ ok = $true; json = $r.raw; skipped = $r.skipped }
 }
 
 # Compact one-line rendering of a TTS reply. The reply is always
