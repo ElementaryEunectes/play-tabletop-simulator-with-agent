@@ -10,7 +10,7 @@
 #   obj_index.ps1 on a new save and it prints (and writes) the whole session map.
 #
 # USAGE
-#   powershell -File 'C:\Users\<user>\.dsh\tts\bootstrap.ps1'
+#   powershell -File '<本仓库>\tts\bootstrap.ps1'
 #   -> prints a markdown table block AND writes cache\session_map.md
 param(
     [string]$Index = '',

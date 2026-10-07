@@ -10,10 +10,10 @@
 ## §1 启动（必做，30 秒）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<user>\projects\tts-agent\start-agent.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 #   → 把 $env:DSH_HOME 钉到项目根，然后起 dsh web
 ```
-**为什么**：`DSH_HOME` 双重含义（harness home ＋ 本项目工作区根）。环境里若残留旧值 `C:\Users\<user>\.dsh`，
+**为什么**：`DSH_HOME` 双重含义（harness home ＋ 本项目工作区根）。环境里若残留旧值 `<用户目录>\.dsh`，
 `tts\config.ps1` 会解析到**已被搬空的旧目录**，产物写丢、`live_index` 报 `ds.ps1 not found`。
 **先验证**：`tts\play.ps1 status` 应回 `bridge=v12-callx` 且 `objs=136` 附近。
 
@@ -21,7 +21,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<user>\projects\tts
 
 | | |
 |---|---|
-| 项目位置 | `C:\Users\<user>\projects\tts-agent`（独立 git 仓库，**46 文件跟踪**，最新提交 `96dba9f`） |
+| 项目位置 | 本仓库根（= `$DSH_HOME`）· 独立 git 仓库 · **46 文件跟踪** |
 | 旧目录 `.dsh` | **项目产物不在这里**（sessions/storages/profiles/attachments ＋ 平台 `AGENTS.md`），但 **`archive\` 还在**：`~\.dsh\archive\tts-legacy\`＝33 个旧 `.ps1` · `~\.dsh\archive\system\` |
 | 游戏 | **《王权骰铸》对局挂起中**（2026-10-08 23:46 玩家说"结束游戏"），随时可续 |
 | 盘面 | **我 26/4 · 他 40/4**（2026-10-08 结清并回读 ✅）· 物件 **136** · 桥接 `v12-callx` · 存档 `TS_Save_7.json`；细节以 `DICETHRONE_STATE.md` 的「当前」块为准 |
@@ -51,13 +51,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<user>\projects\tts
 3. 🔴 **卡面文本待补**（读不到不许编）：我的 `噩梦(MOON 28)`、`终极：群星陨落(MOON 32)`；
    玩家**英雄板基础档**（魔法弹/诅咒弹/噩梦之爪/吸取/混乱冲击/黑暗冲击/心灵震撼/究极/绝对混沌/终极：混沌之怒）。
    ⇒ 最省事：**请他摊牌到桌上或贴图**（桥接读不到容器里的牌）。
-4. 🟡 **开源准备**：`.gitignore` ✅ · 路径去硬编码 ✅（`tts\config.ps1` 是唯一解析层）· `README.md` ✅ · 4 个脚本修完 ✅ ·
-   **还缺**：`LICENSE`（选 MIT/Apache-2.0）· 破坏性动词的 `-Apply` 护栏（`roll.ps1` 默认会掷骰，`play.ps1 -Apply` 直接写 HP）· 英文 README · 测试（socket 层可注入假回复）。
-5. 🟡 **把 `diff_index.ps1` 的离线自测收进仓库**：现在脚手架只在 `out\_selftest\`（**`out\` 被 gitignore，会被清掉**）。
-   值得提交成正式测试（注意 `check_ps1.ps1` 只扫 `tts\*.ps1`、**非递归** ⇒ 测试要么放平级、要么给它加 `-Recurse`）。重做只要三步：
-   ① 从 `cache\live_index.csv` 造两份 fixture（移动/翻面/换容器/改 GMNotes/删除/新增各 1）；
-   ② 写个只认 `-Out` 的**桩脚本冒充 `live_index.ps1`**；③ `diff_index.ps1 -Before b.csv -After a.csv -LiveIndex stub.ps1`
-   ⇒ 期望 `SUMMARY added=1 removed=1 moved=1 flipped=1 reparented=1 state=1`（`exit 0`）。**这是唯一能在 TTS 不开时验证 diff 链的办法。**
+4. 🟡 **开源准备**：`.gitignore` ✅ · 路径/隐私去硬编码 ✅（树里 `C:\Users\<名字>` **0 处**）· `README.md` ✅（状态已刷新）·
+   4 个脚本修完 ✅ · **破坏性动词护栏** ✅（`roll.ps1` 明说意图 · `play.ps1 -Apply -WhatIf` ＋ 写完回读校验 · `install_save2 -DryRun`）·
+   **英文 README** ✅（`README.en.md`）· **测试** ✅（`tts\tests\` 两个离线自测，且都做过阳性对照）· `validate_lua.js` 可移植 ✅。
+   **还缺**：`LICENSE` —— 已选 **MIT**，**只等署名**（仓库 git 身份是 `DSH agent / agent@local`，不适合当版权行）。
+5. ✅ **`diff_index.ps1` 的离线自测已收进仓库**：`tts\tests\test_diff_index.ps1`（＋ `fake_live_index.ps1` 桩 ＋ `fixtures\*.csv`）
+   与 `tts\tests\test_param_backfill.ps1`；`check_ps1.ps1` 已改**递归**，测试自身也受 BOM ＋ 真解析器校验。
+   ⚠️ 改这两个测试**必须重跑阳性对照**（故意造一个坏探针看它是否真报错，见 §6.8/§6.9）。
 
 ## §5 本会话已结清的规则（**别再重问玩家**）
 
@@ -74,14 +74,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<user>\projects\tts
 
 ## §6 ⚠️ 本会话踩过的坑（**下一个人别再付同样的学费**）
 
-1. **`roll.ps1 -Tray <seat>` 默认会先掷骰再读点数** ⇒ 只想看骰面必须加 **`-NoRoll`**。
+1. **`roll.ps1` 的默认曾经会掷骰** ⇒ 只想看骰面必须加 `-NoRoll`。
    我把它当"读"连用 4 次，把玩家的实际投掷结果反复重掷，**玩家当场抓到**。⇒ **骰子判定以玩家报的为准。**
+   2026-10-08 **已加护栏**：`-Roll` / `-NoRoll` 必须明说，**裸调用 `exit 2` 且不接触 TTS**（`play.ps1 roll` 同样不加 `-Roll` 只读）。
 2. **批量字符串替换 = 灾难**：一次"路径去硬编码"的替换脚本连闯 5 祸（替换串被 PS 展开、引号被吃、BOM 叠成 3 个、
    dot-source 插到 `param()` 前、`param()` 默认值引用 config 变量），**连坏 22 个脚本**，手工抢救了两小时。
    ⇒ **动代码前先 `git commit`；要批量改就先 `Copy-Item` 备份；改完逐个用真解析器验证。**
 3. **`param()` 必须是第一条语句**；**默认值里不能引用 config 变量**（那时还没求值）—— 默认 `''`，dot-source 之后回填。
 4. **BOM 会自己繁殖**：`GetString(bytes)` 把 BOM 变成 U+FEFF 字符，`WriteAllText(..., UTF8Encoding(true))` 再加一个 ⇒ 每跑一次多一个 BOM，三个就解析失败。
 5. **旧路径会静默生效**：`DSH_HOME` 残留旧值时，脚本读写"看起来正常"但其实是空目录 ⇒ **启动先跑 `start-agent.ps1`**。
+   同一个病 2026-10-08 又抓到两处：`validate_lua.js` 里写死的 luaparse 路径（项目搬出 `~/.dsh` 后那条路径**早就空了**，
+   而它此前一直被当作"改了 Lua 就要跑"的校验器）；以及 `check_ps1.ps1` 那道写反的 BOM 回写条件（见 §6.8）。
+   ⇒ 现在 `validate_lua.js` **相对仓库优先**，失败时**列出试过的每个路径**。
 6. **`Infinite_Bag` 里取出的 token 没有图案** ⇒ 状态 token 的摆放**交给玩家**。
 7. **沙箱只允许写工作区**：写项目目录（工作区之外）会报 `[sandbox: file access denied]` ⇒ 一次性提权重试，别硬绕。
 8. **校验工具自己坏了整整一轮**（2026-10-08 才发现）：`check_ps1.ps1` 的回写条件写成 `if ($hadBom)`（应为 `if (-not $hadBom)`）

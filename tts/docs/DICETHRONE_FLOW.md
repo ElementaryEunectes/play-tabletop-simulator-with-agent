@@ -319,11 +319,11 @@ SCAR 1–18 是通用行动卡（WILD 01–18：乾坤大挪移!/状什么态?/�
 > **什么时候读我**：需要从桌面上任何一张卡/板读文字的时候。
 
 1. **查 hash**：`cache\obj_index.csv`（`obj_index.ps1` 生成）→ 按 guid 找 `url` 列 = 图的 hash。
-2. **找文件**：图在 `C:\Users\<user>\Documents\My Games\Tabletop Simulator\Mods\Images\`，
+2. **找文件**：图在 `<用户文档>\My Games\Tabletop Simulator\Mods\Images\`（即 `tts\config.ps1` 解析出的 `$TtsImagesDir`），
    文件名 = 原始 URL 去掉 `:/?=&` 之类字符后**以 hash 结尾**（例：`httpssteamusercontent…29EFDCF4…jpg`）。
 3. **裁+放大**（中文必须放大才读得清）：
    ```powershell
-   & powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\<user>\.dsh\tts\crop_zoom.ps1' `
+   & powershell -NoProfile -ExecutionPolicy Bypass -File '<本仓库>\tts\crop_zoom.ps1' `
        -Source <图片> -Out <输出png> -X 0 -Y 1620 -W 640 -H 1100 -Scale 1.9
    ```
 4. ⚠️ **坑**：`Mods\Images` 里很多文件名其实是 JPEG 内容却存成别的后缀 ⇒ 直接喂给读图工具会报

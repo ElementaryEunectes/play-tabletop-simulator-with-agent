@@ -1,8 +1,33 @@
 // validate_lua.js - parse a Lua file with luaparse and report syntax errors.
 // Usage: node validate_lua.js <file.lua> [...]
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
-const luaparse = require(path.join('C:', 'Users', '<user>', '.dsh', 'cache', 'luaparse', 'node_modules', 'luaparse'));
+
+// luaparse is a third-party parser, and cache\ is gitignored, so on a fresh clone you need
+// "npm i luaparse". Resolve it in this order:
+//   1. <repo>\cache\luaparse\node_modules\luaparse  (the vendored copy used on this machine)
+//   2. ordinary node resolution (node_modules beside this file, or in any parent)
+//   3. $LUAPARSE_DIR
+//   4. ~\.dsh\cache\luaparse\node_modules\luaparse  (where it used to live, before the repo
+//      moved out of ~\.dsh -- the old hardcoded path still pointed there and had gone stale)
+function loadLuaparse() {
+  const repo = path.join(__dirname, '..');
+  const tries = [
+    path.join(repo, 'cache', 'luaparse', 'node_modules', 'luaparse'),
+    'luaparse'
+  ];
+  if (process.env.LUAPARSE_DIR) tries.push(path.join(process.env.LUAPARSE_DIR, 'luaparse'));
+  tries.push(path.join(os.homedir(), '.dsh', 'cache', 'luaparse', 'node_modules', 'luaparse'));
+  for (const t of tries) {
+    try { return require(t); } catch (e) { /* try the next one */ }
+  }
+  console.log('FAIL  luaparse not found. Tried:');
+  for (const t of tries) console.log('        ' + t);
+  console.log('      Fix: "npm i luaparse" in the repo, or set LUAPARSE_DIR.');
+  process.exit(2);
+}
+const luaparse = loadLuaparse();
 
 const files = process.argv.slice(2);
 if (files.length === 0) { console.log('no files given'); process.exit(2); }

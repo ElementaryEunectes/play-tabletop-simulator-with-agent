@@ -1,4 +1,4 @@
-# AGENTS.md —— **TTS 代玩项目宪章**（`C:\Users\<user>\projects\tts-agent`）
+# AGENTS.md —— **TTS 代玩项目宪章**（本仓库根 = `$DSH_HOME`）
 
 > 这是**项目**级宪章：只讲"在这个项目里怎么干活"。
 > 跨项目纪律在 `~/.dsh\AGENTS.md`（自动注入，别在这里重复）。
@@ -13,11 +13,11 @@ TTS 消息桥接完成。当前在打**《王权骰铸》（Dice Throne）**，�
 ## 怎么启动（**先做这一步，否则脚本会读错目录**）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<user>\projects\tts-agent\start-agent.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 # 它会把 $env:DSH_HOME 钉到项目根，再启动 dsh web
 ```
 **为什么必须**：`$env:DSH_HOME` 有双重含义 —— ① harness 自己的 home ② 本项目的 `tts\config.ps1` 解析出的工作区根
-（`cache\ out\ logs\ shots\` 都在那）。若环境里还留着**旧值**（例如 `C:\Users\<user>\.dsh`），脚本会静默读写一个**不存在**的目录。
+（`cache\ out\ logs\ shots\` 都在那）。若环境里还留着**旧值**（例如 `<用户目录>\.dsh`），脚本会静默读写一个**不存在**的目录。
 
 ## 一局的固定读法（**别整份读手册**）
 
@@ -54,8 +54,8 @@ tts-agent\                      ← 项目根 = 工作区根（$DSH_HOME）
 3. **路径一律走 `config.ps1`**（`$WorkspaceRoot` / `$DshTts` / `$DshCache` / `$DshOut` / `$DshLogs` / `$DshShots` / `$TtsSavesDir` / `$TtsImagesDir`）；
    ⛔ **不许再出现 `C:\Users\<名字>` 这种硬编码**。
 4. **改完立刻** `powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1`（补 BOM + 真解析器全量校验）。
-5. **骰子读数**：`roll.ps1 -Tray <seat>` **不带 `-NoRoll` 就是"重新掷"**；只想看当前骰面必须加 `-NoRoll`。
-   **对局判定以玩家报的为准**，工具读数只是复核。
+5. **骰子读数**：`roll.ps1` **必须明说意图** —— `-Roll` 才掷、`-NoRoll` 只读（**裸调用 `exit 2`，不接触 TTS**）；
+   `play.ps1 roll` 同样"不加 `-Roll` 只读"。**对局判定以玩家报的为准**，工具读数只是复核。
 6. **响应窗口**：玩家每次宣告动作 = 给我一次出牌机会 ⇒ **必须表态**（"出牌 / 不出牌"），不能当他已定型直接结算。
 7. **隐藏信息双向**：不读对手隐藏区、不拿 guid 对身份；**我自己的手牌/计划也不说**。
 

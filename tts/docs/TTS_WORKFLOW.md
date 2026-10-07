@@ -64,7 +64,7 @@
 **做法**：直接解析自动存档，生成一张全量表。
 
 ```powershell
-& powershell -NoProfile -File 'C:\Users\<user>\.dsh\tts\obj_index.ps1'
+& powershell -NoProfile -File '<本仓库>\tts\obj_index.ps1'
 # -> cache\obj_index.csv ：一行一个物件（行数以实际存档为准），
 #    每行 guid/name/nick/x/y/z/scale/rotY/gm/ss/url/depth
 ```
@@ -75,7 +75,7 @@
 - 递归走 `ObjectStates` / `ContainedObjects` / `ChildObjects` / `States`。
 - **袋子里物件在被取出前不会成为顶层物件**，所以也要把容器展开：
   ```powershell
-  & powershell -NoProfile -File 'C:\Users\<user>\.dsh\tts\bags_dump.ps1'
+  & powershell -NoProfile -File '<本仓库>\tts\bags_dump.ps1'
   # -> cache\bag_contents.txt ：每个容器 + 它的内容物（GUID/图片/计数）
   ```
 - `ConvertFrom-Json` 出来是 PSCustomObject：**用 `$v.FaceURL`，不要用 `$v['FaceURL']`**。
@@ -103,7 +103,7 @@
 ### 2b.2 把世界坐标烧到图上
 
 ```powershell
-& powershell -NoProfile -File 'C:\Users\<user>\.dsh\tts\overview.ps1' -Filter 'Token' -Labels
+& powershell -NoProfile -File '<本仓库>\tts\overview.ps1' -Filter 'Token' -Labels
 # -> cache\overview_annotated.png
 #    世界坐标网格 + 地图板矩形 + 每个匹配物件的红点与 guid
 ```
@@ -354,7 +354,7 @@ if ([math]::Abs($x) -gt $half -or [math]::Abs($z) -gt $half) {
 
 ---
 
-## 10. 工具清单（都在 `C:\Users\<user>\.dsh\tts\`）
+## 10. 工具清单（都在 `tts\`）
 
 > **什么时候读我**：想知道"这个脚本是干什么的 / 有没有现成工具"时（先查表再写新脚本）。
 

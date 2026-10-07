@@ -21,8 +21,11 @@
 --   {cmd="getval", guid="..."}
 --   {cmd="index", limit=50}                -- guid + name + position for many objects
 
--- Directory the panel file can be loaded from, if loadfile is available.
-DSH_DIR = DSH_DIR or "C:/Users/<user>/.dsh"
+-- Directory the optional panel override (DSH_DIR/dsh_panel.lua) can be loaded from, if
+-- loadfile is available. Deliberately NOT set here: a machine-specific absolute path must not
+-- be baked into the repo (this repo is meant to be clonable). Set it before this file loads
+-- to use the override; without it the code below falls back to ".".
+DSH_DIR = DSH_DIR or nil
 
 function onLoad()
     -- broadcastToAll does not exist in this sandbox (see diag), so guard it instead

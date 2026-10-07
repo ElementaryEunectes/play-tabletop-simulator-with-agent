@@ -4,6 +4,7 @@
 其余全部棋子操作由 agent 通过 TTS 的消息桥接完成。当前在打《王权骰铸》（Dice Throne）。
 
 > ⚠️ **本仓库含"跑起来要用的东西"，不含隐私与生成物** —— 凭据/会话/日志/缓存/归档都在 `.gitignore` 里。
+> 🌐 English: [`README.en.md`](README.en.md)
 
 ## 怎么读（**别整份读，按角色取**）
 
@@ -17,6 +18,7 @@
 | 脚本清单（⭐常用 / 💤休眠 / 改名前必读的引用图） | `tts\SCRIPTS.md` |
 | 换局 / 冷启动 | `tts\docs\BOOTSTRAP.md` |
 | 文档与目录总索引 | `tts\docs\README.md` |
+| **改完怎么验证** | `tts\check_ps1.ps1`（递归补 BOM ＋ 真解析器）→ `tts\tests\test_*.ps1`（**不需要 TTS**） |
 
 ## 跑起来需要什么
 
@@ -45,10 +47,24 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
 3. ⛔ **不要用"批量字符串替换"改活代码**（本项目就是这么连坏 22 个脚本的：替换串被 PowerShell 展开、
    引号被吃掉、BOM 被叠成 3 个）。要批量改就先 `cp -r` 一个备份目录，改完逐个验证。
 4. 含中文的 `.ps1` **必须 UTF-8 带 BOM**；新写的一次性脚本尽量只写 ASCII 注释。
+5. **解析通过 ≠ 能用**：本仓库栽过一整类 bug —— `param()` 默认 `''` 却没在 dot-source 之后回填，
+   脚本能启动、然后往空路径写。`tts\tests\test_param_backfill.ps1` 专治这一类。
+6. **校验器要有阳性对照**：`check_ps1.ps1` 和 `test_param_backfill.ps1` 都曾"报成功但其实没看见问题"
+   （一个 BOM 回写条件写反、一个正则锚在行首匹配不到任何东西）⇒ 拿一个**故意造坏的探针**喂它，看它真能报错再信它。
+
+## 护栏（会改桌面的动词）
+
+- **`roll.ps1` 必须明说意图**：`-Roll` 才掷、`-NoRoll` 只读；**裸调用 `exit 2` 且不接触 TTS**。
+  骰子扔了收不回来，而且那是对手的骰子。`play.ps1 roll` 同样"不加 `-Roll` 只读"。
+- **`play.ps1 -Apply` 是唯一的 HP/CP 写入**：加 `-WhatIf` 会打印 `WILL WRITE  HP moon 26 -> 22  (-4)` 而**一个字节都不写**；
+  真写之后脚本自己回读，不一致立刻 `BAD DATA` 停。
+- `install_save2.ps1`（唯一允许写存档的脚本）有 `-DryRun`。其余全部只读。
 
 ## 已知状态
 
-- ✅ **26 个脚本解析通过**，游戏链路（`ds.ps1 ping` / `play.ps1 status` / `roll.ps1 -NoRoll` / `live_index.ps1` / `diff_hidden.ps1`）实测可用。
-- ❌ **2 个待修**（不影响打牌）：`tts\index_images.ps1`（建图索引，一次性）· `tts\tts_api.ps1`（External Editor API 退路）。
-  两者的头部说明与用法都还在，照着重写即可。
-- ⏸ 对局处于**挂起**态，续局步骤写在 `tts\docs\DICETHRONE_STATE.md` 的「恢复打法」一节。
+- ✅ **31 个 `.ps1` 全部通过真解析器**（`check_ps1.ps1`，**递归**，含 `tts\tests\`）：0 解析错误、BOM 齐。
+- ✅ **离线自测**（不需要 TTS）：`tts\tests\test_diff_index.ps1`（桩脚本冒充 `live_index.ps1` ＋ 合成 fixture ⇒ 六类变化全中）·
+  `tts\tests\test_param_backfill.ps1`（每个 `''` 默认值都必须被回填或判空）。
+- ✅ **无个人路径**：树里已无 `C:\Users\<名字>` 之类硬编码（`tts\config.ps1` 是唯一解析层）。
+- ⏸ 对局处于**挂起**态，续局步骤写在 `tts\docs\DICETHRONE_STATE.md` 的「恢复 / 续局三步」一节。
+- 🧾 **尚未补**：`LICENSE`（`tts\validate_lua.js` 需要 `luaparse`：`npm i luaparse`，`cache\` 不入库）。

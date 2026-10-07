@@ -90,11 +90,11 @@ ds.ps1 -Do count       # 名称直方图
 
 **A. 把桥接烤进存档**（我；写 TTS 存档目录在工作区之外 ⇒ **会弹一次批准/提权**）
 ```powershell
-& powershell -NoProfile -ExecutionPolicy Bypass -File 'C:\Users\<user>\.dsh\tts\install_save2.ps1' `
+& powershell -NoProfile -ExecutionPolicy Bypass -File '<本仓库>\tts\install_save2.ps1' `
     -SourceFile 'TS_Save_6.json' `      # 不填 = 最新 TS_AutoSave*.json
     -KeepLua `                          # 保留模组自带 Global 脚本，桥接拼在其后
     -KeepTabs `                         # 完整保留模组笔记本页，只新增一页「DSH 对话频道」
-    -SaveNameFile 'C:\Users\<user>\.dsh\cache\save_name.txt' `   # UTF-8 一行 = 载入列表显示名
+    -SaveNameFile '<本仓库>\cache\save_name.txt' `   # UTF-8 一行 = 载入列表显示名
     -SlotName 'TS_Save_7.json'
 ```
 - 三个必踩的坑（已修，别再踩）：① 模组笔记页 body 全空 ⇒ 旧"找最长页当对话频道"逻辑会抛异常；
