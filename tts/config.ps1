@@ -57,3 +57,24 @@ if (-not $TtsImagesDir) {
         if (-not (Test-Path $TtsImagesDir)) { $TtsImagesDir = Join-Path $Docs 'Tabletop Simulator\Mods\Images' }
     }
 }
+
+# --- WHICH GAME IS CURRENT (appended 2026-10-08) ----------------------------------------------
+# Never hard-code a game name in a script. It comes from the machine-readable GAME= line in
+# local\games\_current.md (gitignored: local content, not toolkit code). A clone that has never
+# played anything gets '' and game-dependent scripts can fail with a clear message instead of
+# silently reading some other game's data.
+Remove-Variable DshGame      -ErrorAction SilentlyContinue
+Remove-Variable DshGameDir   -ErrorAction SilentlyContinue
+Remove-Variable DshGameRules -ErrorAction SilentlyContinue
+Remove-Variable DshGameCards -ErrorAction SilentlyContinue
+$DshLocalGames = Join-Path $WorkspaceRoot 'local\games'
+$DshGame = ''
+$CurrentPointer = Join-Path $DshLocalGames '_current.md'
+if (Test-Path -LiteralPath $CurrentPointer) {
+    foreach ($line in [System.IO.File]::ReadAllLines($CurrentPointer, [System.Text.Encoding]::UTF8)) {
+        if ($line -match '^\s*GAME\s*=\s*([A-Za-z0-9_.-]+)\s*$') { $DshGame = $Matches[1]; break }
+    }
+}
+$DshGameDir   = if ($DshGame -ne '') { Join-Path $DshLocalGames $DshGame } else { '' }
+$DshGameRules = if ($DshGame -ne '') { Join-Path $DshCache ($DshGame + '_rules.json') } else { '' }
+$DshGameCards = if ($DshGame -ne '') { Join-Path $DshCache ($DshGame + '_cards.md') } else { '' }

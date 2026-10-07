@@ -69,7 +69,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 8. 🚧 **让第三方"简单部署 · 廉价游玩"**（2026-10-08 自评：**目前还不行** —— 机制层已开源可用，卡在下面五块，按性价比排序）：
    - **A（~30 min）修"开箱即坏"的引用**：`AGENTS.md`（注入）让 agent 读 `local\games\<游戏>\STATE.md` 与 `local\games\_current.md`，
      但**全新 clone 里这两份都不存在**，而仓库**没有骨架模板**（唯一的 template 是给 harness home 的）
-     ⇒ 加 `tts\docs\STATE.template.md` ＋ `FLOW.template.md`（各 ~20 行），并在 `AGENTS.md` 补一句"**没有就先照 `BOOTSTRAP.md` 建**"。
+     ⇒ 加 `tts\docs\<游戏>_STATE.template.md` ＋ `FLOW.template.md`（各 ~20 行），并在 `AGENTS.md` 补一句"**没有就先照 `BOOTSTRAP.md` 建**"。
    - **B（~1 h）README 顶部写清期望**：首次上手三步 · **时间/成本期望** · **已知限制**
      （Windows only · 每个 mod 要人肉教一次 · **每回合仍需人类点「结束回合」** · **不含游戏规则**）。
    - **C（2–4 h）`setup.ps1` 安装向导**：查 Node / DSH / 凭据 / TTS / 端口 / 存档 → 引导烤桥接 → 自动跑 `doctor.ps1`。

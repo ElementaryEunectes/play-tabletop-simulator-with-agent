@@ -168,7 +168,7 @@ img_y = OffZ - Scale * world_z        # 图上 y 向下 = 世界 z 减小
 - **同一个图在不同主机会有不同的域名**（`steamusercontent-a.akamaihd.net` vs
   `cloud-3.steamusercontent.com`）→ **匹配 hash，不要匹配整个 URL**。
 - 本地图缓存在 `...\Mods\Images\<扁平化URL>.<ext>`。
-  `tts\resolve_cards.ps1` 把存档卡片映射到本地文件，写出 `cache\card_resolved.csv`。
+  `archive\tts-legacy\resolve_cards.ps1` 把存档卡片映射到本地文件，写出 `cache\card_resolved.csv`。
 
 ### 3.1 ⭐⭐ hash 不够：一张拼图可以装很多张牌
 
@@ -198,7 +198,7 @@ CardID = deckId * 100 + 格号      # 格号从 0 起，从左到右、从上到
 数组参数**不会**自动按逗号拆 —— 脚本里要自己 `-split ','`。
 （同类陷阱：`f $arr[0] $arr[1]` 会把整个数组绑给第一个参数。）
 
-**给卡片命名**：`tts\label.ps1` —— 你只填「第几号图 + 名字」，工具回填 hash。
+**给卡片命名**：`archive\tts-legacy\label.ps1` —— 你只填「第几号图 + 名字」，工具回填 hash。
 > ⚠️ 我犯过一次大错：手打 48 个 hash 进 `card_names.csv`，全是编的。
 > **永远不要让模型手抄 hash**，一定用工具从图里取。
 
