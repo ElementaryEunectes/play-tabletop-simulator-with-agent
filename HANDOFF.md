@@ -42,7 +42,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 4. 🟡 **开源准备**：`.gitignore` ✅ · 路径/隐私去硬编码 ✅（树里 `C:\Users\<名字>` **0 处**）· `README.md` ✅（状态已刷新）·
    4 个脚本修完 ✅ · **破坏性动词护栏** ✅（`roll.ps1` 明说意图 · `play.ps1 -Apply -WhatIf` ＋ 写完回读校验 · `install_save2 -DryRun`）·
    **英文 README** ✅（`README.en.md`）· **测试** ✅（`tts\tests\` 两个离线自测，且都做过阳性对照）· `validate_lua.js` 可移植 ✅。
-   **还缺**：`LICENSE` —— 已选 **MIT**，**只等署名**（仓库 git 身份是 `DSH agent / agent@local`，不适合当版权行）。
+   ✅ `LICENSE`（MIT）**已入库**，署名 `Copyright (c) 2026 ElementaryEunectes`（仓库 git 身份是 `DSH agent / agent@local`，不适合当版权行）。
    ✅ **publish 前的隐藏信息检查已完成（2026-10-08）**：跟踪文件里**只剩指针**（本文件 §2 与 `local\games\_current.md` 指向 `local\games\<游戏>\`，那里在 `.gitignore` 里）⇒ 公开仓库看不到牌面。
    📌 **铁律**：牌、计划、任何隐藏信息**只写进 `local\games\<游戏>\MYHAND.md`**（`local\` 整个不进仓库）。
 5. ✅ **`diff_index.ps1` 的离线自测已收进仓库**：`tts\tests\test_diff_index.ps1`（＋ `fake_live_index.ps1` 桩 ＋ `fixtures\*.csv`）
@@ -66,6 +66,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
      全部写在 **`local\games\<游戏>\FLOW.md` 附录 A**（⛔ 不进仓库）；**技术本身通用**（见 `PRIOR_ART.md` §7.4 与本条）—— 换任何 mod 同理。
    - ⇒ **规则有争议先查它**：p05 状态效果图标表 · p08 防御/结算文本 · p09 伤害类型表 · p11 回合详解 · p15 速查表。
    - ⚠️ 它是**基础规则 ＋ 枪手示例页**，**不含**月精灵/猩红女巫的卡面数值 ⇒ 英雄专属数值仍以**桌上卡面**为准（`crop_zoom.ps1` 裁图读）。
+8. 🚧 **让第三方"简单部署 · 廉价游玩"**（2026-10-08 自评：**目前还不行** —— 机制层已开源可用，卡在下面五块，按性价比排序）：
+   - **A（~30 min）修"开箱即坏"的引用**：`AGENTS.md`（注入）让 agent 读 `local\games\<游戏>\STATE.md` 与 `local\games\_current.md`，
+     但**全新 clone 里这两份都不存在**，而仓库**没有骨架模板**（唯一的 template 是给 harness home 的）
+     ⇒ 加 `tts\docs\STATE.template.md` ＋ `FLOW.template.md`（各 ~20 行），并在 `AGENTS.md` 补一句"**没有就先照 `BOOTSTRAP.md` 建**"。
+   - **B（~1 h）README 顶部写清期望**：首次上手三步 · **时间/成本期望** · **已知限制**
+     （Windows only · 每个 mod 要人肉教一次 · **每回合仍需人类点「结束回合」** · **不含游戏规则**）。
+   - **C（2–4 h）`setup.ps1` 安装向导**：查 Node / DSH / 凭据 / TTS / 端口 / 存档 → 引导烤桥接 → 自动跑 `doctor.ps1`。
+   - **D（半天–一天，决定性的一块）把"认物"从写死变成可配置 ＋ 半自动**：`bootstrap.ps1` 现在**按上一局《游城拓荒》写死**
+     （`TTS_RULES.md` §二 有 ⚠️）；目标是 `local\games\<游戏>\objects.json`（座位 / HP / 资源 / 牌堆 / 隐藏区映射）
+     ＋ 用 `obj_index.ps1 -Hist` 名字直方图 ＋ `crop_zoom.ps1` 裁图辅助的标注流程 ⇒ **做完这条，"任何 mod"才真成立**。
+   - **E（半天）做出"能看见"的成品**：一个最小公开 mod 的 demo ＋ 30 秒录屏 ⇒ 让陌生人在 30 秒内判断它行不行。
+   - 📌 两条现实（别在 README 里含糊）：**"廉价"成立** —— 注入 ~7.6 KB/请求，钱花在**模型步数**与**人工**上，不在注入；
+     **"快速"只在"已教好的 mod"上成立**，第一次上手是**小时级**。
+   - 📌 判据（做完 A–E 再看一遍）：陌生人只有**公开仓库 + Windows + TTS + 一个 workshop mod**，能不能在**一小时内**打完一回合？
 
 ## §6 ⚠️ 踩过的坑 ⇒ 已拆到 `tts\docs\MAINTENANCE.md`
 
@@ -74,7 +88,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 
 ## §8 上下文注入（摘要 —— 细节在 `tts\docs\MAINTENANCE.md` 第二部分）
 
-- **每请求注入三份**：通用 `$DSH_HOME\AGENTS.md`（2924 B）＋ 项目 `AGENTS.md`（2960 B）＋ 机器 `AGENTS.local.md`（1048 B）＝ **6932 B**。
+- **每请求注入三份**：通用 `$DSH_HOME\AGENTS.md`（2924 B）＋ 项目 `AGENTS.md`（**3656 B**，含开源边界铁律）＋ 机器 `AGENTS.local.md`（1048 B）＝ **7628 B**。
 - 想只注入一份 ⇒ 用 `start-agent.ps1` 起（`DSH_HOME` 钉到仓库根，两个槽同路径去重）。⛔ harness **没有"忽略全局那份"的开关**。
 - 注入顺序 / 两种去重 / 字节预算 / **各类工作区会注入什么** / rulesync 试点结论 ⇒ 全在 `MAINTENANCE.md`；
   回归测试 ⇒ `tts\tests\test_agents_hygiene.ps1`；"模板即源"的复制关系 ⇒ `HARNESS_HOME_AGENTS.template.md`。
