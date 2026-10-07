@@ -55,6 +55,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
    4 个脚本修完 ✅ · **破坏性动词护栏** ✅（`roll.ps1` 明说意图 · `play.ps1 -Apply -WhatIf` ＋ 写完回读校验 · `install_save2 -DryRun`）·
    **英文 README** ✅（`README.en.md`）· **测试** ✅（`tts\tests\` 两个离线自测，且都做过阳性对照）· `validate_lua.js` 可移植 ✅。
    **还缺**：`LICENSE` —— 已选 **MIT**，**只等署名**（仓库 git 身份是 `DSH agent / agent@local`，不适合当版权行）。
+   ⚠️ **真正 publish 之前还有一件必做**：`tts\docs\DICETHRONE_STATE.md`「我方手牌」与 `HANDOFF.md` §7 记着**对局中的隐藏信息**；
+   这一局若还要继续，公开仓库就等于把我的牌摊给任何人看 ⇒ **发布前先删掉那两段**（或按 `PLAY.md` 的 ≤5KB 规则把细节挪进 gitignore 的 `tts\docs\archive\`）。
 5. ✅ **`diff_index.ps1` 的离线自测已收进仓库**：`tts\tests\test_diff_index.ps1`（＋ `fake_live_index.ps1` 桩 ＋ `fixtures\*.csv`）
    与 `tts\tests\test_param_backfill.ps1`；`check_ps1.ps1` 已改**递归**，测试自身也受 BOM ＋ 真解析器校验。
    ⚠️ 改这两个测试**必须重跑阳性对照**（故意造一个坏探针看它是否真报错，见 §6.8/§6.9）。
@@ -99,6 +101,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 ## §7 交接时的原始数据（万一文档与实物冲突）
 
 - 关键 guid：我 HP `cdd19a` · 我 CP `675a1f` · 他 HP `ed238f` · 他 CP `5b2c43` · 我的骰 `f0738d/187cc1/656b32/e00b2e/910636` · 他的骰 `205873/26745c/aa8300/240f79/033d23`
-- 我的手牌（我方隐藏信息，**不外传**）：`长弓 III`(3CP) · `月光魔法!`(1CP) · `月影袭人!`(2CP) · `隐匿射击 II`(1CP) · `噩梦`(2CP)
+- 我的手牌（**隐藏信息，已移出仓库**）：见 `tts\docs\archive\DICETHRONE_MYHAND.md`（该目录在 `.gitignore` 里，公开仓库看不到）
 - 他挂起时的骰面：**1 / 4 / 4 / 3 / 4**
 - git：`96dba9f`（当前：脚本全修完）· `4e5637a`（加本文件）· `49e35c9` · `781fe2c` · `3fbbde9`（基线）
