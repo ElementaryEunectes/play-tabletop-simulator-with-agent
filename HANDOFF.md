@@ -65,6 +65,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
    项目 `AGENTS.md` **6432 → ~2100 字节**（这份**每次请求都在计费**，所以易变的「已知状态」全部推给 STATE/HANDOFF）；
    `PLAY.md` **4219 → ~2100**；新增 **`tts\docs\USER_GUIDE.md`**（人怎么用）。
    ⇒ **下一次开局的默认动作：`tts\play.ps1 turn`，别再 status+roll 各跑一次。**
+   **为什么没动 Lua**：实测往返不是瓶颈 —— 一个 PowerShell 进程启动固定 **0.35s**，而一次 TTS 往返只 ~40ms
+   （`play.ps1 turn` 17 次往返仍是 1.48s）。把 17 次并成 1 次大约省 0.6s，却要**重装存档 + 请玩家重载**（改 `dsh_global.lua` 的代价）
+   ⇒ **不划算，别去做**，除非以后有一次性几十条 act 的新场景。
+   **为什么 `AGENTS.md` 只砍到 2856**：剩下的是**不变量**（纪律/路径/启动）。易变的东西全在 STATE/HANDOFF —— 它们是**按需读**，
+   而 AGENTS.md **每个请求都注入**。再往下砍就得把纪律搬进按需文档，代价是"新会话可能不读"。**平台那份 `~/.dsh\AGENTS.md`（3925 字节）现在是注入的大头**，
+   但它跨项目共享，动它要先问用户。
 
 ## §5 本会话已结清的规则（**别再重问玩家**）
 
