@@ -24,7 +24,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\<user>\projects\tts
 | 项目位置 | `C:\Users\<user>\projects\tts-agent`（独立 git 仓库，**46 文件跟踪**，最新提交 `96dba9f`） |
 | 旧目录 `.dsh` | **项目产物不在这里**（sessions/storages/profiles/attachments ＋ 平台 `AGENTS.md`），但 **`archive\` 还在**：`~\.dsh\archive\tts-legacy\`＝33 个旧 `.ps1` · `~\.dsh\archive\system\` |
 | 游戏 | **《王权骰铸》对局挂起中**（玩家说"先结束游戏"），随时可续 |
-| 盘面 | **我（Blue/月精灵）27 HP / 4 CP** · **玩家（Red/猩红女巫）40 HP / 4 CP** · 物件 **136** · 桥接 `v12-callx` · 存档 `TS_Save_7.json` |
+| 盘面 | **以 `DICETHRONE_STATE.md` 的「当前」块为准**（台账 **我 30/4 · 他 41/4**）· `play.ps1 status` 现读 **27/40** ＝ 那笔已退回但**没留在存档里**的 −3/−1（待玩家拍）· 物件 **136** · 桥接 `v12-callx` · 存档 `TS_Save_7.json` |
 | 进度 | **R4 他的回合未收**（他重掷后骰面 1/4/4/3/4 = 🌀✳✳🌀✳ 命中「厄运缠身」但**尚未重新宣告**）→ 收完进 **R5（我的回合）** |
 | 棋子状态 | 他 **爆裂 3/3（满）**；他该放 1 个「操控概率」token（要我提醒他放，`Infinite_Bag` 取出来的 token 没图案） |
 | 哨兵/watcher | **都已撤停**（续局时要重挂：file 哨兵盯 `cache\front.txt` 的 `TURN=P2`，以及 `cache\chan.txt` 的 `^NEW`） |
