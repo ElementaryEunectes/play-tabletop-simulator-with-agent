@@ -8,6 +8,9 @@
 
 ## 0. 结论摘要（先看这五条）
 
+> ⚠️ **2026-10-08 追加调研见 §7**：下面五条**仍然成立**（依然没有"AI 当玩家打完整一局"的公开实现），
+> 但 **plumbing 层出现了开源方案**（`tts-toolkit` 的 hub/MCP 扇出），且新增了 agent 框架与两篇相关论文。
+
 1. **公开项目里，「AI 当玩家在 TTS 里打完整一局桌游」的实现 = 0 个。**
    搜遍 GitHub、Steam 社区、arXiv，没有找到。我们做的事在这个生态里**是空白**。
 2. **所有 TTS 自动化都走同一条路**：官方 **External Editor API**（TTS 监听 `39999`，
@@ -196,3 +199,39 @@ Shino 的一手抱怨 + `TabletopSimulatorCompanion` 专门做 RAG 索引 + 玩�
 **未能取到正文的来源**（仅标题可信）
 - Steam 两个社区讨论帖（抓取被 Steam 拦截）
 - linux.do 帖「最近突发奇想让 AI 写桌游发现还挺有意思的」：https://linux.do/t/topic/1540206 （fetch 失败）
+
+---
+
+## 7. 追加调研（2026-10-08）—— **plumbing 层出现开源方案了**
+
+> 触发：准备开源时重新扫了一遍（本文 §0 的"冻结，别重搜"对**结论**仍然有效，但生态确实动了）。
+> **§0 那五条结论全部仍然成立**：依然**没有**任何公开项目做到「AI 当玩家在 TTS 里打完整一局」。
+
+### 7.1 新增（本文之前没收录）
+
+| 项目 | 类型 | 为什么重要 |
+|---|---|---|
+| [Smirk1921/tts-toolkit](https://github.com/Smirk1921/tts-toolkit)（**MIT**，Node ≥24，Windows 优先） | TTS 图包作者工具链 | ⭐ **hub 守护进程（39997）独占唯一的 TTS 连接，再扇出给 CLI / VSCode / MCP agent** —— 正好是我们反复撞的 `ERR listener busy on 39998` 的正解。另有 pack unpack/build（字节级一致）、**游戏内 Lua 测试运行器**、Steam 工坊发布。README 称 2037 用例全绿 |
+| [Smirk1921/tts-lua-hub](https://github.com/Smirk1921/tts-lua-hub) | VSCode 扩展 fork | 上游 `rolandostar/tabletopsimulator-lua` 2023-04 起停滞；此 fork 加 hub 集成（不再抢 39998） |
+| [haive-games](https://pypi.org/project/haive-games/)（[文档](https://pr1m8.github.io/haive-games/overview.html)） | LLM 桌游 agent 框架（Python） | agent 层的现成框架：可作我们"决策层"的对照面 |
+| [damonleelcx/play-with-agents](https://github.com/damonleelcx/play-with-agents) | AI agent 游戏桌（**不是 TTS**） | 自带牌桌 + 主持人 agent + 让 agent 现场设计游戏。⚠️ README 两次 fetch 失败，**只信仓库描述** |
+| Code World Models for General Game Playing（arXiv [2510.04542](https://browse-export.arxiv.org/pdf/2510.04542)） | 学术 | 「代码即动作」的通用对局模型 |
+| Communication and Verification in LLM Agents under Information Asymmetry（arXiv 2510.25595） | 学术 | ⭐ **信息不对称**下的 LLM agent 协作/校验 —— 与我们的"手牌看不见"同题 |
+
+### 7.2 这些**没有**改变的事
+
+- `tts-toolkit` 是**图包作者工具链**：不做"当玩家"、不读棋局语义、不处理隐藏信息。它替代的是我们的**传输/连接层**（`ttslib.ps1` + `ds.ps1` 的一部分），**替代不了** `play.ps1`（本局控制台）、`live_index`/`diff_hidden`（状态语义）、`install_save2`（把**我们的**桥接烤进存档）、以及整套"每回合 token 预算"的玩法。
+- `play-with-agents` 是**另一个平台**（自带牌桌），不是"在 TTS 里代打"。
+- 所以本项目的**差异化仍在"玩家层"**：状态语义化读取 · 隐藏信息纪律 · 每回合 token/耗时预算 · 人机分工（人只决策 + 点结束回合）。
+
+### 7.3 新增可行动项
+
+| 优先级 | 行动 | 理由 |
+|---|---|---|
+| **高** | **评估接入 `tts-hub`（39997）**：让我们的脚本、`front_watch`/`channel_watch`、VSCode 扩展、MCP agent 共享一条 TTS 连接 | 一次性干掉 `LISTENERBUSY` 重试与"后台 watcher 抢 39998"这类坑（现由 `Bridge`/`Send-Tts` 的重试硬扛） |
+| 中 | 若接入 hub，则 `ttslib.ps1` 的传输层可**缩到"只会连 39997"**，删掉 39998 监听/重试逻辑 | 少一层自己维护的协议代码 |
+| 中 | 读 arXiv 2510.25595（信息不对称）与 `haive-games`，看有无可搬的隐藏信息/校验模式 | §4⑤ 的领域空白有人在做理论 |
+| 低 | 游戏内 Lua 测试运行器（`tts test`）：我们目前只有**离线**自测（`tts\tests\`），改动桥接后无法自动验证 | 改 `dsh_global.lua` 目前只能靠人肉重载存档 |
+| 低 | 把 `tts-toolkit` / `haive-games` 写进 README 的"prior art / 相关项目" | 开源项目应当致谢并定位自己 |
+
+⚠️ **不要**因为"有现成工具链"就去重写我们的 PowerShell 层：接入 hub 是一次**协议改动**（验收标准 = 现有 4 个脚本 + 2 个 watcher 全绿），不是重写。
