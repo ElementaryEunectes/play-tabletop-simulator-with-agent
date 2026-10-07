@@ -2,7 +2,7 @@
 <#
   card.ps1 —— 王权骰铸「一条命令查牌」
   用法：  card.ps1 -Q '厄运缠身'      （也支持英文/模糊：-Q hex 、 -Q moon 、 -Q 长弓）
-  数据源： cache\dicethrone_cards.md （初始化时建好的文本库；本脚本只读它，不联网、不裁图）
+  数据源： cache\<game>_cards.md （初始化时建好的文本库；本脚本只读它，不联网、不裁图）
   输出：  1~3 行（名称 / 消耗·骰型 / 效果要点 / 来源）；查不到时输出 NOT FOUND + 最接近的 3 条候选。
   绝不编内容：查不到就说查不到。
 #>
@@ -19,11 +19,15 @@ try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 # A missing -Q used to make PowerShell itself dump a multi-line mandatory-parameter error
 # (~630 bytes of context for nothing). Answer it ourselves, in two lines.
 if ([string]::IsNullOrWhiteSpace($Q)) {
-    Write-Output "usage: card.ps1 -Q '<name or fragment>'   (data: cache\dicethrone_cards.md)"
+    Write-Output "usage: card.ps1 -Q '<name or fragment>'   (data: cache\<game>_cards.md)"
     exit 2
 }
 
-$db = Join-Path $PSScriptRoot '..\cache\dicethrone_cards.md'
+# The card library is game data: WHICH file comes from tts\config.ps1 ($DshGameCards, derived from
+# the GAME= line in local\games\_current.md). No game-specific filename in this script.
+. (Join-Path $PSScriptRoot 'config.ps1')
+$db = $DshGameCards
+if ($db -eq '') { Write-Output 'NOT FOUND (no current game: set GAME= in local\games\_current.md)'; exit 1 }
 $db = [System.IO.Path]::GetFullPath($db)
 if (-not (Test-Path -LiteralPath $db)) {
     Write-Output "NOT FOUND (文本库不存在: $db)"

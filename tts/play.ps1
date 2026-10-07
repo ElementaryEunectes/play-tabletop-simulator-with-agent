@@ -16,7 +16,7 @@
 #   play.ps1 say     -TextFile <utf8 file>
 #
 # ERROR CODES (each one is a DIFFERENT fault and must never be blurred)
-#   NO PART  : the data file cache\dicethrone_rules.json is missing or unreadable
+#   NO PART  : the current game's rules file is missing (see GAME= in local\games\_current.md)
 #   BAD DATA : a counter / a reply / the data file could not be parsed. Hard stop.
 #   NO PORT  : 127.0.0.1:39999 refused (and 39998 free) -> TTS is not listening
 #   NO REPLY : connected, but no messageID 4 came back in time
@@ -63,7 +63,8 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
-if ($RulesFile -eq '') { $RulesFile = Join-Path (Split-Path -Parent $PSScriptRoot) 'cache\dicethrone_rules.json' }
+. (Join-Path $PSScriptRoot 'config.ps1')     # paths + which game is current ($DshGameRules)
+if ($RulesFile -eq '') { $RulesFile = $DshGameRules }
 if ($TtsLib -eq '') { $TtsLib = Join-Path $PSScriptRoot 'ttslib.ps1' }
 
 # ------------------------------------------------------------------ failures -----
@@ -77,6 +78,7 @@ function Fail([string]$code, [string]$msg) {
 if (-not (Test-Path -LiteralPath $TtsLib)) { Fail 'NO PART' ("ttslib.ps1 not found at " + $TtsLib) }
 . $TtsLib
 
+if ($RulesFile -eq '') { Fail 'NO PART' "no current game: set the GAME= line in local\games\_current.md" }
 if (-not (Test-Path -LiteralPath $RulesFile)) { Fail 'NO PART' ("rules file not found: " + $RulesFile) }
 $Raw = [System.IO.File]::ReadAllText($RulesFile, [System.Text.Encoding]::UTF8)
 $Rules = $null

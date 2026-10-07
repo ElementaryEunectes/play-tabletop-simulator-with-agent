@@ -75,10 +75,15 @@ $ErrorActionPreference = 'Continue'
 # ttslib.ps1 is the ONE copy of the TTS TCP transport. Dot-source it: same process,
 # one level deep. (Spawning a helper is what the sandbox kills: dsh -> dsh -> script.)
 . (Join-Path $PSScriptRoot 'ttslib.ps1')
-    # Per-match guids come from the game's rules data (cache\<game>_rules.json), NOT from code:
-    # the key is the tray (seat) and the array order is the slot. See the iron rule in AGENTS.md;
-    # on a NEW game re-filter cache\live_index.csv by name and update the JSON, not this file.
-    $RulesFile = Join-Path (Split-Path -Parent $PSScriptRoot) 'cache\dicethrone_rules.json'
+    # Per-match guids come from the game's rules data, NOT from code: the key is the tray (seat)
+    # and the array order is the slot. WHICH file is decided in ONE place - tts\config.ps1 reads
+    # the GAME= line in local\games\_current.md -> $DshGameRules. See the iron rule in AGENTS.md;
+    # on a NEW game update that JSON, not this file.
+    . (Join-Path $PSScriptRoot 'config.ps1')
+    $RulesFile = $DshGameRules
+    if ($RulesFile -eq '' -or -not (Test-Path -LiteralPath $RulesFile)) {
+        Write-Host "ERR no current game / rules file; set GAME= in local\games\_current.md"; exit 1
+    }
     $Rules = [System.IO.File]::ReadAllText($RulesFile, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
     $Dice = @()
     foreach ($seat in @('moon', 'scar')) {

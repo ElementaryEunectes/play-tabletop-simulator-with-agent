@@ -26,6 +26,11 @@
 Remove-Variable WorkspaceRoot -ErrorAction SilentlyContinue
 Remove-Variable TtsSavesDir   -ErrorAction SilentlyContinue
 Remove-Variable TtsImagesDir  -ErrorAction SilentlyContinue
+# Re-seed the two optional vars as EMPTY. Callers may run with Set-StrictMode -Version 2.0
+# (play.ps1 does), where merely READING an unset variable is a hard error - and the branches
+# below read them. Empty is falsy, so the semantics are identical to "unset".
+$TtsSavesDir  = ''
+$TtsImagesDir = ''
 $SelfRoot = Split-Path -Parent $PSScriptRoot          # <workspace> (this file is <workspace>\tts\config.ps1)
 if ($env:DSH_HOME -and (Test-Path (Join-Path $env:DSH_HOME 'tts\config.ps1'))) {
     $WorkspaceRoot = $env:DSH_HOME
