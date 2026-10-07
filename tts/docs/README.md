@@ -21,7 +21,7 @@
 | 按需（给人） | `USER_GUIDE.md` | **人怎么用**：开局 · 你只做两件事 · AI 何时请你帮忙 · 在哪说话 · 常见问题 | 低 |
 | 按需（先例） | `PRIOR_ART.md` | 二手调研与先例（**冻结，别重搜**；含可搬/不可搬结论） | 冻结 |
 | 不读 | `HARNESS_HOME_AGENTS.template.md` | `$DSH_HOME\AGENTS.md` 的**源**：`---` **以下是正文**（改完拷过去）；`tts\tests\test_agents_hygiene.ps1` 会核对两者逐字一致 | 低 |
-| 永不 | `archive\`（**gitignore**） | 过期留档：旧简报 ×4 · 旧 STATE · 游城拓荒全部文档 · 旧 init 产物 —— **未随仓库分发** | 冻结 |
+| 永不 | `local\archive\`（**gitignore**） | 过期留档：旧简报 ×4 · 旧 STATE · 游城拓荒全部文档 · 旧 init 产物 —— **未随仓库分发** | 冻结 |
 
 ## 目录约定（保持干净 = 省 token）
 
@@ -29,7 +29,9 @@
 - `tts\tests\` = **离线自测（不需要 TTS、不需要存档）**：`test_diff_index.ps1`（桩冒充 `live_index.ps1` ＋ 合成 fixture）·
   `test_param_backfill.ps1`（每个 `''` 默认值必须被回填或判空）· `test_agents_hygiene.ps1`（三槽体积 / 承载性指针 / 隐私 / 漂移）。**改完脚本先跑它们。**
 - `tts\lua\` = TTS 模组的**全局 Lua**（`dsh_global.lua` = 桥接本体；`install_save2.ps1` 依赖它，**别动**）。`tts\validate_lua.js` = 改 Lua 前的校验器。
-- `tts\docs\` = 上面那张表里的文档（`archive\` 除外，它只是**留档**）。
+- `tts\tools\` = **跨语言小工具**：`fetch_pdf.js`（用 **Node 的 TLS 栈**下载 —— 沙箱里 `curl`/`Invoke-WebRequest` 会报 TLS 凭证错）·
+  `pdf_images.js`（从**图片型** PDF 抽整页图）—— 规则书那条链用的就是这两个（见 `DICETHRONE_FLOW.md` 附录 A）。
+- `tts\docs\` = 上面那张表里的文档。
 - `cache\` = **产物**（可重建）：`front.txt` / `chan.txt`（哨兵心跳）· `dicethrone_cards.md`（游戏数据）·
   `live_index.csv` / `baseline.csv` / `obj_index.csv`（快照）· `hidden_zones.csv`（隐藏区规则）· 规则书 PDF 与整页图。
 - **不进仓库的**（都在 `.gitignore`）：`AGENTS.local.md`（本机事实）· `local\`（私有：手牌 / 归档 / scratch）· `cache\` · `out\` · `logs\` · `shots\`。

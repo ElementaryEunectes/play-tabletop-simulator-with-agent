@@ -387,8 +387,8 @@ SCAR 1–18 是通用行动卡（WILD 01–18：乾坤大挪移!/状什么态?/�
 
 ```powershell
 tts\obj_index.ps1                                    # 1. 从存档取 URL（src=CustomPDF.PDFUrl ⇒ pdfurl 列）
-node out\_selftest\fetch_pdf.js <URL> cache\rulebook_dicethrone.pdf                  # 2. 下载
-node out\pdftool\pdf_images.js cache\rulebook_dicethrone.pdf cache\rulebook_pages    # 3. 抽整页图（15 张 2593x1547）
+node tts\tools\fetch_pdf.js <URL> cache\rulebook_dicethrone.pdf                  # 2. 下载
+node tts\tools\pdf_images.js cache\rulebook_dicethrone.pdf cache\rulebook_pages    # 3. 抽整页图（15 张 2593x1547）
 ```
 
 - ⚠️ **为什么必须用 Node 下载**：沙箱里 `curl.exe` 与 `Invoke-WebRequest` 都报 TLS 凭证错

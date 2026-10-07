@@ -149,7 +149,7 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
 - **`tts\docs\DICETHRONE_STATE.md`** = 当前在玩哪个游戏 → 指向哪份状态页（**先读它**）。
 - 每局/每游戏一份 `<游戏>_STATE.md`（例：`DICETHRONE_STATE.md`；旧局 `archive\NOMADCITY_STATE_final.md`），内容=**只写"现在是什么"**：
   比分/资源/位置/**待办** + 本局 guid 对照。**规则、坐标、工具用法、纪律都不放这里**（规则→`<游戏>_FLOW.md`，纪律→`AGENTS.md`）。
-- 一局结束 ⇒ 归档到 `tts\docs\archive\`，状态页重置或另开新的。
+- 一局结束 ⇒ 归档到 `local\archive\`（**不进仓库**），状态页重置或另开新的。
 - ⛔ **不要把 A 游戏的坐标/guid/规则写进 B 游戏的状态页**（《游城拓荒》的"本局…"数据换模组即作废）。
 - ⭐ **看 diff 一律走 `tts\diff_hidden.ps1 -Game <游戏>`**（隐藏区规则在 `cache\hidden_zones.csv`，换游戏只加一行）。
 - ⛔ **STATE 同一时刻只允许一个写入者**（多子代理并发编辑会互相覆盖/留下过期行；改前先 read、改后回报字节数）。

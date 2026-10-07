@@ -51,3 +51,6 @@ Thumbs.db
 desktop.ini
 *.tmp
 *.swp
+
+# ---- 不进开源的私有/归档/scratch（统一到 local\）----
+local/
