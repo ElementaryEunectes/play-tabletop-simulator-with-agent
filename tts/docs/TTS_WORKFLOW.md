@@ -1,14 +1,8 @@
 # 通用工作流：用 DSH 在 Tabletop Simulator 里代玩任意桌游
 
-> ⚠️ **2026-10-07 目录整理**：本文里的脚本名凡是**已归档**的（`overview.ps1` · `map_cells.ps1` · `init.ps1` ·
-> `resolve_cards.ps1` · `resolve_faces.ps1` · `face_map.ps1` · `sheet.ps1` · `label.ps1` · `card_clusters.ps1` ·
-> `scan_save.ps1` · `find_piles.ps1` · `deck_list.ps1` · `alt_activate.ps1` · `wait_click.ps1` · `tts_calib.ps1` ·
-> `tts_probe.ps1` · `tts_ping.ps1` · `diff_safe.ps1` · `dock*.ps1` · `quad*.ps1` · `ruler_*.ps1` · `star_*.ps1`）
-> ⇒ **路径前缀改成 `archive\tts-legacy\`**（内容未改，详见该目录的 `README.md`）。
-> **现役脚本清单以 `tts\SCRIPTS.md` 为准**（按频率分类）；每回合怎么打看 `PLAY.md`；TTS 通用规则看 `TTS_RULES.md`。
-> 另外：`diff_safe.ps1` 一律用 **`diff_hidden.ps1 -Game <游戏>`** 代替。
-> ⚠️ **2026-10-07 二次整理**：已终局那局（游城拓荒）的规则文档移进 `archive\`（`NOMADCITY_FLOW.md` / `NOMADCITY_REF.md`）；
-> `cache\` 里那两个旧产物（`init_report.md` / `session_map.md`）也一并归档到 `archive\`。
+> ⚠️ **脚本名以 `tts\SCRIPTS.md` 为准**：现役按频率分类；**已归档的一律在 `~\.dsh\archive\tts-legacy\`**（不在本仓库）。
+> 本文提到的 `overview.ps1` / `init.ps1` / `resolve_*.ps1` / `dock*.ps1` 之类旧名都按归档看；`diff_safe.ps1` 已由 **`diff_hidden.ps1 -Game <游戏>`** 取代。
+> 每回合怎么打看 `PLAY.md` · TTS 通用规则看 `TTS_RULES.md` · 上一局（游城拓荒）的文档在 `archive\`。
 
 这份文档是从《明日方舟：游城拓荒》那一局里**踩了十几轮坑**之后总结出来的。
 核心教训一句话：**不要用截图去反推坐标。** 游戏自己知道每个物件在哪，
