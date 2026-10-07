@@ -12,7 +12,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 ```
 
 1. 它先把工作区根钉好，再启动 agent。
-2. 在 TTS 里**载入存档**（当前是 `TS_Save_7.json`）。
+2. 在 TTS 里**载入存档**（哪一份、叫什么，见 `local\games\_current.md`）。
 3. 让 AI 跑一句自检：`tts\play.ps1 status` —— 看到 `bridge=v12-callx` 且 `objs` 与桌面相符就算通了。
 
 ⚠️ 若 39999 端口有人在听但 AI 说"没反应"，先确认**存档是不是载入了**（桥接脚本是**烤进存档**的，光开 TTS 不够）。
@@ -25,7 +25,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 | 点棋子 / 点牌 | 先冻结一张基线快照，再用 `diff_hidden.ps1` 读变化（**不读你的隐藏区**） |
 | 点右上角 **「结束回合」** | 自动醒，进入下一回合 |
 
-⛔ **「结束回合」只能你点** —— AI 点不了（合成点击对该按钮无效，已定案）。
+⛔ **「结束回合」目前只能你点** —— 判定与理由（试过哪几种点击、为什么无效）**只有一处**：`tts\docs\TTS_RULES.md` §四。哪天它能被程序按下去，改那一处即可，本页不用动。
 
 ## 3. 什么时候 AI 会请你帮忙
 

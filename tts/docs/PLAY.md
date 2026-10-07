@@ -29,14 +29,15 @@
 | `defense -Seat moon [-Apply -Incoming N]` | 我的防御；**不加 `-Roll` 只读** |
 | `say -TextFile <utf8>` | 往笔记本发一行（中文**必须**走文件） |
 
-⚠️ **别 read `play.ps1` 本体**（35KB ≈ 10k token）；技能表在 `cache\dicethrone_rules.json`，卡面 `tts\card.ps1 -Q '<名>'`。
+⚠️ **别 read `play.ps1` 本体** —— 实现已拆到 `tts\lib\play.*.ps1`（`bridge`/`dice`/`rules`/`verbs`，**要改哪块就读哪块**；本体只是 ~5 KB 分发器）。技能数据 `cache\<game>_rules.json`（= `$DshGameRules`），卡面 `tts\card.ps1 -Q '<名>'`。
 ⚠️ `setLock` 坏了（`cannot convert userdata to Boolean`）⇒ 重掷只能逐颗 `ds.ps1 -Do act:<骰guid>:roll`。
 ⚠️ **骰子**：`roll.ps1` 必须明说 `-Roll`/`-NoRoll`（裸调用 `exit 2`）；**判定以玩家报的为准**。
 ⚠️ **结算顺序**：宣告 → 先问他改不改骰 → 防御掷骰 → 才扣血。**数字没谈定先跑 `-Apply -WhatIf`**（打印 `WILL WRITE` 但不写）；`-Apply` 真写后脚本自己回读，不一致即 `BAD DATA`。
 
 ### 哨兵 / 叫醒（细节见 `TTS_RULES.md`；**不跨会话继承**）
 
-- 推进只有一条路：**玩家点「结束回合」**（我点不了）⇒ 我靠 file 哨兵盯 `cache\front.txt` 的 `TURN=P2` 被叫醒。
+- 推进：**玩家点「结束回合」** ⇒ 我靠 file 哨兵盯 `cache\front.txt` 的 `TURN=P2` 被叫醒。
+  ⛔ **"我点不了那个按钮"的判定与理由只有一处**：`TTS_RULES.md` §四 —— **别处不要再复述**；哪天它能被按下去，只改那一处。
 - 新会话**必须重挂**（编号每会话不同，先 `sentinel_list`）：`sentinel_watch kind=file target=<绝对路径> pattern=<正则>`；另一条盯 `cache\chan.txt` 的 `^NEW`。
 - 判活 = 两个 txt 的 **mtime 秒级滚动**；**停了才**后台重启 `front_watch.ps1 -Minutes 600` / `channel_watch.ps1 -Minutes 600 -IntervalMs 12000`。
 - 收工：`sentinel_cancel` ＋ kill 后台作业。
