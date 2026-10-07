@@ -111,6 +111,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 11. **"只读"的基准脚本也会写游戏**（2026-10-08）：我写性能基线时把 `play.ps1 income` 当只读测了一次 ⇒ **悄悄给玩家 +1 CP**
     （已 `setCount` 复位并回读 ✅）。教训两层：① 任何"跑一遍看看"的脚本，先确认每个动词是读还是写 —— **`income` 是写动词**；
     ② **写动词一律要有显式开关**：现在 `income` 与 `attack`/`defense` 一致，默认只读、必须 `-Apply` 才写、`-WhatIf` 可预览。
+12. **端口探测工具自己会撒谎**（2026-10-08）：`Get-NetTCPConnection -LocalPort 39999` 在本沙箱里**看不到明明在听的端口**
+    （`netstat -ano` 和原始 `TcpClient.Connect` 都能看到）。我据此差点告诉用户"3080 空闲"，而 3080 上正跑着这个会话。
+    ⇒ **判端口一律用 `netstat -ano | findstr :<port>` 或原始 TCP 连接**；别信 `Get-NetTCPConnection`。（与 §6.8/§6.9 同一课：**验证工具本身也要验**。）
 
 ## §7 交接时的原始数据（万一文档与实物冲突）
 

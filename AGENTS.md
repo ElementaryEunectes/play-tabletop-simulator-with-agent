@@ -35,4 +35,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 5. **骰子**：`roll.ps1` 必须明说 `-Roll`/`-NoRoll`（裸调用 `exit 2`，不接触 TTS）；**判定以玩家报的为准**。
 6. **响应窗口**：玩家每次宣告 = 我的出牌机会 ⇒ **必须表态「出牌 / 不出牌」**。
 7. **隐藏信息双向**：不读对手隐藏区、不拿 guid 对身份；**我自己的手牌/计划也不外传**（手牌在 gitignore 的 `tts\docs\archive\`）。
-8. **判"玩家在不在"看 39999 端口**或跑 `play.ps1 status` —— ⛔ 别用 `Get-Process`（沙箱里根本看不见 TTS 进程）。
+8. **判"玩家在不在"看 39999 端口**（`netstat -ano | findstr :39999`；⛔ `Get-NetTCPConnection` 在本沙箱里**会假报"没人在听"**）或跑 `play.ps1 status`；⛔ 别用 `Get-Process`（沙箱里根本看不见 TTS 进程）。

@@ -46,7 +46,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 
 | 现象 | 原因 / 怎么办 |
 |---|---|
-| AI 半天没反应 | 看 39999 端口在不在：`Get-NetTCPConnection -LocalPort 39999`。不在 = TTS 没开或存档没载入 |
+| AI 半天没反应 | 看 39999 端口在不在：`netstat -ano | findstr :39999`（⚠️ **别用 `Get-NetTCPConnection`**，它在沙箱里会假报"没人在听"）。看不到 = TTS 没开或存档没载入 |
 | AI 回的是**乱码** | 中文**必须走文件**：让它用 `say.ps1 -MessageFile <utf8 文件>`，别用命令行参数（控制台代码页会毁掉中文） |
 | 我的骰子被重掷了 | 旧版 `roll.ps1` 默认会掷（曾连掷你 4 次）。**2026-10-08 已加护栏**：必须 `-Roll` 才掷，`-NoRoll` 只读，裸调用直接 `exit 2` 且不接触 TTS |
 | HP/CP 数字对不上 | AI 每次写都会**回读并打印**，不一致就报 `BAD DATA` 停下。**以你看到的牌面为准**，它会把台账对齐 |
