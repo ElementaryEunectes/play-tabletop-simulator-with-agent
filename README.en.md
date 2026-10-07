@@ -92,4 +92,15 @@ the dot-source, and `tts\tests\test_param_backfill.ps1` enforces exactly that.
 - ✅ **Guardrails** on `roll.ps1`, `play.ps1 -Apply` and `install_save2.ps1 -DryRun`.
 - ✅ **No personal paths** anywhere in the tree: `tts\config.ps1` is the only resolver.
 - ⏸ The Dice Throne match is **suspended**; how to resume is in `tts\docs\DICETHRONE_STATE.md`.
-- 🧾 Not added yet: `LICENSE`.
+- 🧾 `LICENSE` = **MIT** (see below).
+
+## License and third parties
+
+This repository's **code and documentation** are MIT licensed — see `LICENSE`,
+Copyright (c) 2026 ElementaryEunectes.
+That does **not** cover: **Tabletop Simulator** (Berserk Games), **Dice Throne** and its card
+text/art (Roxley / MINDVG), or the Workshop mod itself. `tts\docs\DICETHRONE_FLOW.md` is a
+personal play-aid that transcribes parts of the card text; **no card art is included** — the
+images and the card-text cache live in `cache\`, which is not committed.
+`tts\validate_lua.js` needs **`luaparse`** (MIT), which is not vendored here: run
+`npm i luaparse`, or set `LUAPARSE_DIR`.

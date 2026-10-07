@@ -67,4 +67,12 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
   `tts\tests\test_param_backfill.ps1`（每个 `''` 默认值都必须被回填或判空）。
 - ✅ **无个人路径**：树里已无 `C:\Users\<名字>` 之类硬编码（`tts\config.ps1` 是唯一解析层）。
 - ⏸ 对局处于**挂起**态，续局步骤写在 `tts\docs\DICETHRONE_STATE.md` 的「恢复 / 续局三步」一节。
-- 🧾 **尚未补**：`LICENSE`（`tts\validate_lua.js` 需要 `luaparse`：`npm i luaparse`，`cache\` 不入库）。
+- 🧾 `LICENSE` = **MIT**（见下）。
+
+## 许可与第三方
+
+本仓库的**代码与文档**按 **MIT** 授权（见 `LICENSE`，Copyright (c) 2026 ElementaryEunectes）。
+它**不覆盖**：**Tabletop Simulator**（Berserk Games）· **《王权骰铸》/ Dice Throne** 及其卡面文本与美术（Roxley / MINDVG）·
+创意工坊模组本身。`tts\docs\DICETHRONE_FLOW.md` 是**自用打牌便签**（转抄了部分卡面文字），**不含任何卡图** ——
+图片与卡面文本库都在 `cache\`，不进仓库。
+`tts\validate_lua.js` 依赖 **`luaparse`**（MIT），但**未随仓库分发**：`npm i luaparse`，或设 `LUAPARSE_DIR`。
