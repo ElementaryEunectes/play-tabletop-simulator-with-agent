@@ -27,6 +27,20 @@
 2. **DSH**（提供哨兵与工具调用；本工作区就是 `$DSH_HOME`）。
 3. **Tabletop Simulator** + 目标模组；`tts\lua\dsh_global.lua` 通过 `install_save2.ps1` 灌进存档建立桥接。
 
+## 在新机器上（**新 clone 的第一步**）
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\doctor.ps1      # 只读体检 + 注入成本预测
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1   # 全部脚本：补 BOM + 真解析器
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfill.ps1
+```
+
+`doctor.ps1` 会顺便算出**每请求注入多少字节**：本仓库的 `AGENTS.md`（约 2.9 KB）＋ **你这台机器 harness home 里的 `AGENTS.md`**。
+第二份**不在本仓库里** —— 它是 harness 的**用户全局**文件（`$DSH_HOME\AGENTS.md`）。若 `DSH_HOME` 就指向本仓库，两份会**去重成一份**（`start-agent.ps1` 就是这个用法）。
+
+⚠️ 本仓库用 `.gitattributes`（`* -text`）**锁住行尾与编码**：clone 出来的字节与提交的完全一致。**别改成 `text=auto`** —— 那会一次性重写所有文件的 blob，还可能碰坏 `.ps1` 必须保留的 UTF-8 BOM。
+
 ## 路径配置（**不要再把用户名写进脚本**）
 
 所有机器相关的路径由 **`tts\config.ps1`** 解析一次，其余脚本只引用它的变量：

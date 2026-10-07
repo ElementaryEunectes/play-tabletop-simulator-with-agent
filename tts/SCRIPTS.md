@@ -21,6 +21,7 @@
 | `front_watch.ps1` | 后台：写 `cache\front.txt`（前台状态 ＋ `TURN=Pn`）→ 配 file 哨兵叫醒 |
 | `channel_watch.ps1` | 后台：写 `cache\chan.txt`（笔记本尾部变化 → `NEW`）→ 配 file 哨兵 |
 | `check_ps1.ps1` | **改完 `.ps1` 必跑**：补 BOM ＋ 真解析器校验 |
+| **`doctor.ps1`** | **新机器 / 新 clone 第一步**（**只读**体检）：PowerShell · 路径解析 · TTS 目录 · 39999 端口 · node · **每请求注入字节数** ⇒ `VERDICT: ready` 或带修复建议的问题清单 |
 
 ## 🔧 常用（按需）
 

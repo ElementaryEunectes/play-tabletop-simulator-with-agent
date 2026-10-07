@@ -15,6 +15,14 @@
 
 ## §1 共同核心：冷启动四步
 
+**0. 这台机器准备好了吗**（新机器 / 新 clone 的**第一步**）
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\doctor.ps1     # 只读：PowerShell · 路径 · TTS 目录 · 39999 · node · 每请求注入字节
+```
+- 它列完现状后给 `VERDICT: ready` 或带修复建议的问题清单；**它启动不了也改不了任何东西**（纯只读）。
+- TTS 目录 `MISSING` ⇒ 设 `$env:TTS_SAVES_DIR` / `$env:TTS_IMAGES_DIR`（见 `README.md` 的路径配置）。
+- 它还会告诉你**每请求注入多少字节**（项目 `AGENTS.md` ＋ **harness home 里那份**）—— 后者**不在仓库里**，是每台机器自己的事。
+
 **A. 让桌面有一个存档（只有情形 C 必须新存）**
 - 玩家 `Menu → Save & Load → Save Game`，或挂机等自动存档（`TS_AutoSave*.json`，约 5 分钟）。
 - ⚠️ 载入列表显示的是存档里的 **`SaveName`**，不是文件名（文件名是 TTS 编的槽位 TS_Save_N）。

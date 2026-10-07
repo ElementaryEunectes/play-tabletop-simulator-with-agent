@@ -33,6 +33,25 @@ through a message bridge into the running game. The current game is **Dice Thron
 4. **Node.js** — only for `tts\validate_lua.js`, which must be run before touching the Lua.
    It needs `luaparse`; `cache\` is not committed, so run `npm i luaparse` (or set `LUAPARSE_DIR`).
 
+## On a new machine (**first step after cloning**)
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\doctor.ps1      # read-only check + injection cost
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1   # every script: BOM + real parser
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfill.ps1
+```
+
+`doctor.ps1` also works out **how many bytes get injected on every request**: this repository's
+`AGENTS.md` (about 2.9 KB) plus **the `AGENTS.md` in *your* harness home**. That second file is
+**not part of this repository** — it is the harness's *user-global* instruction file
+(`$DSH_HOME\AGENTS.md`). If `DSH_HOME` points at this repository, the two deduplicate into one
+(which is what `start-agent.ps1` arranges).
+
+⚠️ `.gitattributes` (`* -text`) **freezes line endings and encoding**: a clone is byte-identical
+to what was committed. **Do not switch it to `text=auto`** — that rewrites every stored blob
+once and can break the UTF-8 BOM that `.ps1` files require.
+
 ## Path configuration (never write your user name into a script again)
 
 Every machine-specific path is resolved once, in **`tts\config.ps1`**; the other scripts only

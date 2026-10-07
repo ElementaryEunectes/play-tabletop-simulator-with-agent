@@ -1,0 +1,15 @@
+# .gitattributes - keep a clone byte-identical to what was committed.
+#
+# WHY THIS FILE EXISTS
+#   This is a Windows / PowerShell project and the repository deliberately contains a MIX of
+#   CRLF and LF files. Worse, several .ps1 files MUST keep their UTF-8 BOM: PowerShell 5.1
+#   reads a BOM-less file as ANSI, the Chinese comments turn into mojibake and the parser dies
+#   with a misleading "missing closing parenthesis". Any end-of-line conversion or encoding
+#   smudge on checkout can therefore break the project on a machine that is not this one.
+#
+#   So: no conversion in either direction. What was committed is exactly what you get, on every
+#   platform. A line-ending normalisation would also rewrite every stored blob once, turning a
+#   one-line fix into an unreviewable diff.
+#
+#   If you add a file, keep its bytes as-is; tts\check_ps1.ps1 fixes the BOM when it is missing.
+* -text
