@@ -2,7 +2,7 @@
 
 > ⚠️ **脚本名以 `tts\SCRIPTS.md` 为准**：现役按频率分类；**已归档的一律在 `~\.dsh\archive\tts-legacy\`**（不在本仓库）。
 > 本文提到的 `overview.ps1` / `init.ps1` / `resolve_*.ps1` / `dock*.ps1` 之类旧名都按归档看；`diff_safe.ps1` 已由 **`diff_hidden.ps1 -Game <游戏>`** 取代。
-> 每回合怎么打看 `PLAY.md` · TTS 通用规则看 `TTS_RULES.md` · 上一局（游城拓荒）的文档在 `archive\`。
+> 每回合怎么打看 `PLAY.md` · TTS 通用规则看 `TTS_RULES.md` · 上一局（游城拓荒）的文档在 `tts\docs\archive\`（⚠️ **该目录 gitignore，未随仓库分发**）。
 
 这份文档是从《明日方舟：游城拓荒》那一局里**踩了十几轮坑**之后总结出来的。
 核心教训一句话：**不要用截图去反推坐标。** 游戏自己知道每个物件在哪，
@@ -33,7 +33,7 @@
 | 玩家不配合 / 我看不到他的牌 | §8 ＋ `TTS_RULES.md` 的隐藏信息条 |
 | 完整开一局（换桌游） | §9（含 ⚠️ **写入前 sanity check**） |
 | 只想找某个脚本 | §10 ＋ `SCRIPTS.md` |
-| 卡住了 / 见到怪现象 | **`PITFALLS.md`** —— 坑的细节都在那份 |
+| 卡住了 / 见到怪现象 | **`MAINTENANCE.md`** —— 坑的细节都在那份 |
 
 ---
 

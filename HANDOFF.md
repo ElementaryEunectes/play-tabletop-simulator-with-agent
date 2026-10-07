@@ -4,8 +4,7 @@
 > **怎么读**：本文件 = "现在到哪了 + 先干什么"；长期规矩在 `AGENTS.md`（本项目）与 `~/.dsh\AGENTS.md`（平台）；
 > 每局开工照 `tts\docs\CURRENT.md` → `DICETHRONE_STATE.md` → `PLAY.md` 三步走。
 > ⚠️ **先做 §1 的启动动作，否则所有脚本会读写一个不存在的旧目录。**
-> 🕳️ **坑的细节已拆到 `tts\docs\PITFALLS.md`**（动手改脚本 / 改流程 / 排查怪现象前读）；
-> **上下文注入与隔离**（三槽 / 去重 / 字节预算 / 各类工作区注入什么）见 **`tts\docs\CONTEXT.md`**。
+> 🛠️ **维护参考在 `tts\docs\MAINTENANCE.md`**（动手改脚本 / 改流程 / 排查怪现象前读：坑 ×13 ＋ 上下文注入与隔离）。
 
 ---
 
@@ -94,7 +93,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 | 爆裂上限 | **3**（玩家给出） |
 | 结束回合 | 只能玩家点（点不了那个横幅是定案）；`front_watch` 写 `TURN=Pn` 配哨兵叫醒 |
 
-## §6 ⚠️ 踩过的坑 ⇒ 已拆到 `tts\docs\PITFALLS.md`
+## §6 ⚠️ 踩过的坑 ⇒ 已拆到 `tts\docs\MAINTENANCE.md`
 
 - **动手改 `.ps1` / 改流程 / 排查怪现象之前，先读那一份**（13 条，每条都付过真实代价）。
 - 本文件只留"现在到哪了 + 先干什么"；坑的细节不在这里重复（否则每次会话都在读参考材料）。
@@ -106,10 +105,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 - 他挂起时的骰面：**1 / 4 / 4 / 3 / 4**
 - git：`96dba9f`（当前：脚本全修完）· `4e5637a`（加本文件）· `49e35c9` · `781fe2c` · `3fbbde9`（基线）
 
-## §8 上下文注入（摘要 —— 细节在 `tts\docs\CONTEXT.md`）
+## §8 上下文注入（摘要 —— 细节在 `tts\docs\MAINTENANCE.md` 第二部分）
 
 - **每请求注入三份**：通用 `$DSH_HOME\AGENTS.md`（2924 B）＋ 项目 `AGENTS.md`（2960 B）＋ 机器 `AGENTS.local.md`（1048 B）＝ **6932 B**。
 - 想只注入一份 ⇒ 用 `start-agent.ps1` 起（`DSH_HOME` 钉到仓库根，两个槽同路径去重）。⛔ harness **没有"忽略全局那份"的开关**。
-- 注入顺序 / 两种去重 / 字节预算 / **各类工作区会注入什么** / rulesync 试点结论 ⇒ 全在 `CONTEXT.md`；
+- 注入顺序 / 两种去重 / 字节预算 / **各类工作区会注入什么** / rulesync 试点结论 ⇒ 全在 `MAINTENANCE.md`；
   回归测试 ⇒ `tts\tests\test_agents_hygiene.ps1`；"模板即源"的复制关系 ⇒ `HARNESS_HOME_AGENTS.template.md`。
 

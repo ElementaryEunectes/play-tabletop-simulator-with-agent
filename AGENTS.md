@@ -2,7 +2,7 @@
 
 > 只讲**在这个仓库里怎么干活**；跨项目纪律在 `~/.dsh\AGENTS.md`。
 > ⛔ 比分/待办/规则数字**都不放这里** ⇒ 放 `tts\docs\DICETHRONE_STATE.md`（唯一真源）。
-> 📌 接手先读 `HANDOFF.md`（现状 · 待办）· **动手改东西前读 `tts\docs\PITFALLS.md`**（每条坑都付过代价）。
+> 📌 接手先读 `HANDOFF.md`（现状 · 待办）· **动手改东西前读 `tts\docs\MAINTENANCE.md`**（坑 ×13 ＋ 注入/隔离）。
 
 ## 这个项目
 
