@@ -29,8 +29,29 @@ $q2       = ([string][char]39) + ([string][char]39)
 $patParam = '\[(?:string|int|double|bool)\]\s*\$(\w+)\s*=\s*' + $q2
 $bad      = 0
 
+# Program scope: a script's guards may live in the modules it dot-sources (play.ps1 -> lib\play.*.ps1),
+# so search the file PLUS everything it dot-sources, recursively. A missing dot-source still fails.
+$fileText = @{}
+foreach ($g in Get-ChildItem -LiteralPath $Dir -Filter *.ps1 -Recurse -File) { $fileText[$g.FullName] = [System.IO.File]::ReadAllText($g.FullName) }
+function Get-Scope([string]$Path) {
+    $seen = @{}; $sb = New-Object System.Text.StringBuilder; $stack = New-Object System.Collections.Stack
+    $stack.Push($Path)
+    while ($stack.Count -gt 0) {
+        $cur = $stack.Pop()
+        if ($seen.ContainsKey($cur) -or -not $fileText.ContainsKey($cur)) { continue }
+        $seen[$cur] = $true
+        [void]$sb.AppendLine($fileText[$cur])
+        foreach ($m in [regex]::Matches($fileText[$cur], '\.\s+"\$PSScriptRoot\\([^"]+)"')) {
+            $dep = Join-Path (Split-Path $cur -Parent) $m.Groups[1].Value
+            if ($fileText.ContainsKey($dep)) { $stack.Push($dep) }
+        }
+    }
+    return $sb.ToString()
+}
+
 foreach ($f in Get-ChildItem -LiteralPath $Dir -Filter *.ps1 -Recurse -File) {
     $text = [System.IO.File]::ReadAllText($f.FullName)
+    $scope = Get-Scope $f.FullName
     foreach ($n in @([regex]::Matches($text, $patParam) | ForEach-Object { $_.Groups[1].Value })) {
         if ($Allow.ContainsKey($f.Name) -and $Allow[$f.Name] -contains $n) { continue }
         $guards = @(
@@ -42,7 +63,7 @@ foreach ($f in Get-ChildItem -LiteralPath $Dir -Filter *.ps1 -Recurse -File) {
             ('\$null\s*-ne\s*\$' + $n)
         )
         $ok = $false
-        foreach ($g in $guards) { if ([regex]::IsMatch($text, $g)) { $ok = $true; break } }
+        foreach ($g in $guards) { if ([regex]::IsMatch($scope, $g)) { $ok = $true; break } }
         if (-not $ok) {
             $bad++
             $rel = $f.FullName.Substring($Dir.Length).TrimStart('\')

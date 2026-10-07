@@ -75,23 +75,19 @@ $ErrorActionPreference = 'Continue'
 # ttslib.ps1 is the ONE copy of the TTS TCP transport. Dot-source it: same process,
 # one level deep. (Spawning a helper is what the sandbox kills: dsh -> dsh -> script.)
 . (Join-Path $PSScriptRoot 'ttslib.ps1')
-
-# --------------------------------------------------------------- the dice table ---
-# guid -> tray. Filled from cache\live_index.csv (name contains the hero's die name),
-# 2026-10-07. Blue = moon elf, Red = the player's scarlet witch.
-# These are per-save: on a NEW game re-filter cache\live_index.csv by name.
-$Dice = @(
-    @{ guid = [string]'f0738d'; tray = 'moon'; slot = 1 }   # x =  -5, z = 35
-    @{ guid = [string]'187cc1'; tray = 'moon'; slot = 2 }   # x =   0, z = 35
-    @{ guid = [string]'656b32'; tray = 'moon'; slot = 3 }   # x =   5, z = 35
-    @{ guid = [string]'e00b2e'; tray = 'moon'; slot = 4 }   # x =  10, z = 35
-    @{ guid = [string]'910636'; tray = 'moon'; slot = 5 }   # x =  15, z = 35
-    @{ guid = [string]'205873'; tray = 'scar'; slot = 1 }   # x =  75, z = -35
-    @{ guid = [string]'26745c'; tray = 'scar'; slot = 2 }   # x =  80, z = -35
-    @{ guid = [string]'aa8300'; tray = 'scar'; slot = 3 }   # x =  85, z = -35
-    @{ guid = [string]'240f79'; tray = 'scar'; slot = 4 }   # x =  90, z = -35
-    @{ guid = [string]'033d23'; tray = 'scar'; slot = 5 }   # x =  95, z = -35
-)
+    # Per-match guids come from the game's rules data (cache\<game>_rules.json), NOT from code:
+    # the key is the tray (seat) and the array order is the slot. See the iron rule in AGENTS.md;
+    # on a NEW game re-filter cache\live_index.csv by name and update the JSON, not this file.
+    $RulesFile = Join-Path (Split-Path -Parent $PSScriptRoot) 'cache\dicethrone_rules.json'
+    $Rules = [System.IO.File]::ReadAllText($RulesFile, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+    $Dice = @()
+    foreach ($seat in @('moon', 'scar')) {
+        $slot = 0
+        foreach ($dg in @($Rules.dice.$seat.guids)) {
+            $slot++
+            $Dice += @{ guid = [string]$dg; tray = $seat; slot = $slot }
+        }
+    }
 
 $TrayLabel = @{ moon = 'MoonElf(Blue/me)'; scar = 'ScarletWitch(Red/P1)' }
 

@@ -37,7 +37,7 @@
 
 | 脚本 | 干什么 |
 |---|---|
-| **`play.ps1`** | **控制台**（通用；本局的动词/参数由该游戏的状态页给出）：⭐`turn`（**回合开局一条命令**：盘面＋骰面＋招式＋笔记本尾条，全只读）/ `status` / `income` / `roll` / `attack` / `defense` / `say` —— 一条命令一个阶段。写动词要显式开关（`-Apply` / `-Roll`）且支持 `-WhatIf`。**别 read 它的本体**（35KB ≈ 10k token） |
+| **`play.ps1`** | **控制台**（通用；本局的动词/参数由该游戏的状态页给出）：⭐`turn`（**回合开局一条命令**：盘面＋骰面＋招式＋笔记本尾条，全只读）/ `status` / `income` / `roll` / `attack` / `defense` / `say` —— 一条命令一个阶段。写动词要显式开关（`-Apply` / `-Roll`）且支持 `-WhatIf`。**实现拆在 `tts\lib\play.*.ps1`**（`bridge`/`dice`/`rules`/`verbs`）⇒ **要改哪块就读哪个模块**，本体只是 ~5 KB 的分发器 |
 | **`roll.ps1`** | 掷/读骰面：`-Tray moon\|scar` —— **必须明说意图**：`-Roll` 才掷、`-NoRoll` 只读；**裸调用 `exit 2`（不接触 TTS）** |
 | **`ds.ps1`** | **跟 TTS 说话的高层入口**：`-Do 'ping / tabread / getState:<g> / setCount:<g>:<n> / act:<g>:<verb> / move:… / draw:… / all:<n> / read:<g>'` |
 | `dsbatch.ps1` | 一条进程跑多条 `ds.ps1` 命令（`-Commands 'a;;b'`）；⚠️ 两层子进程会被沙箱掐网络，优先 `ds.ps1` 逐条 |

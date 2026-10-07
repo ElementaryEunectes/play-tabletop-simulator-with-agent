@@ -36,6 +36,7 @@
 - `tts\*.ps1` = **现役工具**；**清单与用途见 `TTS_RULES.md` §二**；死的 / 一次性的 / 实验性的一律进 `~\.dsh\archive\tts-legacy\`。
 - `tts\tests\` = **离线自测（不需要 TTS、不需要存档）**：`test_diff_index.ps1`（桩冒充 `live_index.ps1` ＋ 合成 fixture）·
   `test_param_backfill.ps1`（每个 `''` 默认值必须被回填或判空）· `test_agents_hygiene.ps1`（三槽体积 / 承载性指针 / 隐私 / 漂移）。**改完脚本先跑它们。**
+- `tts\lib\` = **从大脚本拆出来的实现模块**（当前只有 `play.*.ps1`：bridge/dice/rules/verbs），由主脚本 **dot-source**（同进程，无额外进程启动）⇒ 改哪块读哪块，别整份读主脚本。
 - `tts\lua\` = TTS 模组的**全局 Lua**（`dsh_global.lua` = 桥接本体；`install_save2.ps1` 依赖它，**别动**）。`tts\validate_lua.js` = 改 Lua 前的校验器。
 - `tts\tools\` = **跨语言小工具**：`fetch_pdf.js`（用 **Node 的 TLS 栈**下载 —— 沙箱里 `curl`/`Invoke-WebRequest` 会报 TLS 凭证错）·
   `pdf_images.js`（从**图片型** PDF 抽整页图）—— 规则书那条链用的就是这两个（见 `local\games\<游戏>\FLOW.md` 附录 A）。
