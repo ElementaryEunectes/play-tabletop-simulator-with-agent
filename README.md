@@ -12,7 +12,7 @@
 ## 怎么启动（**普通人：双击 `start.cmd`**）
 
 在资源管理器里双击本仓库根目录的 **`start.cmd`** 就行 —— ⛔ **别直接双击 `.ps1`**（那会用记事本打开）。
-它会把工作目录切到本仓库、钉好 `$DSH_HOME`，再启动 DSH；没装 `dsh` 时它会停下并告诉你怎么装。
+它会把工作目录切到本仓库，并给**本项目**一个独立的 harness home（`tts\dsh_profile.ps1` 建：链接你原有的会话与凭据，但**不放** `AGENTS.md`）⇒ 你那台机器的**通用 `AGENTS.md` 不会被注入**，也不用搬数据；没装 `dsh` 时它会停下并告诉你怎么装。
 
 **第一次用，按这个顺序**：Windows → **Node.js** → `npm i -g @deepseek-ai/dsh` → **Tabletop Simulator**（Steam，付费）＋ 订阅目标模组 →
 **把桥接烤进存档**（`tts\docs\BOOTSTRAP.md`）→ 双击 `start.cmd` → 在 TTS 里载入那个存档。

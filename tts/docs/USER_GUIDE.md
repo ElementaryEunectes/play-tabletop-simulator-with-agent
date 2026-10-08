@@ -13,7 +13,7 @@
 > 进阶 / 排错（在 PowerShell 里手打）：`powershell -NoProfile -ExecutionPolicy Bypass -File "<本仓库>\start-agent.ps1"`
 > 报"禁止运行脚本"是执行策略问题 —— 上面这行里的 `-ExecutionPolicy Bypass` 就是绕开它的正路，**不需要改机器策略**。
 
-1. 它把**会话目录切到本仓库**（不切 ⇒ 项目的 `AGENTS.md` 根本不会注入）＋**钉好 `$DSH_HOME`**（不钉 ⇒ 每请求多付通用那份 ~2.9 KB），然后启动 agent。
+1. 它把**会话目录切到本仓库**（不切 ⇒ 项目的 `AGENTS.md` 根本不会注入）＋**给本项目一个独立 harness home**（链接你原有的会话与凭据，但**不放** `AGENTS.md` ⇒ **通用那份不会被注入**，也不用搬数据），然后启动 agent。
    ⚠️ 唯一**不会**发生的麻烦是"路径写错" —— `tts\config.ps1` 会自愈（这条以前是真的，现已由代码保证）。
 2. 在 TTS 里**载入存档**（哪一份、叫什么，见 `local\games\_current.md`）。
 3. 让 AI 跑一句自检：`tts\play.ps1 status` —— 看到 `bridge=v12-callx` 且 `objs` 与桌面相符就算通了。
