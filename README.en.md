@@ -14,6 +14,18 @@ is **not** shipped; which game is being played right now is local information, s
 > 📖 The run-time documents are written in Chinese (the game's own terms are Chinese); **every
 > code comment and the whole test suite are English**.
 
+## How to start (double-click `start.cmd`)
+
+Double-click **`start.cmd`** in the repository root — do **not** double-click the `.ps1` (Windows
+opens those in Notepad). The launcher moves the session into this folder, pins `$DSH_HOME` and then
+starts DSH; if `dsh` is missing it stops and tells you how to install it.
+
+**First time, in this order**: Windows → **Node.js** → `npm i -g @deepseek-ai/dsh` → **Tabletop
+Simulator** (Steam, paid) + subscribe to the target mod → **bake the bridge into a save**
+(`tts\docs\BOOTSTRAP.md`) → double-click `start.cmd` → load that save in TTS.
+⚠️ No game rules or card text ship with this repository (that is one game's content, kept under
+`local\games\`).
+
 ## How to read this repo (never read it all — read by role)
 
 | What you want | Read |

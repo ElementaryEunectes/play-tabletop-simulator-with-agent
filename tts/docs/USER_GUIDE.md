@@ -7,9 +7,11 @@
 
 ## 1. 开一局（30 秒）
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
-```
+**在资源管理器里双击本仓库根目录的 `start.cmd`** —— 就这样，不用敲命令。（⛔ **别直接双击 `.ps1`**：Windows 会用记事本打开它。）
+没装 `dsh`（Node 全局包）时它会停下并告诉你怎么装。
+
+> 进阶 / 排错（在 PowerShell 里手打）：`powershell -NoProfile -ExecutionPolicy Bypass -File "<本仓库>\start-agent.ps1"`
+> 报"禁止运行脚本"是执行策略问题 —— 上面这行里的 `-ExecutionPolicy Bypass` 就是绕开它的正路，**不需要改机器策略**。
 
 1. 它把**会话目录切到本仓库**（不切 ⇒ 项目的 `AGENTS.md` 根本不会注入）＋**钉好 `$DSH_HOME`**（不钉 ⇒ 每请求多付通用那份 ~2.9 KB），然后启动 agent。
    ⚠️ 唯一**不会**发生的麻烦是"路径写错" —— `tts\config.ps1` 会自愈（这条以前是真的，现已由代码保证）。

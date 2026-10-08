@@ -26,7 +26,7 @@ if ($Root -eq '') { $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 $Root = (Resolve-Path -LiteralPath $Root).Path
 
 $informRoots = @('cache\', 'out\', 'local\', 'logs\', 'shots\', 'archive\')
-$rootFiles = @('AGENTS.md', 'HANDOFF.md', 'README.md', 'README.en.md', 'CONTRIBUTING.md', 'LICENSE', 'start-agent.ps1')
+$rootFiles = @('AGENTS.md', 'HANDOFF.md', 'README.md', 'README.en.md', 'CONTRIBUTING.md', 'LICENSE', 'start-agent.ps1', 'start.cmd')
 $missing = @(); $informed = @(); $checked = 0
 $files = @(& git -C $Root ls-files '*.md')
 if ($files.Count -eq 0) { Write-Host 'FAIL  no tracked .md files found (run this inside the repo)'; exit 1 }
