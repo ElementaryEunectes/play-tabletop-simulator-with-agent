@@ -7,8 +7,16 @@
 #       1. freeze a baseline of the whole table   (diff_index.ps1 -Snapshot)
 #       2. let them act
 #       3. diff                                     (diff_index.ps1)
-#   Every action that leaves a footprint shows up: a card moved, a card flipped, a
-#   counter changed, a card put into a discard pile (parent changed).
+#   Every action that leaves a footprint shows up -- AS LONG AS THE SNAPSHOT CARRIES IT.
+#   A LIVE snapshot does not carry everything, and that decides what this script can say:
+#     added / removed / moved / flipped           always available (guid set, x/z, rotZ)
+#     reparented (into or out of a container)     needs `parent`
+#     state (counters / LuaScriptState / GMNotes) needs `gm` / `ss`
+#   tts\live_index.ps1 hard-codes parent/gm/ss as EMPTY (see its LIMITS block), so on a real
+#   table this script reports FOUR of the six classes; the other two need obj_index.ps1, which
+#   parses the autosave - correct, but TTS writes that only every ~5 minutes.
+#   => when the snapshots carry no parent/gm/ss values, this script PRINTS A NOTE, so that
+#      "reparented=0 state=0" is never read as "nothing like that happened".
 #
 # WHAT IT CANNOT SEE
 #   - pure click events with no state change (a button that only prints, a chat line)
@@ -55,6 +63,18 @@ if ($Snapshot) {
 foreach ($p in @($Before, $After)) { if (-not (Test-Path -LiteralPath $p)) { Write-Host ("ERR missing {0}" -f $p); exit 1 } }
 $old = @{}; foreach ($r in Import-Csv -LiteralPath $Before) { $old[$r.guid] = $r }
 $new = @{}; foreach ($r in Import-Csv -LiteralPath $After)  { $new[$r.guid] = $r }
+# Two of the six classes live in columns a live snapshot leaves empty. Say so out loud instead
+# of printing a zero that reads like "the player did not do that".
+function Test-AnyValue($rows, [string[]]$cols) {
+    foreach ($r in $rows) { foreach ($c in $cols) { $p = $r.PSObject.Properties[$c]; if ($p -and "$($p.Value)" -ne '') { return $true } } }
+    return $false
+}
+$blind = @()
+if (-not (Test-AnyValue (@($old.Values) + @($new.Values)) @('parent')))    { $blind += 'reparented' }
+if (-not (Test-AnyValue (@($old.Values) + @($new.Values)) @('gm', 'ss')))  { $blind += 'state' }
+if ($blind.Count -gt 0) {
+    Write-Host ("NOTE  snapshot carries no parent/gm/ss values -> NOT reported this run: {0}  (live mode sees 4 of 6 classes; for container/state changes use obj_index.ps1, ~5 min autosave lag)" -f ($blind -join ' + '))
+}
 Write-Host ("baseline {0} objs   now {1} objs" -f $old.Count, $new.Count)
 
 $added = @(); $removed = @(); $moved = @(); $flipped = @(); $reparented = @(); $stateChanged = @()
