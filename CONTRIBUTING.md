@@ -44,7 +44,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_doc_refs.ps1 
 - 真要用脚本编辑：**① 开头 `$ErrorActionPreference = 'Stop'`；② 先全量校验锚点，再统一写盘；③ 写入函数兜底"内容短于 20 字符就拒绝写"**。
 - **能追加就别重写**（`Add-Content` 按构造不可能截断）；**`local\` 没有版本控制** ⇒ 改前先 `Copy-Item` 备份。
 - 改完**回读**关键行；跟踪文件坏了用 `git checkout HEAD -- <files>` 救。
+- **一处定义、他处引用**：判定 / 常量 / 路径 / 阈值**只在一处**定义，别处引用它；**文档不复述判定**，只留指针（"见 X §N"）—— 同一事实写两遍 = 迟早不一致（曾有一条判定散在 9 份文档 19 处）。
+- **函数名先 `Get-Alias` 自检**：`rd del erase rm rmdir md cd ls mv cp cat echo` 是内置别名，且**别名优先于函数** —— 叫 `Rd` 的"读取"函数实际执行的是 `Remove-Item`（**真删过 4 个文件**）。
+- **体积一律按字节比，别用 `$t.Length`**（那是**字符**数）：守卫写 `[Text.Encoding]::UTF8.GetByteCount($t) -lt $minBytes` ⇒ 否则中文文件会被误判（本项目因此误拦过 3 次）。
+- **同进程 `&` 调别人的脚本前确认它不 `exit`**：`exit` 会终止**调用者的整个会话** ⇒ 工具 / 库脚本用 `throw`。
+- ⭐ **门禁绿了才提交**：⛔ 别把"跑测试"与"提交"无条件串成一条命令（会带着红灯提交）。
 
-详见 `tts\docs\MAINTENANCE.md`（本仓库要点）＋ harness home 的 `platform\MAINTENANCE.md`（坑 ×15 · 注入机制）。
+详见 `tts\docs\MAINTENANCE.md`（本仓库要点）＋ harness home 的 `platform\MAINTENANCE.md`（坑 ×16 · 注入机制）。
 
-⛔ **开源发布前**：跑一次 `Get-ChildItem -Recurse -File | Select-String -Pattern OPENSOURCE-TEMP`（PowerShell 原生，Windows 上没有 grep），按标记处理（目前只有 `tts\docs\MAINTENANCE.md` §0 的平台要点 —— 那是"因本项目走 profile、平台宪章不注入"而就近放的，**不属于 TTS 领域内容**）。
+⛔ **开源发布前**：跑一次 `Get-ChildItem -Recurse -File | Select-String -Pattern OPENSOURCE-TEMP`（PowerShell 原生，Windows 上没有 grep），按标记处理（目前只有 `tts\docs\MAINTENANCE.md` §0 的平台要点 —— 那是"机器上不放全局那份（方案 A）"而就近放的，**不属于 TTS 领域内容**）。

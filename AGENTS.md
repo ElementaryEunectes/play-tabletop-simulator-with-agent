@@ -18,9 +18,8 @@
 powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 ```
 
-它：**把 cwd 切到本仓库**（否则项目链不注入本文件）＋ **把 `$DSH_HOME` 指向本项目 profile**（`<harness home>\platform\dsh_profile.ps1`）⇒ **通用槽零注入**，不用搬 harness 的家。
-⚠️ cwd 在仓库外 ⇒ 本文件不注入；`-PlainHome` 跳过 profile ⇒ `<DSH_HOME>\AGENTS.md` 会叠加上来。
-验证：`tts\doctor.ps1`（注入 ≈ 项目 ＋ overlay，不含通用那份）· `play.ps1 status` 回 `bridge=v12-*`。
+它只做一件必要的事：**把 cwd 切到本仓库**（否则项目链不注入本文件）。`$DSH_HOME` **不用动** —— 全局指令槽本来就是空的 ⇒ **任何启动方式都零注入**（改法见 `<harness home>\platform\MAINTENANCE.md`）。
+验证：`tts\doctor.ps1`（注入 = 项目 ＋ overlay，通用槽 0）· `play.ps1 status` 回 `bridge=v12-*`。
 👤 **给人用**：让他双击 `start.cmd`（⛔ `.ps1` 会进记事本）。
 
 ## 每回合读什么（**别整份读手册**）
@@ -28,8 +27,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 1. **`local\games\<当前游戏>\STATE.md`** —— **这一局的状态**（唯一真源：比分 · token · 待办 · guid）· ⛔ **不进仓库**
 2. **`tts\docs\PLAY.md`** —— **通用**每回合卡（控制台动词 · 哨兵 · 状态页维护）· ✅ 在仓库里
 
-当前哪款 ⇒ `local\games\_current.md`；按需查：`tts\docs\TTS_RULES.md`（**开工前一次**：通用纪律 ＋ §二 工具清单）·
-`tts\docs\BOOTSTRAP.md`（换 mod）· `tts\docs\MAINTENANCE.md`（**动手改东西前**）· `tts\docs\USER_GUIDE.md`（人怎么用）。
+当前哪款 ⇒ `local\games\_current.md`；按需：`tts\docs\TTS_RULES.md`（开工前一次）· `tts\docs\MAINTENANCE.md`（**改东西前**）· `tts\docs\BOOTSTRAP.md`（换 mod）· `tts\docs\USER_GUIDE.md`（人怎么用）。
 
 ## ⛔ 纪律
 
