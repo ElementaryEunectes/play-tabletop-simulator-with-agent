@@ -25,7 +25,8 @@
 | **换局 / 冷启动** | `BOOTSTRAP.md` | 换存档 / 换模组 / 换游戏的**唯一**工作流（三种情形） | 低 |
 | 按需（规则 · **不进仓库**） | `local\games\<游戏>\FLOW.md` | 该游戏的规则/技能/骰面 —— **顶部有"我要干什么 ⇒ 读哪节"路由表**；＋ **附录 A：官方规则书**（在哪 · 怎么拿 · 每页是什么） | 学到新规则时 |
 | 按需（技术） | `TTS_WORKFLOW.md` | 跨游戏技术手册（索引 / 识别 / 几何 / 工具 / PowerShell 陷阱）· **顶部有路由表，按节取用** | 低 |
-| 按需（维护） | **`MAINTENANCE.md`** | **本仓库**要点（门禁 · 两个指令槽 · 路径纪律）；坑 ×15 与注入机制已迁出 ⇒ harness home 的 `platform\MAINTENANCE.md` | 学到新坑时 |
+| **装机器时一次** | **`INJECTION.md`** | **指令文件怎么被注入**：三个槽 · 三条硬规则（去重/预算）· 成本实测 · **安装时该怎么放** · ⛔ 两个别做（链接农场 / 机器事实进跟踪文件） | 低 |
+| 按需（维护） | **`MAINTENANCE.md`** | **本仓库**要点（门禁 · 两个指令槽 · 路径纪律）；坑 ×16 与注入机制已迁出 ⇒ harness home 的 `platform\MAINTENANCE.md` | 学到新坑时 |
 | 按需（给人） | `USER_GUIDE.md` | **人怎么用**：开局 · 你只做两件事 · AI 何时请你帮忙 · 在哪说话 · 常见问题 | 低 |
 | 按需（先例） | `PRIOR_ART.md` | 二手调研与先例（**冻结，别重搜**；含可搬/不可搬结论） | 冻结 |
 | 不读（**已迁出仓库** ⇒ harness home 的 `platform\HARNESS_HOME_AGENTS.template.md`） | ~~HARNESS_HOME_AGENTS.template.md~~ | `$DSH_HOME\AGENTS.md` 的**源**：`---` **以下是正文**（改完拷过去）；`tts\tests\test_agents_hygiene.ps1` 会核对两者逐字一致 | 低 |
