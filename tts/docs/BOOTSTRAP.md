@@ -21,7 +21,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\doctor.ps1     # 只读�
 ```
 - 它列完现状后给 `VERDICT: ready` 或带修复建议的问题清单；**它启动不了也改不了任何东西**（纯只读）。
 - TTS 目录 `MISSING` ⇒ 设 `$env:TTS_SAVES_DIR` / `$env:TTS_IMAGES_DIR`（见 `README.md` 的路径配置）。
-- 它还会告诉你**每请求注入多少字节**（项目 `AGENTS.md` ＋ **harness home 里那份**）—— 后者**不在仓库里**，是每台机器自己的事。
+- 它还会告诉你**每请求注入多少字节**（项目 `AGENTS.md` ＋ 本机 `AGENTS.local.md`；**全局槽应为 0**）。
+- ⛔ **若全局槽不是 0** ⇒ 机器上存在 `$DSH_HOME\AGENTS.md`（那是"跨项目纪律"）：本项目建议**不放它** —— 全局槽零注入、且与启动方式无关。
+- 📖 **机制 · 成本 · 安装时三份文件怎么放** ⇒ **`tts\docs\INJECTION.md`**（本步配套读；`tts\doctor.ps1` 可复核实测字节）。
 
 **A. 让桌面有一个存档（只有情形 C 必须新存）**
 - 玩家 `Menu → Save & Load → Save Game`，或挂机等自动存档（`TS_AutoSave*.json`，约 5 分钟）。
@@ -187,4 +189,3 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
       城=`chan.txt` + `front_watch.ps1` 的 `TURN=Pn`〕
 - [ ] **10. 定先手 → 第 1 回合**〔骰=**未定**（FLOW §5 待确认）；城=按规则定〕
 - [ ] **11.（收尾）写状态页**：`<游戏>_STATE.md` 只写"现在是什么"，规则进 `<游戏>_FLOW.md`〔骰=`DICETHRONE_*.md`〕
-
