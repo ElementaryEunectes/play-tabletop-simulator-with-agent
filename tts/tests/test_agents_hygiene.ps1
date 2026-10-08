@@ -14,7 +14,9 @@
 param(
     [string]$Root = '',                 # defaults to the repository root (tts\tests -> repo)
     [int]$MaxProjectBytes = 3840,   # 3656 measured after the boundary rule; the rule is worth its bytes       # the committed charter is injected every request
-    [int]$MaxLocalBytes = 2048          # so is the machine-local overlay
+    [int]$MaxLocalBytes = 4096          # the machine-local overlay now also carries the platform
+                                      # subset this project needs (method A: no global slot at all),
+                                      # so its budget grew from 2048; it stays far below the project one
 )
 $ErrorActionPreference = 'Stop'
 if ($Root -eq '') { $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }

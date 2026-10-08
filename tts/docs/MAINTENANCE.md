@@ -7,8 +7,8 @@
 ## 0. 平台要点 —— `OPENSOURCE-TEMP`（**开源前处理**）
 
 <!-- ===== OPENSOURCE-TEMP: 平台要点 =========================================
-     为什么在这：本项目用 per-project profile 起（harness home 的 platform\dsh_profile.ps1）
-     ⇒ 跨项目平台宪章（$DSH_HOME\AGENTS.md）**不注入本项目** ⇒ 这几条就近放这儿。
+     为什么在这：**方案 A —— 机器上不放 `~/.dsh\AGENTS.md`**（已移为 `<harness home>\platform\AGENTS.md.disabled`）
+     ⇒ 全局槽对**任何**启动方式都不注入（与 cwd/启动模式无关）⇒ 本项目要用的通用子集就近放这儿（另见本机 overlay）。
      判据：这几条"换配置/换 harness/换机器就未必成立"，**不属于 TTS 领域内容**。
      开源前处理：① 删掉整块（推荐，若平台层会另行发布），或 ② 改成指向平台层的指针。
      查找：grep -rn "OPENSOURCE-TEMP" .

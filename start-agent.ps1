@@ -31,10 +31,13 @@
 param(
     [switch]$NoLaunch,
     [string]$DshCommand = 'dsh web',
-    [string]$Profile = '',            # '' = this repository's folder name
+    [switch]$Profile,                 # OPT-IN: build/use a per-project profile home (junction farm).
+                                      # NOT the default: on this machine the ACL-based Windows sandbox
+                                      # fails to start child processes through it (0xc0000142).
+    [string]$ProfileName = '',        # profile folder name; '' = this repository's folder name
     [string]$Shared = '',             # '' = <user profile>\.dsh   (the home holding the real state)
     [switch]$RepoAsHome,
-    [switch]$PlainHome
+    [switch]$PlainHome                # explicit no-op form of the default
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -43,8 +46,9 @@ Set-Location -LiteralPath $root
 if ($RepoAsHome) {
     $env:DSH_HOME = $root
     Write-Host ("DSH_HOME = {0}   (repo-as-home: global slot deduped, harness state now lives in the repo)" -f $env:DSH_HOME)
-} elseif ($PlainHome) {
-    Write-Host ("DSH_HOME = {0}   (untouched: whatever the environment had)" -f $env:DSH_HOME)
+} elseif (-not $Profile) {
+    Write-Host ("DSH_HOME = {0}   (untouched: default - no global slot anywhere, because" -f $env:DSH_HOME)
+    Write-Host '                        ~\.dsh\AGENTS.md is disabled; see platform\README.md)'
 } else {
     $dshHome = ''
     try {
