@@ -19,7 +19,7 @@
 | 加了新的**原语**（桥接能力） | `TTS_RULES.md` §二 工具清单 ＋ `HANDOFF.md` §4 | ❌ |
 | 加了新的**脚本** | `TTS_RULES.md` §二（按频率分类）＋ `tts\docs\README.md` 目录约定 | ❌ |
 | 改了**每回合要走的路**（动词/哨兵） | `tts\docs\PLAY.md` ＋ `tts\docs\USER_GUIDE.md` | ❌ |
-| 改了**启动方式**（`start.cmd` / `start-agent.ps1` / `tts\dsh_profile.ps1`）或 harness home | `AGENTS.md` 启动段 · `tts\docs\MAINTENANCE.md` 第二部分（注入机制 ＋ 工作区矩阵）· `README`／`USER_GUIDE` 的启动说明 | ❌（无测试守断言） |
+| 改了**启动方式**（`start.cmd` / `start-agent.ps1` / `<harness home>\platform\dsh_profile.ps1`）或 harness home | `AGENTS.md` 启动段 · `tts\docs\MAINTENANCE.md` 第二部分（注入机制 ＋ 工作区矩阵）· `README`／`USER_GUIDE` 的启动说明 | ❌（无测试守断言） |
 | 改了 `AGENTS.md`（**每个请求都在计费**） | 跑 `tts\tests\test_agents_hygiene.ps1`（体积 ≤3.75 KB ＋ 5 个承载性指针） | ✅（**会红**） |
 | 换了游戏 / 开了新局 | `local\games\_current.md` 的 **`GAME=` 行** ＋ 新建 `local\games\<游戏>\{STATE,FLOW,MYHAND}.md` | ❌（但脚本会报"no current game"） |
 | 改了 `tts\config.ps1` 暴露的变量 | 用它的脚本（`grep` 变量名） | ❌ |
@@ -45,4 +45,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_doc_refs.ps1 
 - **能追加就别重写**（`Add-Content` 按构造不可能截断）；**`local\` 没有版本控制** ⇒ 改前先 `Copy-Item` 备份。
 - 改完**回读**关键行；跟踪文件坏了用 `git checkout HEAD -- <files>` 救。
 
-详见 `tts\docs\MAINTENANCE.md`（坑 ×14）。
+详见 `tts\docs\MAINTENANCE.md`（本仓库要点）＋ harness home 的 `platform\MAINTENANCE.md`（坑 ×15 · 注入机制）。

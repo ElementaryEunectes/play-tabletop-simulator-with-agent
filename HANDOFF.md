@@ -4,7 +4,7 @@
 > **怎么读**：本文件 = "现在到哪了 + 先干什么"；长期规矩在 `AGENTS.md`（本项目）与 `~/.dsh\AGENTS.md`（平台）；
 > 每局开工：`local\games\_current.md` → 该游戏 `STATE.md`（状态 · 待办）＋ `tts\docs\PLAY.md`（通用动作）——**先做 §1 的启动动作**。
 > ⚠️ **先做 §1 的启动动作，否则所有脚本会读写一个不存在的旧目录。**
-> 🛠️ **维护参考在 `tts\docs\MAINTENANCE.md`**（动手改脚本 / 改流程 / 排查怪现象前读：坑 ×13 ＋ 上下文注入与隔离）。
+> 🛠️ **维护参考**：本仓库要点在 `tts\docs\MAINTENANCE.md`；**坑 ×15 ＋ 上下文注入与隔离**已迁到 harness home 的 `platform\MAINTENANCE.md`（动手改脚本 / 排查怪现象前读）。
 
 ---
 
@@ -81,14 +81,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
      **"快速"只在"已教好的 mod"上成立**，第一次上手是**小时级**。
    - 📌 判据（做完 A–E 再看一遍）：陌生人只有**公开仓库 + Windows + TTS + 一个 workshop mod**，能不能在**一小时内**打完一回合？
 
-## §6 ⚠️ 踩过的坑 ⇒ 已拆到 `tts\docs\MAINTENANCE.md`
+## §6 ⚠️ 踩过的坑 ⇒ 已拆到 harness home 的 `platform\MAINTENANCE.md`
 
 - **动手改 `.ps1` / 改流程 / 排查怪现象之前，先读那一份**（13 条，每条都付过真实代价）。
 - 本文件只留"现在到哪了 + 先干什么"；坑的细节不在这里重复（否则每次会话都在读参考材料）。
 
-## §8 上下文注入（摘要 —— 细节在 `tts\docs\MAINTENANCE.md` 第二部分）
+## §8 上下文注入（摘要 —— 细节在 harness home 的 `platform\MAINTENANCE.md`）
 
 - **每请求注入三份**：通用 `$DSH_HOME\AGENTS.md`（2924 B）＋ 项目 `AGENTS.md`（**3656 B**，含开源边界铁律）＋ 机器 `AGENTS.local.md`（1048 B）＝ **7628 B**。
 - 想只注入一份 ⇒ 用 `start-agent.ps1` 起（`DSH_HOME` 钉到仓库根，两个槽同路径去重）。⛔ harness **没有"忽略全局那份"的开关**。
-- 注入顺序 / 两种去重 / 字节预算 / **各类工作区会注入什么** / rulesync 试点结论 ⇒ 全在 `MAINTENANCE.md`；
-  回归测试 ⇒ `tts\tests\test_agents_hygiene.ps1`；"模板即源"的复制关系 ⇒ `HARNESS_HOME_AGENTS.template.md`。
+- 注入顺序 / 两种去重 / 字节预算 / **各类工作区会注入什么** / rulesync 试点结论 ⇒ 全在 harness home 的 `platform\MAINTENANCE.md`；
+  回归测试 ⇒ `tts\tests\test_agents_hygiene.ps1`；"模板即源"的复制关系 ⇒ harness home 的 `platform\HARNESS_HOME_AGENTS.template.md`（**已迁出仓库**）。

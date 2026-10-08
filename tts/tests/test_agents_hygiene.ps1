@@ -90,7 +90,14 @@ if ($homeAgents -ne '' -and (Test-Path -LiteralPath $homeAgents)) {
     if ($n -gt 4096) { Write-Host 'WARN  it is larger than the repo charter - generic rules should be shorter than project ones' -ForegroundColor Yellow }
 
     # ---- 5. it must equal the body of the committed template, or the two have drifted ----
-    $tplPath = Join-Path $Root 'tts\docs\HARNESS_HOME_AGENTS.template.md'
+    # The charter template moved OUT of this repository on 2026-10-09 (it is platform layer, harness
+# home). Look there first; keep the old in-repo path as a fallback so an older checkout still works.
+$tplPath = ''
+foreach ($cand in @(
+    $(if ($env:DSH_HOME) { Join-Path $env:DSH_HOME 'platform\HARNESS_HOME_AGENTS.template.md' }),
+    (Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dsh\platform\HARNESS_HOME_AGENTS.template.md'),
+    (Join-Path $Root 'tts\docs\HARNESS_HOME_AGENTS.template.md')
+)) { if ($cand -and (Test-Path -LiteralPath $cand)) { $tplPath = $cand; break } }
     $tpl = Read-Utf8 $tplPath
     if ($null -ne $tpl) {
         $lines = $tpl -split "`r?`n"

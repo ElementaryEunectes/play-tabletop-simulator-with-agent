@@ -2,13 +2,13 @@
 
 > 只讲**在这个仓库里怎么干活**；跨项目纪律在 harness home（本项目 profile 下不注入）。
 > ⛔ **具体某一款游戏的东西**（比分/待办/规则/卡面/卡库/牌）**不进仓库** ⇒ 放 `local\games\<游戏>\`（唯一真源在那里）。
-> 📌 接手先读 `HANDOFF.md`（现状 · 待办）· **动手改东西前读 `tts\docs\MAINTENANCE.md`**（坑 ×15 ＋ 注入/隔离）。
+> 📌 接手先读 `HANDOFF.md`（现状 · 待办）· **动手改东西前读 `tts\docs\MAINTENANCE.md`**（本仓库要点；坑在 harness home 的 `platform\`）。
 
 ## 这个项目（⭐ **开源的边界**）
 
 在 **Tabletop Simulator** 里由 AI 代打桌游：人类只做**决策** + 点「**结束回合**」，其余棋子操作全由 agent 走 TTS 消息桥接完成。
 
-⭐ **本仓库 = 对「任何 TTS mod」都适用的通用工具链**（桥接 · 脚本 · 工作流 · 纪律）＝ **开源内容**。
+⭐ **本仓库 = 对「任何 TTS mod」都适用的通用工具链**＝ **开源内容**。
 ⛔ **某款游戏专属的东西不进仓库**：状态/比分 · 规则与卡面 · 卡库 · 牌与计划 · 当前在玩哪款 ⇒ 一律放 **`local\games\<游戏>\`**（`local\` 在 `.gitignore` 里）。
 **一句话判据**：**换个 mod 还成立 ⇒ 留下；只对这一局成立 ⇒ 搬进 `local\`。**
 
@@ -18,8 +18,8 @@
 powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 ```
 
-它：**把 cwd 切到本仓库**（否则项目链不注入本文件）＋ **把 `$DSH_HOME` 指向本项目 profile**（`tts\dsh_profile.ps1`：链接共享状态、**不放** `AGENTS.md`）⇒ **通用槽零注入**，且不搬 harness 的家。
-⚠️ cwd 在仓库外 ⇒ 本文件不注入；`-PlainHome` 跳过 profile ⇒ 你机器的 `<DSH_HOME>\AGENTS.md` 会叠加上来。
+它：**把 cwd 切到本仓库**（否则项目链不注入本文件）＋ **把 `$DSH_HOME` 指向本项目 profile**（`<harness home>\platform\dsh_profile.ps1`）⇒ **通用槽零注入**，不用搬 harness 的家。
+⚠️ cwd 在仓库外 ⇒ 本文件不注入；`-PlainHome` 跳过 profile ⇒ `<DSH_HOME>\AGENTS.md` 会叠加上来。
 验证：`tts\doctor.ps1`（注入 ≈ 项目 ＋ overlay，不含通用那份）· `play.ps1 status` 回 `bridge=v12-*`。
 👤 **给人用**：让他双击 `start.cmd`（⛔ `.ps1` 会进记事本）。
 

@@ -33,7 +33,7 @@
 | 玩家不配合 / 我看不到他的牌 | §8 ＋ `TTS_RULES.md` 的隐藏信息条 |
 | 完整开一局（换桌游） | §9（含 ⚠️ **写入前 sanity check**） |
 | 只想找某个脚本 | §10 ＋ `TTS_RULES.md（§二 工具清单）` |
-| 卡住了 / 见到怪现象 | **`MAINTENANCE.md`** —— 坑的细节都在那份 |
+| 卡住了 / 见到怪现象 | **`MAINTENANCE.md`** —— 本仓库要点；坑的细节在 harness home 的 `platform\MAINTENANCE.md` |
 
 ---
 

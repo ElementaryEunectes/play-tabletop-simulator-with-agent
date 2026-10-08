@@ -6,7 +6,7 @@
 #      else and the project charter is simply NOT injected. Hence the Set-Location below.
 #   2. WHICH HARNESS HOME. $DSH_HOME decides where the harness keeps its state AND which file fills
 #      the "user global" instruction slot (<DSH_HOME>\AGENTS.md, name hard-coded, no opt-out switch).
-#      This launcher points it at a per-project PROFILE (see tts\dsh_profile.ps1): a home whose
+#      This launcher points it at a per-project PROFILE (see <harness home>\platform\dsh_profile.ps1): a home whose
 #      entries are links back to the shared ~\.dsh, and which deliberately carries NO instruction
 #      file. Result: the global slot injects nothing, this project's own chain injects normally, and
 #      no session history or credential is copied or migrated.
@@ -48,7 +48,15 @@ if ($RepoAsHome) {
 } else {
     $dshHome = ''
     try {
-        & (Join-Path $root 'tts\dsh_profile.ps1') -Name $Profile -Shared $Shared -Apply -Quiet | Out-Null
+        # The profile tool is platform layer: it lives in the harness home, NOT in this repository
+        # (it moved out on 2026-10-09). A clone without it simply gets the fallback below.
+        $profileScript = ''
+        foreach ($cand in @(
+            $(if ($env:DSH_HOME) { Join-Path $env:DSH_HOME 'platform\dsh_profile.ps1' }),
+            (Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dsh\platform\dsh_profile.ps1')
+        )) { if ($cand -and (Test-Path -LiteralPath $cand)) { $profileScript = $cand; break } }
+        if ($profileScript -eq '') { throw 'platform\dsh_profile.ps1 not found under the harness home' }
+        & $profileScript -Name $Profile -Shared $Shared -Apply -Quiet | Out-Null
         $leaf = if ($Profile -ne '') { $Profile } else { Split-Path -Leaf $root }
         $base = if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'dsh-profiles' }
                 else { Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dsh-profiles' }
