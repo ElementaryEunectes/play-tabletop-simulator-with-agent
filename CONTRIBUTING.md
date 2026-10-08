@@ -46,3 +46,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_doc_refs.ps1 
 - 改完**回读**关键行；跟踪文件坏了用 `git checkout HEAD -- <files>` 救。
 
 详见 `tts\docs\MAINTENANCE.md`（本仓库要点）＋ harness home 的 `platform\MAINTENANCE.md`（坑 ×15 · 注入机制）。
+
+⛔ **开源发布前**：跑一次 `Get-ChildItem -Recurse -File | Select-String -Pattern OPENSOURCE-TEMP`（PowerShell 原生，Windows 上没有 grep），按标记处理（目前只有 `tts\docs\MAINTENANCE.md` §0 的平台要点 —— 那是"因本项目走 profile、平台宪章不注入"而就近放的，**不属于 TTS 领域内容**）。

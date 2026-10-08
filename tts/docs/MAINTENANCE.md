@@ -4,6 +4,22 @@
 > ⇒ 现在在 **harness home 的 `platform\MAINTENANCE.md`**（即 `$DSH_HOME\platform\`；路径不写死）。
 > 本文件只留**和本仓库直接相关**的部分。
 
+## 0. 平台要点 —— `OPENSOURCE-TEMP`（**开源前处理**）
+
+<!-- ===== OPENSOURCE-TEMP: 平台要点 =========================================
+     为什么在这：本项目用 per-project profile 起（harness home 的 platform\dsh_profile.ps1）
+     ⇒ 跨项目平台宪章（$DSH_HOME\AGENTS.md）**不注入本项目** ⇒ 这几条就近放这儿。
+     判据：这几条"换配置/换 harness/换机器就未必成立"，**不属于 TTS 领域内容**。
+     开源前处理：① 删掉整块（推荐，若平台层会另行发布），或 ② 改成指向平台层的指针。
+     查找：grep -rn "OPENSOURCE-TEMP" .
+     ===== /OPENSOURCE-TEMP ================================================ -->
+
+- 含中文的 `.ps1` **必须 UTF-8 带 BOM**；改完立刻跑 `tts\check_ps1.ps1`（递归补 BOM ＋ 真解析器校验）。
+- 跑脚本一律 `powershell -NoProfile -ExecutionPolicy Bypass -File '<绝对路径>'`（`& xxx.ps1` 可能被策略挡下）。
+- **写工作区之外**会报 `[sandbox: file access denied]` ⇒ 那是策略不是 bug，**一次提权重试**，别硬绕。
+- 工具壳是 **Windows PowerShell 5.1** ⇒ 直接读中文文件会按 ANSI 解码成**乱码**（文件没坏）⇒ 加 `-Encoding UTF8` 或 `[IO.File]::ReadAllText`。
+- 判端口用 `netstat -ano | findstr :39999`（⛔ `Get-NetTCPConnection` 在本沙箱会假报"没人在听"）。
+
 ## 1. 改完必须过的门禁（都在仓库里，**不需要 TTS**）
 
 ```powershell
