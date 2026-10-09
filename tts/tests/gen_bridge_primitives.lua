@@ -264,30 +264,20 @@ DSH_spawn = function(m)
             if t == "" then return { ok = false, cmd = "spawn", err = "json has neither Name nor type" } end
         end
         mode = "type"
-        -- ASYNC ON PURPOSE (2026-10-09, measured live): calling spawnObject and waiting for its
-        -- return HANGS the bridge's own thread. The trace proved it - entry marker "enter ... type=Block"
-        -- was recorded, the marker after this call never was, the caller got "no reply in 25s", and the
-        -- object count was back to 115 afterwards because TTS rewound the scripted change. The
-        -- documented way to get the spawned object is callback_function, so ask for it and answer the
-        -- caller immediately with "pending"; cmd=diag reports the guid once TTS has built the piece.
-        ok = true
-        res = nil
-        __spawn_last = nil
-        pcall(function()
-            return spawnObject({
-                type = t,
-                position = { x = x, y = y, z = z },
-                callback_function = function(o)
-                    local cg = nil
-                    pcall(function() cg = o.getGUID() end)
-                    __spawn_last = tostring(cg)
-                end,
-            })
-        end)
-        __spawn_trace = __spawn_trace .. " | called type=" .. tostring(t)
-        -- answer NOW, before TTS has built the piece: cmd=diag reports __spawn_last once it exists
-        return { ok = true, cmd = "spawn", mode = "type", pending = true, type = t,
-                 at = tostring(x) .. "," .. tostring(y) .. "," .. tostring(z) }
+        -- DEFERRED ON PURPOSE (2026-10-09, measured live, third attempt): calling spawnObject at all -
+        -- synchronous or with callback_function, wrapped in pcall or not - stops the bridge thread
+        -- before the handler can return. Evidence: the entry marker "enter ... type=Block" is written,
+        -- the marker after the call never is, the caller sees "no reply in 25s", and the object count
+        -- is unchanged afterwards because TTS rewinds the scripted change. The two earlier attempts
+        -- only tried to protect the reply, which was never the problem.
+        -- So the spawn is NOT done here. The reply goes out first (nothing can be lost after that),
+        -- and the actual spawnObject runs on the NEXT message through cmd=spawn_step. That way the
+        -- thread has a whole message boundary to die in, and the caller learns the outcome either way.
+        __spawn_queue = { type = t, x = x, y = y, z = z, at = os.date("%H:%M:%S") }
+        __spawn_trace = __spawn_trace .. " | queued type=" .. tostring(t)
+        return { ok = true, cmd = "spawn", mode = "type", queued = true, type = t,
+                 at = tostring(x) .. "," .. tostring(y) .. "," .. tostring(z),
+                 note = "run cmd=spawn_step, then cmd=diag to read spawn_last" }
     end
     if not ok or res == nil then
         return { ok = false, cmd = "spawn", mode = mode, err = "spawn returned nothing: " .. S(res) }
@@ -314,6 +304,41 @@ DSH_spawn = function(m)
     -- no `self` in the Global script, the assignment would just be swallowed by the pcall.
     __spawn_trace = __spawn_trace .. " | reached reply guid=" .. tostring(g)
     return { ok = true, cmd = "spawn", mode = mode, guid = g, name = nm }
+end
+
+-- Does the actual spawnObject for a queued `spawn:type`, on the message AFTER the request.
+--
+-- WHY THE SPLIT (measured live 2026-10-09): spawnObject stops the bridge thread before the handler
+-- can return, so a request that both spawns and replies can never reply. The reply is what callers
+-- depend on, so it goes first (see DSH_spawn), and the piece is built here. If this call also stops
+-- the thread, it stops after the caller already has its answer, and the outcome is read back with
+-- cmd=diag (spawn_last / spawn_trace). spawn:copy needs none of this - clone() returns complete.
+DSH_spawnStep = function(m)
+    local q = __spawn_queue
+    if type(q) ~= "table" then
+        return { ok = false, cmd = "spawn_step", err = "nothing queued" }
+    end
+    __spawn_queue = nil
+    __spawn_last = nil
+    __spawn_trace = tostring(__spawn_trace) .. " | step type=" .. tostring(q.type) .. " at " .. os.date("%H:%M:%S")
+    local ok, res = pcall(function()
+        return spawnObject({
+            type = tostring(q.type),
+            position = { x = tonumber(q.x) or 0, y = tonumber(q.y) or 2, z = tonumber(q.z) or 0 },
+            callback_function = function(o)
+                local cg = nil
+                pcall(function() cg = o.getGUID() end)
+                __spawn_last = tostring(cg)
+            end,
+        })
+    end)
+    if res ~= nil then
+        local g = nil
+        pcall(function() g = res.getGUID() end)
+        __spawn_last = tostring(g)
+    end
+    __spawn_trace = tostring(__spawn_trace) .. " | step returned ok=" .. tostring(ok) .. " res=" .. type(res)
+    return { ok = true, cmd = "spawn_step", type = tostring(q.type), called = ok, result = type(res) }
 end
 
 -- Remove an object from the table. pcall-wrapped because destroying something already gone, or
@@ -434,10 +459,15 @@ do
     local sj = DSH_spawn({ json = '{"Name":"Custom_Tile"}' })
     check("spawn from JSON answers ok with a new guid", sj.ok == true and tostring(sj.guid):sub(1, 6) == "spawn-", sj.err)
     local st = DSH_spawn({ type = "Block", x = 3, y = 2, z = 3 })
-    check("spawn by type answers pending with the type echoed", st.ok == true and tostring(st.mode) == "type" and tostring(st.pending) == "true" and tostring(st.type) == "Block", st.err)
-    -- the guid arrives through callback_function, which the handler stashes for cmd=diag to read
-    check("spawn by type filled the callback guid", tostring(__spawn_last):sub(1, 5) == "type-", __spawn_last)
-    check("spawn by type left a trace ending at the call", tostring(__spawn_trace):find("type=Block") ~= nil, __spawn_trace)
+    check("spawn by type queues instead of spawning inline", st.ok == true and tostring(st.mode) == "type" and tostring(st.queued) == "true" and tostring(st.type) == "Block", st.err)
+    check("spawn by type did NOT spawn before the reply", __spawn_last == nil, __spawn_last)
+    -- the queued piece is built by the NEXT message; the callback is how the guid comes back
+    local ss = DSH_spawnStep({})
+    check("spawn_step answers ok and reports it called spawnObject", ss.ok == true and ss.called == true and tostring(ss.result) == "table", ss.err)
+    check("spawn_step filled the callback guid", tostring(__spawn_last):sub(1, 5) == "type-", __spawn_last)
+    check("spawn_step left a trace ending at the call", tostring(__spawn_trace):find("step returned ok=true") ~= nil, __spawn_trace)
+    local se = DSH_spawnStep({})
+    check("spawn_step with nothing queued fails loudly", se.ok == false and tostring(se.err):find("nothing queued") ~= nil, se.err)
     local sn = DSH_spawn({})
     check("spawn with nothing to spawn fails loudly", sn.ok == false and tostring(sn.err):find("need json") ~= nil, sn.err)
     -- a nil from the API must come back as the REPORTED failure, not as a crash: the first live

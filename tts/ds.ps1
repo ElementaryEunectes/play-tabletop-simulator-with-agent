@@ -1,4 +1,4 @@
-﻿# ds.ps1 - the single TTS entry point, built for minimum output tokens.
+# ds.ps1 - the single TTS entry point, built for minimum output tokens.
 #
 # WHY THIS EXISTS
 #   The previous path (write payload.json -> run ask.ps1 -> dump the whole reply)
@@ -150,6 +150,9 @@ switch -Regex ($Do) {
     }
     # destroy:<guid>                           -> remove an object from the table
     '^destroy:([^:]+)$' { $cm = @{ cmd = 'destroy'; guid = $Matches[1] } }
+    # spawn_step                               -> the second half of `spawn:type` (see DSH_spawnStep:
+    #   spawnObject stops the bridge thread, so the reply goes first and the piece is built here)
+    '^spawn_step$' { $cm = @{ cmd = 'spawn_step' } }
     # spawn is the one command whose payload is JSON (colons and quotes inside), so only the SHORT
     # forms get a command-line syntax. Everything else goes through -Json with a full envelope:
     #   ds.ps1 -Json '{"messageID":2,"customMessage":{"cmd":"spawn","json":"{\"Name\":\"Custom_Tile\"}","x":5,"y":2,"z":0}}'
