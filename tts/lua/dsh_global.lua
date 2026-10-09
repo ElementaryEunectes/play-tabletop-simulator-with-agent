@@ -1934,18 +1934,24 @@ local handlers = {
         if not okList or type(list) ~= "table" then return { ok = false, cmd = "container", err = "getObjects failed" } end
                 local lines = {}
                 for i, x in ipairs(list) do
-                    -- flat "guid|name|nick|qty|tags" on purpose: see the players() note above.
-                    local g = ""
-                    local nm = ""
-                    local nk = ""
-                    local q = ""
-                    local tg = ""
-                    pcall(function() g = tostring(x.getGUID()) end)
-                    pcall(function() nm = tostring(x.getName()) end)
-                    pcall(function() nk = tostring(x.getNickname()) end)
-                    pcall(function() q = tostring(x.getQuantity()) end)
-                    pcall(function() tg = table.concat(x.getTags() or {}, ",") end)
-                    lines[#lines + 1] = g .. "|" .. nm .. "|" .. nk .. "|" .. q .. "|" .. tg
+                    -- ⚠️ getObjects() returns PLAIN TABLES, not object proxies: x.getName() and
+                    -- friends are nil calls (probed live 2026-10-09, every method returned "attempt
+                    -- to call a nil value" and the fields came out empty). Read the FIELDS - they
+                    -- are the TTS object's serialised keys.
+                    local g, nm, nk, q, ds = "", "", "", "", ""
+                    if type(x) == "table" then
+                        if x.guid ~= nil then g = tostring(x.guid) end
+                        if x.name ~= nil then nm = tostring(x.name) end
+                        if x.nickname ~= nil then nk = tostring(x.nickname) end
+                        if x.quantity ~= nil then q = tostring(x.quantity) end
+                        -- `description` carries the full face text of a card; keep a short prefix so
+                        -- a 147-card reply stays small (the full text is one read:<guid> away).
+                        if x.description ~= nil then
+                            ds = tostring(x.description):gsub("[\r\n]+", " ")
+                            if #ds > 60 then ds = ds:sub(1, 60) .. "..." end
+                        end
+                    end
+                    lines[#lines + 1] = g .. "|" .. nm .. "|" .. nk .. "|" .. q .. "|" .. ds
                 end
                 local qty = nil
                 pcall(function() qty = o.getQuantity() end)

@@ -289,16 +289,28 @@ switch ($cmOut) {
         if ($resp.items) { try { $items = @($resp.items | ConvertFrom-Json) } catch { $items = @() } }
         foreach ($it in $items) { Write-Host ("  {0,-9} {1}" -f ($it.guid -join ','), ($it.name -join ',')) }
     }
-    # container: what is inside a Bag/Deck right now, with tags (hashes, not names).
-    # Every field goes through `-join`: ConvertFrom-Json can return a 1-element ARRAY for what looks
-    # like a scalar, and `-f` then prints "System.Object[]" instead of the value (seen live).
+    # container: what is inside a Bag/Deck right now. Each line is "guid|name|nick|qty|description",
+    # where description is a short prefix of the card's face text (the full text is read:<guid>).
     'container' {
         Write-Host ("ok container guid={0} count={1} quantity={2}" -f `
             ($resp.guid -join ','), ($resp.count -join ','), ($resp.quantity -join ','))
-        # each line is "guid|name|nick|qty|tags" - flat on purpose (see the players note above)
-        foreach ($s in @($resp.lines)) {
-            $f = @($s -split '\|')
-            Write-Host ("  {0,-9} {1,-26} nick={2,-14} qty={3} tags={4}" -f $f[0], $f[1], $f[2], $f[3], $f[4])
+        # `lines` arrives as an array whose single element is a JSON string (the bridge's flattening
+        # does that to any list), so unwrap it, then slice each line.
+        # Keep this block DUMB on purpose. Three attempts died here on PowerShell traps that reported
+        # the WRONG line, so avoid all of them: no -join with an empty operand (it binds as a switch),
+        # no -like '[*' (an unmatched `[` is an invalid wildcard pattern), no nested expression.
+        # Index the array and test the character instead.
+        $parts = @($resp.lines)
+        $rows = @()
+        foreach ($p in $parts) {
+            $s = [string]$p
+            if ($s.Length -gt 0 -and $s[0] -eq '[') {
+                try { foreach ($r in @($s | ConvertFrom-Json)) { $rows += $r } } catch { }
+            } elseif ($s -ne '') { $rows += $s }
+        }
+        foreach ($s in $rows) {
+            $f = @([string]$s -split '\|')
+            Write-Host ("  {0,-9} {1,-26} nick={2,-12} qty={3} tags={4}" -f $f[0], $f[1], $f[2], $f[3], $f[4])
         }
     }
     'draw'     {
