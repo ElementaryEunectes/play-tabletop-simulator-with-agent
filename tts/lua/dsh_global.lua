@@ -1545,6 +1545,9 @@ local function setCount(guid, value)
     out.customSet = ok2 and ("ok " .. tostring(e2)) or ("ERR " .. S(e2))
     local ok3, e3 = pcall(function() o.script_state = JSON.encode({ saved_count = math.floor(n) }) end)
     out.state = ok3 and o.script_state or ("ERR " .. S(e3))
+    return out
+end
+
 -- ============================ SHARED MOVE HELPERS ============================
 -- Used by BOTH draw (a deck's top card) and take (one NAMED card out of a container), so the two
 -- cannot drift apart on the one thing that decides face up vs face down.
@@ -1713,8 +1716,6 @@ DSH_destroy = function(m)
     local ok, e = pcall(function() return o.destruct() end)
     if not ok then return { ok = false, cmd = "destroy", guid = guid, err = "destruct failed: " .. S(e) } end
     return { ok = true, cmd = "destroy", guid = guid }
-end
-    return out
 end
 
 -- Draw cards OFF a deck and lay them out on the table.
