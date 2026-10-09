@@ -36,6 +36,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_agents_hygien
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_doc_refs.ps1            # 文档里的路径必须存在
 ```
 
+### 若你的 agent 沙箱限制子进程（本项目本机就是：DSH 的 `workspace-write`）
+
+- ⛔ **抓子进程输出一律"重定向到文件再读"**：在这种沙箱里 `& x 2>&1`（或 `$o = & x`）会**静默丢输出** —— 退出码**仍是 0**、文本为空 ⇒ 看起来像"没跑"甚至"全绿"。（本仓库的三个测试与 `run_all.ps1` 都已按此改写。）
+- ⛔ **别用 `Start-Process`**（含 `-WindowStyle Hidden` / `-NoNewWindow`）：Windows ACL 后端文档明写，这类"隐藏控制台"启动会以 **`0xC0000142`** 死在 DLL 初始化。
+- ⚠️ **"测试里 spawn 测试"**（内层再起 `powershell.exe`）在受限模式下会被拦 ⇒ **`tts\tests\test_diff_index.ps1` 需要完全权限**才能跑；其余四个门禁在受限模式下可用。
+- ✅ 门禁入口统一用 `tts\tests\run_all.ps1`：它已按上面两条写（全部走文件），并坚持"**空输出 = `NOT RUN`**，不算通过"。
+
 **测试是契约，不是装饰**：
 - 改测试的判定逻辑时，**必须先造一个"坏"的阳性对照**，确认它真的会红（本项目已两次出现"校验器假绿/假红"）。
 - 断言**行为**的文档改动，最好同时补一条断言（见第 2 条表里标 ❌ 的行）。

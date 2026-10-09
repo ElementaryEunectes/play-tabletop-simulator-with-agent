@@ -18,7 +18,8 @@
 - 跑脚本一律 `powershell -NoProfile -ExecutionPolicy Bypass -File '<绝对路径>'`（`& xxx.ps1` 可能被策略挡下）。
 - **写工作区之外**会报 `[sandbox: file access denied]` ⇒ 那是策略不是 bug，**一次提权重试**，别硬绕。
 - 工具壳是 **Windows PowerShell 5.1** ⇒ 直接读中文文件会按 ANSI 解码成**乱码**（文件没坏）⇒ 加 `-Encoding UTF8` 或 `[IO.File]::ReadAllText`。
-- 判端口用 `netstat -ano | findstr :39999`（⛔ `Get-NetTCPConnection` 在本沙箱会假报"没人在听"）。
+- 判端口用 `netstat -ano | findstr :39999`
+- **沙箱限制子进程时的门禁姿势**（抓输出走文件 · 别用 `Start-Process` · `test_diff_index` 需完全权限）⇒ 见 `CONTRIBUTING.md` 的门禁小节。（⛔ `Get-NetTCPConnection` 在本沙箱会假报"没人在听"）。
 
 ## 1. 改完必须过的门禁（都在仓库里，**不需要 TTS**）
 
