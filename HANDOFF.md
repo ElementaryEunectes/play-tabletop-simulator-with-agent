@@ -154,12 +154,16 @@ c5d622f docs: correct three statements that config.ps1 made obsolete, and the la
 
 1. **火绒 HIPS** —— 规则「隐藏执行PowerShell」会拦"沙箱以隐藏方式起 powershell" ⇒ 症状：整条命令**无输出、退出码 -1**。修法：信任区加 `node.exe` · `%APPDATA%\npm\node_modules\@deepseek-ai\dsh\` · `powershell/pwsh/cmd/git` · `~\.dsh\` · `%TEMP%\dsh-*` · 工作区；或把该规则改成"询问/允许"。
 2. **`0xC0000142`（DLL 初始化失败）** —— `Start-Process`（含 `-WindowStyle Hidden`）与**经 `cmd` 启动**都会死（后端成文限制，README L127）⇒ **都别用**；本项目脚本已改成裸调用。
-3. **管道会静默丢输出** —— `& x 2>&1` 在受限模式下是"子进程跑了、退出码 0、文本为空"；**内层 spawn `powershell.exe`** 会被拦 ⇒ `tts\tests\test_diff_index.ps1` **只能在完全权限下跑**，其余四个受限模式可用。
+3. **管道会静默丢输出 ＋ 不可见 PowerShell 被拦（后者是*安全属性*，不是 bug）**
+   - `& x 2>&1` 在受限模式下是"子进程跑了、退出码 0、文本为空" ⇒ 抓输出**一律写文件再读** ✓
+   - **内层再起 `powershell.exe`（不可见执行）会被沙箱/杀软拦** —— 沙箱的职责就是约束"命令**及其后代**"（后端 README L12）；而"隐藏执行 PowerShell"本身是恶意软件的典型手法 ⇒ **拦得对**。原来 `tts\tests\test_diff_index.ps1` 会去 spawn `diff_index.ps1`，**这个 spawn 本来多余**。
+   - ✅ **正解（顺从而不是绕过）**：把 `tts\diff_index.ps1` 改成**用 `return` 而不是顶层 `exit`**（`ds.ps1` 早就这么做 ✓，理由同：能被同进程调用、不会杀掉调用者）⇒ 测试**同进程调用**它 ⇒ 五个门禁在受限模式下也能全绿。「完全权限」只是权宜，不是修法。
 
 ⇒ **工位建议**：干活的会话切「**完全权限**」（五个门禁都能跑）；受限模式下只用"**裸调用 ＋ 读文件/看控制台**"。
 
 ### 9.3 待办（**下一步从这里挑**）
 
+- **D0（新增，优先，~30 分钟）** —— 顺沙箱的安全属性修门禁：`tts\diff_index.ps1` 去掉顶层 `exit`（改 `return` ＋ 返回码）⇒ `tts\tests\test_diff_index.ps1` **同进程调用**它 ⇒ **五个门禁在受限模式下全绿**，不再需要"完全权限"这个权宜。
 - **D ⭐（建议先做）** —— 清掉"本款数据进代码"：`tts\card.ps1` 第 63-76 行的**别名表**抽成数据（`cache\<game>_alias.json`；缺文件则退化为纯文本匹配 ＋ 一行提示）；`tts\bootstrap.ps1` 的认物改成读 `local\games\<游戏>\objects.json`。**验证**：造一个假 `GAME=fake` ＋ 最小数据，跑通"查牌 / 认物"。
 - **A** —— `STATE` / `FLOW` 模板（新游戏起手；`BOOTSTRAP.md` §6 有清单但无模板）。
 - **C** —— `setup.ps1` 向导（检测 ＋ 写 `local\games\_current.md` ＋ 生成模板 ＋ 打印下一步）。
