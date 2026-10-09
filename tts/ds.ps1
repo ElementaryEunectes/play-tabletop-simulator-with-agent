@@ -1,4 +1,4 @@
-﻿# ds.ps1 - the single TTS entry point, built for minimum output tokens.
+# ds.ps1 - the single TTS entry point, built for minimum output tokens.
 #
 # WHY THIS EXISTS
 #   The previous path (write payload.json -> run ask.ps1 -> dump the whole reply)
@@ -132,6 +132,9 @@ switch -Regex ($Do) {
     '^hand:(\w+):(\w+):([^:]+)$' { $cm = @{ cmd = 'hand'; player = $Matches[1]; action = $Matches[2]; guid = $Matches[3] } }
     '^hand:(\w+):(\w+):([^:]+):(\d+)$' { $cm = @{ cmd = 'hand'; player = $Matches[1]; action = $Matches[2]; guid = $Matches[3]; n = $Matches[4] } }
     # container:<guid>  -- what is actually inside a Bag/Deck right now (complements index/draw/take)
+    # container:<guid>:full  -- same, but the WHOLE face text instead of a 60-char prefix. Needed to
+    #   build the card library: the face text exists nowhere else (obj_index/live_index stop at name).
+    '^container:([^:]+):full$' { $cm = @{ cmd = 'container'; guid = $Matches[1]; full = '1' } }
     '^container:([^:]+)$' { $cm = @{ cmd = 'container'; guid = $Matches[1] } }
     # ---- v14-primitives (2026-10-09): the operations a trained control layer kept missing ----
     # players                                  -> who is at the table, whose turn, hand COUNT

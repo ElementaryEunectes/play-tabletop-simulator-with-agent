@@ -2021,6 +2021,11 @@ local handlers = {
         local list = nil
         local okList = pcall(function() list = o.getObjects() end)
         if not okList or type(list) ~= "table" then return { ok = false, cmd = "container", err = "getObjects failed" } end
+        -- full=1 asks for the WHOLE face text instead of a 60-char prefix. WHY: the prefix keeps a
+        -- 147-card reply small, but the card library (card.ps1's cache\<game>_cards.md) needs the face
+        -- text complete - and nothing else on this side carries it (obj_index.ps1 and live_index.csv
+        -- stop at name/nickname/position). Measured 2026-10-09.
+        local full = m.full == true or tostring(m.full or "") == "1" or tostring(m.full or "") == "true"
                 local lines = {}
                 for i, x in ipairs(list) do
                     -- ⚠️ getObjects() returns PLAIN TABLES, not object proxies: x.getName() and
@@ -2034,10 +2039,10 @@ local handlers = {
                         if x.nickname ~= nil then nk = tostring(x.nickname) end
                         if x.quantity ~= nil then q = tostring(x.quantity) end
                         -- `description` carries the full face text of a card; keep a short prefix so
-                        -- a 147-card reply stays small (the full text is one read:<guid> away).
+                        -- a 147-card reply stays small (full=1 gives it whole - see above).
                         if x.description ~= nil then
                             ds = tostring(x.description):gsub("[\r\n]+", " ")
-                            if #ds > 60 then ds = ds:sub(1, 60) .. "..." end
+                            if not full and #ds > 60 then ds = ds:sub(1, 60) .. "..." end
                         end
                     end
                     lines[#lines + 1] = g .. "|" .. nm .. "|" .. nk .. "|" .. q .. "|" .. ds
