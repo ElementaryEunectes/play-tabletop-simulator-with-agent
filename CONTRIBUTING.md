@@ -28,6 +28,8 @@
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1                      # 递归补 BOM ＋ 真解析器
+# 或者直接跑统一入口（它要求"退出码 0 ＋ 输出含成功标志"，子进程没起来会报 NOT RUN）：
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfill.ps1      # 每个 '' 默认值有解或判空
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps1          # 离线索引/差分
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_agents_hygiene.ps1      # 三个指令槽

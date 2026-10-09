@@ -91,6 +91,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 桥接 Lua 已加 `turn_token` / `turn_state`（自制可点回合令牌：点一下把回合号写进昵称 ⇒ `diff_index.ps1` 现在也差 `nick`）。
 ⛔ **尚未生效**：`dsh_global.lua` 是**烤进存档**的 ⇒ 需要一次 `install_save2.ps1` 重装 ＋ **请玩家重载**，然后 `{cmd="turn_token"}` 自举、`{cmd="turn_state"}` 读回验证。
 
+**实机验收清单**（TTS 开着、存档重载之后逐条打勾）：
+
+1. `{cmd="ping"}` ⇒ `v` = `v13-turntoken`（确认桥接是**新版**，否则说明存档没重装成功）。
+2. `{cmd="turn_token"}` ⇒ `ok=true` · `created=true` · 记下 `guid`；**再跑一次**应 `created=false`（幂等）。
+3. 让玩家**点一下那个令牌** ⇒ `{cmd="turn_state"}` 的 `turn` 从 `0` 变 `1`、`nick` = `DSH-TURN 1`。
+   （我不需要"点"：`{cmd="call", guid=<令牌>, fn="dshBump"}` 能直接调同一个函数 —— 但那是我自己的簿记，**mod 的回合机另说**。）
+4. `tts\diff_index.ps1 -Snapshot` → 点一次 → 再跑 `diff_index.ps1` ⇒ 应出现 **`NICK (昵称变化)`** 段（`was`/`now`）且 SUMMARY 含 `nick=1`。
+5. **对照实验（它相对 `front_watch.ps1` 的价值）**：把 TTS 切到**后台**再点一次 ⇒ 令牌状态**照样读得到**（`front.txt` 此时读不出 `TURN`）。
+6. 任一条不符 ⇒ 记下 `{cmd="turn_state"}` 的**原始返回**与 TTS 的 `Console`（Lua 报错打在那里），**别猜**。
+
 ## §8 上下文注入（摘要 —— 细节在 harness home 的 `platform\MAINTENANCE.md`）
 
 - **每请求注入三份**：通用 `$DSH_HOME\AGENTS.md`（2924 B）＋ 项目 `AGENTS.md`（**3656 B**，含开源边界铁律）＋ 机器 `AGENTS.local.md`（1048 B）＝ **7628 B**。
