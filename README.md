@@ -70,16 +70,9 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
 
 ## 改代码的规矩（**本仓库付过代价**）
 
-1. **先提交再改**：`git add -A && git commit -m "before: xxx"`。改坏了 `git checkout -- <file>` 一键回滚。
-2. **改完任何 `.ps1` 立刻**：`powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1`
-   （它会补 BOM 并用真解析器全量校验）。
-3. ⛔ **不要用"批量字符串替换"改活代码**（本项目就是这么连坏 22 个脚本的：替换串被 PowerShell 展开、
-   引号被吃掉、BOM 被叠成 3 个）。要批量改就先 `cp -r` 一个备份目录，改完逐个验证。
-4. 含中文的 `.ps1` **必须 UTF-8 带 BOM**；新写的一次性脚本尽量只写 ASCII 注释。
-5. **解析通过 ≠ 能用**：本仓库栽过一整类 bug —— `param()` 默认 `''` 却没在 dot-source 之后回填，
-   脚本能启动、然后往空路径写。`tts\tests\test_param_backfill.ps1` 专治这一类。
-6. **校验器要有阳性对照**：`check_ps1.ps1` 和 `test_param_backfill.ps1` 都曾"报成功但其实没看见问题"
-   （一个 BOM 回写条件写反、一个正则锚在行首匹配不到任何东西）⇒ 拿一个**故意造坏的探针**喂它，看它真能报错再信它。
+1. **先提交再改**（`git checkout -- <file>` 一键回滚）· ⛔ **不要用"批量字符串替换"改活代码**（本项目就是这么连坏 22 个脚本的）· 含中文的 `.ps1` **必须 UTF-8 带 BOM**。
+2. **改完任何 `.ps1` 跑 `tts\check_ps1.ps1`**（补 BOM ＋ 真解析器全量校验）；**解析通过 ≠ 能用** —— `param()` 默认 `''` 却没在 dot-source 后回填那一类 bug，由 `tts\tests\run_all.ps1` 里的 `param backfill` 专治。
+3. **改测试判定逻辑前先造一个"坏"的阳性对照**（本仓库的校验器两次"报成功但其实没看见问题"）。完整规矩 ⇒ **[`CONTRIBUTING.md`](CONTRIBUTING.md)**；本机沙箱/编码 ⇒ `tts\docs\MAINTENANCE.md` §0。
 
 ## 护栏（会改桌面的动词）
 
@@ -91,14 +84,11 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
 
 ## 已知状态
 
-- ✅ **31 个 `.ps1` 全部通过真解析器**（`check_ps1.ps1`，**递归**，含 `tts\tests\`）：0 解析错误、BOM 齐。
-- ✅ **离线自测**（不需要 TTS）：`tts\tests\test_diff_index.ps1`（桩脚本冒充 `live_index.ps1` ＋ 合成 fixture ⇒ 六类变化全中）·
-  `tts\tests\test_param_backfill.ps1`（每个 `''` 默认值都必须被回填或判空）。
-- ✅ **无个人路径**：树里已无 `C:\Users\<名字>` 之类硬编码（`tts\config.ps1` 是唯一解析层）。
+- ✅ **`tts\` 下 40 个 `.ps1` 全部通过真解析器**（`check_ps1.ps1`，递归）：0 解析错误、BOM 齐。
+- ✅ **离线门禁 6 条**（不需要 TTS）：唯一入口 `tts\tests\run_all.ps1`（清单 ⇒ `CONTRIBUTING.md` §3）。
+- ✅ **无个人路径**：树里已无 `C:\Users\<名字>` 之类硬编码（`tts\config.ps1` 是唯一解析层）· `LICENSE` = **MIT**。
 - ⏸ 对局处于**挂起**态：**现状与续局步骤不在仓库里**（`local\games\_current.md` 指到具体文件）。
-- ⚡ **每回合成本**（2026-10-08 实测）：回合开局用**一条** `tts\play.ps1 turn` ≈ **1.5s**，替代原来 `status`+`roll`+`tabread` 三条的 ~2.9s；
-  `say.ps1` 每条消息 **0.79s**（原 ~1.7s，少了两次子进程）。**每个 PowerShell 进程启动固定 ~0.35s ⇒ 合并命令就是省时间**，TTS 往返不是瓶颈。
-- 🧾 `LICENSE` = **MIT**（见下）。
+- ⚡ **每回合成本**（2026-10-08 实测）：回合开局一条 `tts\play.ps1 turn` ≈ **1.5s**（替代 `status`+`roll`+`tabread` 的 ~2.9s）；`say.ps1` 每条 **0.79s**。**每个 PowerShell 进程固定 ~0.35s ⇒ 合并命令就是省时间**，TTS 往返不是瓶颈。
 
 ## 相关项目（prior art —— 我们站在谁旁边）
 

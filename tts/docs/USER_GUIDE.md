@@ -70,7 +70,6 @@
 ## 7. 想自己核一遍（**不需要开 TTS**）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1                   # 全部脚本：补 BOM + 真解析器
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps1       # 快照差分链的离线自测
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfill.ps1   # 默认值回填自测
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # 6 条门禁一起跑（"退出码 0 ＋ 输出含成功标志"才算过）
 ```
+逐条清单/限制 ⇒ `CONTRIBUTING.md` §3；本机沙箱注意事项 ⇒ `MAINTENANCE.md` §0。

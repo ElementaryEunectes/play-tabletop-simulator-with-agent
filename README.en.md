@@ -99,42 +99,16 @@ the dot-source, and `tts\tests\test_param_backfill.ps1` enforces exactly that.
 
 ## Code rules (this repository paid for every one of them)
 
-1. **Commit before you edit**: `git add -A && git commit -m "before: xxx"`. Undo with
-   `git checkout -- <file>`.
-2. **After editing any `.ps1`, run**
-   `powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1`
-   It adds the UTF-8 BOM where it is missing and syntax-checks every script with the real
-   parser, recursively — including `tts\tests\`.
-3. ⛔ **Never edit live code with a bulk string replace.** That is how 22 scripts broke here at
-   once: the replacement text was expanded by PowerShell, quotes were eaten, and the BOM
-   multiplied to three copies. Back up first, edit precisely, then validate file by file.
-4. **A `.ps1` containing Chinese must be UTF-8 *with* BOM.** PowerShell 5.1 reads a BOM-less
-   file as ANSI, the Chinese becomes mojibake, and the parser dies with a misleading error
-   ("missing closing parenthesis"). New throwaway scripts should keep their comments ASCII.
-5. **Passing a syntax check does not mean the script works.** A whole class of bug here was a
-   `param()` default of `''` that was never resolved: the script started, then wrote to an empty
-   path. `tts\tests\test_param_backfill.ps1` catches that class.
-6. **A validator needs a positive control.** Two tools in this repo were themselves broken while
-   reporting success — a BOM rewriter whose condition was inverted, and a regex anchored to the
-   start of a line that therefore matched nothing. Feed them a deliberately broken probe and
-   watch them fail before you trust them.
-7. **Test offline.** `tts\tests\test_diff_index.ps1` needs no TTS and no save (a stub stands in
-   for `live_index.ps1`, and the fixtures are synthetic), so the diff chain can be verified with
-   the game closed.
+1. **Commit before you edit** (`git checkout -- <file>` undoes it) · ⛔ **never edit live code with a bulk string replace** (that is how 22 scripts broke at once here) · a `.ps1` containing Chinese must be UTF-8 **with** BOM (5.1 reads a BOM-less file as ANSI → mojibake → a misleading parse error).
+2. **After editing any `.ps1`, run `tts\check_ps1.ps1`** (adds the BOM recursively and syntax-checks with the real parser). **Passing a syntax check does not mean the script works** — the `param()` default of `''` that was never resolved is caught by the `param backfill` gate inside `tts\tests\run_all.ps1`.
+3. **A validator needs a positive control** — two tools here were themselves broken while reporting success. Feed them a deliberately broken probe before you trust them. Full rules ⇒ **[`CONTRIBUTING.md`](CONTRIBUTING.md)**; this machine's sandbox/encoding ⇒ `tts\docs\MAINTENANCE.md` §0.
 
 ## Status
 
-- ✅ **31/31 `.ps1` parse clean** (`check_ps1.ps1`, recursive), BOM present everywhere.
-- ✅ **Offline tests**: `tts\tests\test_diff_index.ps1`, `tts\tests\test_param_backfill.ps1`.
-- ✅ **Guardrails** on `roll.ps1`, `play.ps1 -Apply` and `install_save2.ps1 -DryRun`.
-- ✅ **No personal paths** anywhere in the tree: `tts\config.ps1` is the only resolver.
+- ✅ **Every `.ps1` under `tts\` parses clean** (`check_ps1.ps1`, recursive), BOM present · **no personal paths** (tts\config.ps1 is the only resolver) · `LICENSE` = **MIT**.
+- ✅ **6 offline gates, no TTS needed**: one entry point, `tts\tests\run_all.ps1` (list ⇒ `CONTRIBUTING.md` §3) · guardrails on `roll.ps1`, `play.ps1 -Apply`, `install_save2.ps1 -DryRun`.
 - ⏸ A match is **suspended**; its status and resume steps are **not in the repository** (see `local\games\_current.md`).
-- ⚡ **Per-turn cost** (measured 2026-10-08): open a turn with the single command
-  `tts\play.ps1 turn` — about **1.5s**, replacing the ~2.9s of `status` + `roll` + `tabread`.
-  `say.ps1` costs **0.79s** per message (was ~1.7s, two child processes fewer). **Starting one
-  PowerShell process costs a flat ~0.35s, so merging commands is what saves time** — TTS round
-  trips are not the bottleneck.
-- 🧾 `LICENSE` = **MIT** (see below).
+- ⚡ **Per-turn cost** (measured 2026-10-08): open a turn with the single command `tts\play.ps1 turn` — about **1.5s** (was ~2.9s for `status` + `roll` + `tabread`); `say.ps1` costs **0.79s** per message. **Starting one PowerShell process costs a flat ~0.35s, so merging commands is what saves time** — TTS round trips are not the bottleneck.
 
 ## Related work (prior art)
 

@@ -75,19 +75,9 @@
 
 ### 🧪 测试（**不开 TTS 也能跑**）
 
-| 脚本 | 干什么 |
-|---|---|
-| `tests\test_diff_index.ps1` | `diff_index.ps1` 的**离线自测**：`fake_live_index.ps1` 冒充 `live_index.ps1`，`fixtures\*.csv` 是合成数据 ⇒ 六类变化各 1、`-Snapshot` 写基线、相同快照必须安静 |
-| `tests\test_game_data.ps1` | **游戏数据必须在文件里、不在代码里**：拿**假游戏**的 fixture 跑 `card.ps1`（别名表）与 `bootstrap.ps1`（`objects.json`）；**决定性的两条是否定用例** —— 没有别名文件时英文词**必须查不到**、换成"只有座位"的最小 `objects.json` 时专属区块**必须消失** |
-| `tests\test_param_backfill.ps1` | **每个 `''` 默认值都必须被回填或判空** —— 就是那次"5 个脚本能解析、一跑却写空路径"的 bug 类 |
-| `tests\test_agents_hygiene.ps1` | **三个指令槽各守其位**：项目 `AGENTS.md` ≤3 KB ＋ 必含 5 个承载性指针 · 被跟踪文件里**不许有真实用户名/绝对用户路径** · `AGENTS.local.md` 必须被 gitignore · **全局那份必须与模板正文逐字一致**（漂移检查） |
-| `tests\fake_live_index.ps1` | 上面用到的桩（只认 `-Out`） |
-| `tests\fixtures\` | 合成的前后快照 CSV（**不是真实存档**） |
-
-跑法：`powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps1`（`exit 0` = 过）。
-⚠️ `check_ps1.ps1` 现在是**递归**的 ⇒ 测试自身也会被补 BOM ＋ 真解析器校验。
-⚠️ **校验器要有阳性对照**：`test_param_backfill.ps1` 第一版因为正则锚在行首而**完全看不见**单行 `param([string]$X = '')`，
-  故意造一个坏脚本才试出来（`HANDOFF.md` §6.8）——改这个测试时必须重跑那个对照。
+6 条、唯一入口 `tts\tests\run_all.ps1`（"退出码 0 ＋ 输出含成功标志"才算过）⇒ **逐条清单与限制见 `CONTRIBUTING.md` §3**；每条测试的**头部注释**说明自己验什么。
+`tests\fixtures\` = 合成数据（**不是真实存档**）· `tests\fake_live_index.ps1` = 冒充 `live_index.ps1` 的桩。
+⚠️ 改测试判定逻辑前必须先造一个"坏"的**阳性对照**（`test_param_backfill.ps1` 第一版就因正则锚在行首而**完全看不见**单行 `param(...)`）；`check_ps1.ps1` 是**递归**的 ⇒ 测试自身也受 BOM ＋ 真解析器校验。
 
 ### 目录
 

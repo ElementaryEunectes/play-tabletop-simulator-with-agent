@@ -385,24 +385,7 @@ if ([math]::Abs($x) -gt $half -or [math]::Abs($z) -gt $half) {
 
 ---
 
-## 10. 工具清单（都在 `tts\`）
+## 10. 工具清单
 
-> **什么时候读我**：想知道"这个脚本是干什么的 / 有没有现成工具"时（先查表再写新脚本）。
-
-| 脚本 | 作用 |
-|---|---|
-| `ds.ps1` | **唯一通信入口**，一行输出。`ping/tabread/tabwrite/notepush/act/geom/move/rotate/find` |
-| `say.ps1` | 往 TTS 对话频道发消息（滚动窗口，自动归档旧正文） |
-| `obj_index.ps1` | 自动存档 → `cache\obj_index.csv` 全量物件表 |
-| `bags_dump.ps1` | 展开所有容器内容 → `cache\bag_contents.txt` |
-| `star_find.ps1` | 按颜色识别板面标记（LockBits，秒级） |
-| `dock2.ps1` | 十字星 → 停靠点换算 + 位移矢量探针（含写入前 sanity check） |
-| `resolve_cards.ps1` / `card_index.ps1` | 卡片 → 本地图缓存映射 |
-| `label.ps1` | 给图命名（只填序号+名字，hash 由工具回填） |
-| `grab_window.ps1` | 按句柄抓 TTS 窗口（`-Handle <hwnd>`） |
-| `alt_activate.ps1` | 抢 TTS 前台（先 ALT 轻敲） |
-| `install_save2.ps1` | 重建存档（装 Lua + 修 notebook id） |
-| `validate_lua.js` | Lua 语法校验，写盘前必跑 |
-
-**不要用**：`daemon\`（已废弃）、`set_lua_live.ps1`（TTS 不接受，还会打哑运行中的脚本）、
-`archive\tts-old\fix_tabs.ps1`、`repair_slot5.ps1`（会破坏 tab id）。
+> ⛔ **别在这里再列一份**：脚本清单的**唯一真源是 `TTS_RULES.md` §二**（按使用频率分类 · 找脚本/清理时读它，**先查表再写新脚本**）。
+> 已知"不要用"的：`daemon\`（已废弃）· `set_lua_live.ps1`（TTS 不接受，还会打哑运行中的脚本）· `archive\tts-old\fix_tabs.ps1` / `repair_slot5.ps1`（会破坏 tab id）。

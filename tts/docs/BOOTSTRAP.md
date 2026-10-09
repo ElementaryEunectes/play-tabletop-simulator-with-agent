@@ -99,52 +99,33 @@ ds.ps1 -Do count       # 名称直方图
 
 ## §1b 认物数据：`local\games\<游戏>\objects.json`（`bootstrap.ps1` 的输入）
 
-> **为什么这是数据、不是代码**：哪个图 hash 是"源石"、哪个 nick 是"移动城市"，**只对一款 mod 成立** ⇒ 换 mod 即作废。
-> 工具链只留**通用识别方式**（按 name / nick / 图 hash / 缩放 / 与参照物的距离），**"这是什么东西"由这份文件说了算**。
-> ⇒ `tts\bootstrap.ps1` 里**一个牌名、一个图 hash 都没有**；缺这份文件它**报错并指出它要的路径**，不会打一份空表冒充答案。
+> **这是数据、不是代码**：哪个图 hash 是"源石"只对一款 mod 成立 ⇒ `bootstrap.ps1` 里**一个牌名/图 hash 都没有**；缺文件它**报错并指出路径**（不打空表冒充答案）。它只留通用识别方式：name / nick / 图 hash / 缩放 / 与参照物的距离。
 
-**怎么产出它**（新 mod 的"教一次"）：
-```powershell
-obj_index.ps1                                                                   # 先有存档侧索引 cache\obj_index.csv
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\bootstrap.ps1 -Inventory # -> cache\obj_inventory.md
-```
-`-Inventory` 给 **name / nick / 图 hash 三个直方图** = 写 `objects.json` 的原料（它**不需要** `objects.json`，因为它的用途正是帮你写出第一份）。
-照直方图把"哪几个是座位区 / 资源 / 牌堆 / 面板 / 标记"填进下表，再跑不带 `-Inventory` 的 `bootstrap.ps1`。
+**怎么产出它**（新 mod 的"教一次"）：先 `obj_index.ps1`，再
+`powershell -NoProfile -ExecutionPolicy Bypass -File tts\bootstrap.ps1 -Inventory` ⇒ `cache\obj_inventory.md`（**name / nick / 图 hash 三个直方图**，是写这份文件的原料；`-Inventory` 本身**不需要** `objects.json`）。照直方图填下表，再跑不带 `-Inventory` 的 `bootstrap.ps1`。
 
-**最小可用**（只有座位，没有任何专属区块）：
+**最小可用**（只有座位）：
 ```json
 { "seats": { "name": "HandTrigger", "zBelow": -50, "labels": ["P4","P3","P2","P1"], "player": "P1" } }
 ```
 
-**顶层键**
+**顶层键**：`seats.name`（座位区物件的 `name`，TTS 通用 `HandTrigger`）· `seats.zBelow`（只留 `z` 更小的，**用来排除桌外多余的 zone**；不写就全留）· `seats.labels`（从左到右，按 x 升序）· `seats.player`（哪个是我，只影响一句提示）· `seats.note`（座位表后的 markdown，字符串或数组）· `sections[]`（每项一个区块，见下）。
 
-| 键 | 含义 |
-|---|---|
-| `seats.name` | 座位区物件的 `name`（TTS 通用：`HandTrigger`） |
-| `seats.zBelow` | 只保留 `z` 小于它的座位区（**用来排除桌外那个多余的 zone**；不写就全留） |
-| `seats.labels` | 从左到右（按 x 升序）每个座位的名字，如 `["P4","P3","P2","P1"]` |
-| `seats.player` | 哪个是我（只影响一句提示） |
-| `seats.note` | 追加在座位表后的 markdown（字符串，或字符串数组） |
-| `sections[]` | 每个元素 = 一个区块，`kind` 决定渲染方式 |
-
-**`where`（选物件；多个条件是 AND）**：`name` · `nameRegex` · `nick` · `nickRegex` · `nickNonEmpty`(true) · `topLevel`(true，父为空) · `urlHash`(url 前 8 位十六进制) · `minScale`(`sx` 下限)
+**`where`（选物件，多个条件是 AND）**：`name` · `nameRegex` · `nick` · `nickRegex` · `nickNonEmpty`(true) · `topLevel`(true＝父为空) · `urlHash`(url 前 8 位十六进制) · `minScale`(`sx` 下限)
 
 **`kind`**
 
 | kind | 渲染成 | 附加键 |
 |---|---|---|
-| `seatRow` | 每人一行（计数器 / 玩家指示物 / 面板） | `where` · `sort` · `columns`（含 `scale` 就多一列） |
+| `seatRow` | 每人一行（计数器/玩家指示物/面板） | `where` · `sort` · `columns`（含 `scale` 就多一列） |
 | `seatGrid` | 每个图 hash 一行、每人一列（每人一套的资源） | `where` · `byHash`（`{"AAAA1111":"矿石"}`） |
 | `rows` | 满足 `where` 的普通表 | `columns`（`guid`/`pos`/`x`/`y`/`z`/`scale`/`nick`/`name`）· `sort` |
 | `deckByHash` | 按**牌堆里那张牌的图 hash** 找 Deck（牌不是独立物件） | `byHash` |
 | `nearRef` | 参照物附近的标记（如分数轨上的标记） | `where`(标记) · `ref`(参照物，取**最大**的一个) · `within` · `sort` · `stepPerUnit` ＋ `stepAxis` |
 
-其余键：`title`（区块标题，markdown 原样输出）· `note`（标题后追加的 markdown）· `sort` = `x`/`z`/`y`/`size`。
+其余键：`title`（区块标题，markdown 原样）· `note`（标题后的 markdown）· `sort` = `x`/`z`/`y`/`size`。
 
-**契约（门禁钉死）**：`objects.json` **只放某款游戏专属的东西**；通用渲染逻辑留在 `bootstrap.ps1`。
-`tts\tests\test_game_data.ps1` 用一个**假游戏** fixture 同时验证两边：
-有数据文件 ⇒ 区块按数据渲染；**把数据文件换成"只有座位"的最小版 ⇒ 那些专属区块必须消失**。
-后者才是这条契约的证明（"数据不在代码里"），前者只能证明"渲染没崩"。
+**契约（`tts\tests\test_game_data.ps1` 钉死）**：`objects.json` 只放**某款游戏专属**的东西，通用渲染留在代码里。门禁用**假游戏** fixture 验两边 —— 关键是**否定**那条：换成"只有座位"的最小版 ⇒ 专属区块**必须消失**（"数据不在代码里"只有这个能证）。
 
 ---
 
