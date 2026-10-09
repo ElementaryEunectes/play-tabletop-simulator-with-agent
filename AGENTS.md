@@ -31,11 +31,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 
 ## ⛔ 纪律
 
-1. **改任何 `.ps1` 前先 `git commit`**；⛔ **绝不用批量字符串替换改活代码**（本仓库就这么连坏过 22 个脚本）。
+1. **改任何 `.ps1` 前先 `git commit`**；⛔ **绝不用批量字符串替换改活代码**（为什么 + 替代做法 ⇒ `CONTRIBUTING.md` §4）。
 2. **`param()` 必须是第一条语句**；**默认值里不许引用 config 变量**（那时还没求值）⇒ 默认 `''`，dot-source 之后 `if ($X -eq '') { $X = ... }` 回填。
 3. **路径一律走 `tts\config.ps1`**（`$WorkspaceRoot` / `$DshCache` / `$DshGameRules` / `$DshGameCards` … 全在那份文件里）；⛔ 不许出现 `C:\Users\<名字>`。
-4. **改完 `.ps1` 立刻**跑 `tts\check_ps1.ps1`（补 BOM ＋ 真解析器）；**解析通过 ≠ 能用** ⇒ 再跑 `tts\tests\*.ps1`（离线，不需要 TTS）。
+4. **改完 `.ps1`** 跑 `tts\check_ps1.ps1`；**解析通过 ≠ 能用** ⇒ 再跑 `tts\tests\run_all.ps1`（离线，不需要 TTS）。
 5. **骰子**：`roll.ps1` 必须明说 `-Roll`/`-NoRoll`（裸调用 `exit 2`）；**判定以玩家报的为准**。
 6. **响应窗口**：玩家每次宣告 = 我的出牌机会 ⇒ **必须表态「出牌 / 不出牌」**。
 7. **隐藏信息双向**：不读对手隐藏区、不拿 guid 对身份；**我自己的手牌/计划也不外传**（手牌在 `local\games\<游戏>\MYHAND.md`；`local\` 不进仓库）。
-8. **判"玩家在不在"**：`netstat -ano | findstr :39999` 或 `tts\play.ps1 status`。⛔ `Get-NetTCPConnection` 会**假报"没人在听"**；⛔ `Get-Process` 看不见 TTS。
+8. **判"玩家在不在"**：跑 `tts\play.ps1 status`（端口等平台手段见 `tts\docs\MAINTENANCE.md` §0）。
