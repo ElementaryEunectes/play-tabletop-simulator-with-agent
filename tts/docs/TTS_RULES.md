@@ -37,7 +37,7 @@
 
 | 脚本 | 干什么 |
 |---|---|
-| **`play.ps1`** | **控制台**（通用；本局的动词/参数由该游戏的状态页给出）：⭐`turn`（**回合开局一条命令**：盘面＋骰面＋招式＋笔记本尾条，全只读）/ `status` / `income` / `roll` / `attack` / `defense` / `say` —— 一条命令一个阶段。写动词要显式开关（`-Apply` / `-Roll`）且支持 `-WhatIf`。**实现拆在 `tts\lib\play.*.ps1`**（`bridge`/`dice`/`rules`/`verbs`）⇒ **要改哪块就读哪个模块**，本体只是 ~5 KB 的分发器 |
+| **`play.ps1`** | **控制台**（**只服务"有 `cache\<game>_rules.json` 的游戏"** —— ⚠️ 见下方方框）：⭐`turn`（**回合开局一条命令**：盘面＋骰面＋招式＋笔记本尾条，全只读）/ `status` / `income` / `roll` / `attack` / `defense` / `say` —— 一条命令一个阶段。写动词要显式开关（`-Apply` / `-Roll`）且支持 `-WhatIf`。**实现拆在 `tts\lib\play.*.ps1`**（`bridge`/`dice`/`rules`/`verbs`）⇒ **要改哪块就读哪个模块**，本体只是 ~5 KB 的分发器 |
 | **`roll.ps1`** | 掷/读骰面：`-Tray moon\|scar` —— **必须明说意图**：`-Roll` 才掷、`-NoRoll` 只读；**裸调用 `exit 2`（不接触 TTS）** |
 | **`ds.ps1`** | **跟 TTS 说话的高层入口**：`-Do 'ping / tabread / getState:<g> / setCount:<g>:<n> / act:<g>:<verb> / move:… / draw:… / all:<n> / read:<g>'` |
 | `dsbatch.ps1` | 一条进程跑多条 `ds.ps1` 命令（`-Commands 'a;;b'`）；⚠️ 两层子进程会被沙箱掐网络，优先 `ds.ps1` 逐条 |
@@ -50,6 +50,15 @@
 | `channel_watch.ps1` | 后台：写 `cache\chan.txt`（笔记本尾部变化 → `NEW`）→ 配 file 哨兵 |
 | `check_ps1.ps1` | **改完 `.ps1` 必跑**：补 BOM ＋ 真解析器校验 |
 | **`doctor.ps1`** | **新机器 / 新 clone 第一步**（**只读**体检）：PowerShell · 路径解析 · TTS 目录 · 39999 端口 · node · **每请求注入字节数** ⇒ `VERDICT: ready` 或带修复建议的问题清单 |
+
+> ### ⚠️ `play.ps1` ≠ 通用控制层（2026-10-09 实测更正：七圣召唤）
+> 它的**每个动词都要 `cache\<game>_rules.json`**：`play.ps1` 在**读规则之前**就 `Fail 'NO PART'`，
+> 且 `status` 也经 `Seat-Obj`（= `$Rules.dice.<seat>`）＋ `(…).hp_counter`／`heroes` ⇒ **schema 是"对局型"的**
+> （座位 · 计数板 · 骰盘 · 招式表）。⇒ 对该游戏**没写这份规则 JSON 之前，连 `status` 都跑不了**；
+> 而像**七圣召唤**这种"没有那套计数板/骰盘"的 mod，**不是缺文件，是根本没有可读之物**。
+> **通用层只有这些**：`ds.ps1`/`ttsx.ps1`/`ttslib.ps1`（传话）· `obj_index`/`live_index`/`diff_index`/`diff_hidden`（看）·
+> `bootstrap.ps1`（认物，数据在 `local\games\<游戏>\objects.json`）· `card.ps1`（查卡库）· `say.ps1`。
+> ✅ 判"桥接在不在"**永远**用 `ds.ps1 -Do ping`（版本号即凭据）—— **别拿 `play.ps1 status` 当连通性检查**。
 
 ### 🔧 常用（按需）
 

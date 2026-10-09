@@ -34,6 +34,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\doctor.ps1     # 只读�
 ds.ps1 -Do ping        # 期望 ok v=<DSH_VERSION> objs=<n> loads=<n>
 ```
 - 版本号 = **"新桥接有没有真的进去"的唯一凭据**。`no reply` ⇒ 桥接不在（走 §2）。
+- ⚠️ **用 `ds.ps1 -Do ping`，别用 `play.ps1 status`**（后者要先有该游戏的 `cache\<game>_rules.json`，否则连 TTS 都没碰就报 `NO PART`；理由见 `TTS_RULES.md` §二 的方框）。
 - ⚠️ TTS 只接收、不吃合成输入 ⇒ 我**不能点按钮**；连「结束回合」都是玩家点。
 
 **C. 盘点与重认**（guid 每局/每模组都变，**只认 hash + nick + scale + 坐标关系**）
@@ -222,7 +223,7 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
 | **他（<角色>）** | | | |
 
 ## 续局 / 起手步骤
-1. `tts\play.ps1 turn` 核盘面 → 与本表比对；**不一致由玩家拍，别自己复位**。
+1. `tts\play.ps1 turn` 核盘面 → 与本表比对；**不一致由玩家拍，别自己复位**。（⚠️ 只在有该游戏 `cache\<game>_rules.json` 时可用；否则改用 `tts\ds.ps1 -Do ping` ＋ `live_index.ps1`）
 2. 复述"轮到谁 + 待办"，**由他决定**；他每次宣告 **我必须表态"出牌 / 不出牌"**。
 3. 重挂哨兵（命令见 `tts\docs\PLAY.md`）。
 
