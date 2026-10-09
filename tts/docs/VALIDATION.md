@@ -115,6 +115,43 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ `spawn`/`take`/`destroy` 各需**重烤后真跑一次**
 （尤其 `spawnObjectJSON` 的入参放宽：`{Name=..., Transform={posX=...}}` 与 `{type=..., position=N}` 两种都要试）。
 
+**F8 · `players` / `take` / `spawn` / `destroy` 在活体上不可达，原因**未查明**（`❌`，2026-10-09）**
+症状（活体实测原始回执）：
+```
+players -> handler error: Global:(5975,26-47): attempt to call a nil value
+take    -> handler error: Global:(5970,23-44): attempt to call a nil value
+destroy -> handler error: Global:(5972,26-47): attempt to call a nil value
+```
+列区间**正好等于**注册处那次调用（如 `DSH_players(m)`）的宽度 ⇒ 注册表里的那个名字在调用时是 nil。
+
+**已排除的原因**（每条都做了实验，不是推理）：
+- **不是"定义在表之后"**：定义在 5621、`handlers` 表在 5873、注册在 5975，顺序正确。
+- **不是顶层 `return`**：全文没有列首的 `return`。
+- **不是 200 局部量上限**：Lua 5.3 在 201 个时是**编译报错**（本机实测），而这份 chunk **能编译**（反汇编过，名字都在常量表里）。
+- **不是形式问题**：`local x = function`、`local function x()`、全局 `DSH_x = function` **三种都试过**，结果一致。
+- **不是重复桥接**：运行脚本里各标志行**只出现 1 次**。
+
+**矛盾的核心证据**（用 `gen_bridge_alone_test.js` 在**运行中的字节**上复现）：
+- chunk 内测得 `hand=function`（旧函数**能用**），而 `takeOne/players/spawn/destroy`（v14/v15 后加的）**全 nil**；
+- **执行检查点**显示 chunk **执行到了 `handlers` 表之后**的代码，却**从未执行表之前**那些定义行（同一 chunk、顺序执行 —— 这互相矛盾）；
+- 用 `error()` 做对分探测，在 `local function takeOne(m)`（1592 行，列首语句）处注入错误，**脚本仍能跑完并打出尾部输出** ⇒ 那里的"语句"似乎不在主 chunk 的执行路径上。
+
+**下一步（唯一正确的做法）**：把运行脚本**二分**到"仍能观察到 `hand=function` 但 `takeOne=nil`"的最小片段，把它作为回归用例；工具已就位：`tts\tools\bisect_run.js`（在指定行注入 `error()`，报告是否到达）＋ `gen_bridge_alone_test.js`（从运行脚本或本地文件生成桩环境）。
+
+⚠️ **在这些命令通过上面那条最小复现之前，一律按"活体不可用"对待** —— 离线门禁（含 26 条桩用例）**看不见这个问题**，这是本轮最值钱的一课。
+
+**F9 · `dsh_global.lua` 的行尾从"故意混用"漂移成了单一风格**（`⚠️`，2026-10-09）
+**先说结论：`.gitattributes` 的字节一致性承诺没问题** —— 用可靠方法验过：`git diff HEAD -- <file>` 为空，且
+`git cat-file -s HEAD:<file>` = **96789 B** ＝ 工作区文件（`.NET` 直读）**96789 B** ⇒ 逐字节相同。
+⚠️ 但我一开始用**不可靠的方法**（`git show ... > 文件` 经 PowerShell 重定向落盘）得到"HEAD 是全 LF、工作区是全 CRLF"，
+据此写下了"承诺被打破"的结论 —— **那是方法造成的假象**。教训：核对二进制/编码相关的事实，**必须走 `git cat-file -s`
+与 `[IO.File]::ReadAllBytes`**，别用 shell 重定向。
+
+**真实且仍待处理的部分**：该文件现在是 **2045 行全 CRLF、0 行裸 LF**，而 `.gitattributes` 的注释写明本仓库
+**故意混用**（原为 1607 CRLF ＋ 93 裸 LF）。本次会话的多次"文本模式编辑"（丢掉 `\r` 再统一补成 CRLF）逐步把它推成了单一风格。
+⇒ 功能无影响（`validate_lua.js`、TTS 都过），但**与文件自身声明的意图不符**。要处理的话应一次性决定统一到哪一种，
+并用 `[IO.File]::WriteAllBytes` 写入（不经任何文本模式编辑）。
+
 ## 4. 怎么续验（下一款 mod 来了照做）
 
 1. 照 `tts\docs\BOOTSTRAP.md` §2 走"教一款新 mod"（存档 → 烤桥接 → `ping` → 索引 → `-Inventory` → `objects.json` → 地图）。

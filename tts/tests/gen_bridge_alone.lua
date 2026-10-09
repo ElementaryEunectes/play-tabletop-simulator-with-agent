@@ -1589,8 +1589,7 @@ end
 -- WHY: a card inside a Deck is not a separate object - getObjectFromGUID cannot find it and
 -- `move:` cannot reach it. Deck/hand takeObject is the only way out, and the top card is not always
 -- the one wanted (reveal a named card / undo a misdeal).
-TRACE1 = "reached takeOne"
-DSH_takeOne = function(m)
+local function takeOne(m)
     local deck = getObjectFromGUID(tostring(m.deckguid or ""))
     if not deck then return { ok = false, err = "no container with guid " .. S(m.deckguid) } end
     local before = nil
@@ -1626,8 +1625,7 @@ end
 -- machine and hand display do not work).
 -- NOTE: getPlayers().hand is a COUNT, not the cards. Use cmd=hand for the cards themselves, and
 -- that only works for MY OWN colour (hidden-information rules in tts\docs\TTS_RULES.md).
-TRACE2 = "reached players"
-DSH_players = function(m)
+local function players(m)
     -- A member list, not getPlayers(): that function does not exist in this TTS build.
     local seated = {}
     local okS = pcall(function() seated = getSeatedPlayers() end)
@@ -1675,7 +1673,7 @@ end
 --     Prefer this when the mod already has the piece on the table.
 -- Declared as `local spawn = function`, NOT `local function spawn`, so the Lua globals
 -- spawnObject / spawnObjectJSON this body calls are never shadowed.
-DSH_spawn = function(m)
+local function spawn(m)
     local x = tonumber(m.x) or 0
     local y = tonumber(m.y); if y == nil then y = 2 end
     local z = tonumber(m.z) or 0
@@ -1724,7 +1722,7 @@ end
 -- Remove an object from the table. pcall-wrapped because destroying something already gone, or
 -- something TTS refuses to destroy mid-animation, must come back as a failure the caller can see -
 -- never as a silent dead handler.
-DSH_destroy = function(m)
+local function destroy(m)
     local guid = tostring(m.guid or "")
     if guid == "" then return { ok = false, cmd = "destroy", err = "no guid" } end
     local o = getObjectFromGUID(guid)
@@ -1953,18 +1951,24 @@ local handlers = {
         if not okList or type(list) ~= "table" then return { ok = false, cmd = "container", err = "getObjects failed" } end
                 local lines = {}
                 for i, x in ipairs(list) do
-                    -- flat "guid|name|nick|qty|tags" on purpose: see the players() note above.
-                    local g = ""
-                    local nm = ""
-                    local nk = ""
-                    local q = ""
-                    local tg = ""
-                    pcall(function() g = tostring(x.getGUID()) end)
-                    pcall(function() nm = tostring(x.getName()) end)
-                    pcall(function() nk = tostring(x.getNickname()) end)
-                    pcall(function() q = tostring(x.getQuantity()) end)
-                    pcall(function() tg = table.concat(x.getTags() or {}, ",") end)
-                    lines[#lines + 1] = g .. "|" .. nm .. "|" .. nk .. "|" .. q .. "|" .. tg
+                    -- ⚠️ getObjects() returns PLAIN TABLES, not object proxies: x.getName() and
+                    -- friends are nil calls (probed live 2026-10-09, every method returned "attempt
+                    -- to call a nil value" and the fields came out empty). Read the FIELDS - they
+                    -- are the TTS object's serialised keys.
+                    local g, nm, nk, q, ds = "", "", "", "", ""
+                    if type(x) == "table" then
+                        if x.guid ~= nil then g = tostring(x.guid) end
+                        if x.name ~= nil then nm = tostring(x.name) end
+                        if x.nickname ~= nil then nk = tostring(x.nickname) end
+                        if x.quantity ~= nil then q = tostring(x.quantity) end
+                        -- `description` carries the full face text of a card; keep a short prefix so
+                        -- a 147-card reply stays small (the full text is one read:<guid> away).
+                        if x.description ~= nil then
+                            ds = tostring(x.description):gsub("[\r\n]+", " ")
+                            if #ds > 60 then ds = ds:sub(1, 60) .. "..." end
+                        end
+                    end
+                    lines[#lines + 1] = g .. "|" .. nm .. "|" .. nk .. "|" .. q .. "|" .. ds
                 end
                 local qty = nil
                 pcall(function() qty = o.getQuantity() end)
@@ -1975,10 +1979,10 @@ local handlers = {
     -- deck (draw could only take the top); spawn = put a new piece on the table (json, a copy of an
     -- existing object, or a plain TTS type); destroy = remove one; player = act on a player
     -- (TTS's own turn marker, blindfold, or a passthrough to hand).
-    players = function(m) return DSH_players(m) end,
-    take = function(m) return DSH_takeOne(m) end,
-    spawn = function(m) return DSH_spawn(m) end,
-    destroy = function(m) return DSH_destroy(m) end,
+    players = function(m) return players(m) end,
+    take = function(m) return takeOne(m) end,
+    spawn = function(m) return spawn(m) end,
+    destroy = function(m) return destroy(m) end,
     player = function(m)
         local action = tostring(m.action or "")
         if action == "" or action == "get" or action == "take" then return hand(m) end
@@ -1998,7 +2002,6 @@ local handlers = {
     end,
 }
 
-DSH_dbg = table.concat({ "after-handlers players=" .. type(DSH_players), "takeOne=" .. type(DSH_takeOne), "hand=" .. type(hand) }, " ")
 -- ============================ THE SILENT-REPLY BUG ============================
 -- `sendExternalMessage` CANNOT serialise a reply that contains a NESTED table.
 -- It raises, and because the call below was not inside a pcall, the whole
