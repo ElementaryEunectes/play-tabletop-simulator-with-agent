@@ -21,12 +21,15 @@
 - 判端口用 `netstat -ano | findstr :39999`
 - **沙箱限制子进程时的门禁姿势**（抓子进程输出走文件再读 · 别用 `Start-Process`）⇒ 见 `CONTRIBUTING.md` 的门禁小节。（⛔ `Get-NetTCPConnection` 在本沙箱会假报"没人在听"）。
 - **火绒 HIPS 实测（2026-10-09，可复核）**：命中的规则是 `rp_name_execcreate_powershell_hidden`（"隐藏执行 PowerShell"），**触发者是 DSH 自己** —— 日志里 `p_procname = node.exe`（`dsh web` / `dsh-subprocess-local` / `dsh-sandbox-windows-acl`），被创建的是 `powershell.exe -NoLogo -NoProfile -NonInteractive -Command "<本次工具调用的脚本文本>"` ⇒ **每一次工具调用都是这个形状**，不是某条命令格外可疑。
-  - **但不是每次都拦**：全天 `sysprot` 事件共 5 条（4 条在上一场 18:53–18:59；1 条在 20:13:58）。20:13:58 那条正是**把三种"隐藏执行"惯用法塞进同一条命令**的探针（`cmd /c powershell` ＋ 嵌套 `powershell` ＋ `Start-Process -WindowStyle Hidden`）⇒ **整条被掐**（无输出、退出码 `-1`）；而三种惯用法**各自单独**用、以及一条 **7.3 KB 的长内联命令**，都跑通了、日志里**没有**新事件 ⇒ **单次不触发、叠加才触发**（`clsname":"risk_prot_v6"`＝行为评分）。`action:0` 的枚举含义读不出来（规则库 `db\hips.db` 是加密的 `VARDYHFS` 头）。
+  - **匹配很罕见、且是"间歇"的**：产品日志里该规则**总共只有 5 条**（18:53:47 · 18:54:16 · 18:55:54 · 18:59:16 · 20:13:58），而这两天经它起的 PowerShell 有几百次 ⇒ **不是每次工具调用都被拦**。⚠️ **触发条件未查明**：20:13:58 那次（唯一一条我确知"调用被掐"的：无输出、退出码 `-1`）恰是我把三种"隐藏执行"惯用法塞进同一条命令的探针，但**同一份惯用法组合在 20:19:18 重跑一遍完全正常、日志里连匹配都没有** ⇒ **"叠加才触发"这个说法已被自己推翻**（当时 n=1）。可用的只有相关性，不是机制。
+  - `$.detail.action` 恒为 0、`$.detail.risk` 恒为 2（**不区分**）；`$.detail.treatment` 有 0/3 两种：我**已知被掐**的那次（20:13:58）是 **3**，上一场用户报"被掐"的 18:53/18:54 两条也是 **3**，而 18:55/18:59 两条是 **0** ⇒ **`treatment=3` 与"调用被掐"相关（n=3）**，但这是相关性、不是解码出来的枚举（规则库 `db\hips.db` 加密，`VARDYHFS` 头）。
   - **查法**（只读，不需要 GUI）：`C:\ProgramData\Huorong\Sysdiag\` 下 `log.db`（SQLite：表 `HrLogV3_60(fname,ts,detail)`，HIPS 事件 = `fname='sysprot'`，`detail` 是 JSON）与 `applog.db`（`AppRunInfoList_60` = 程序运行记录，⚠️ 它的 `ts` 是 **FILETIME** 不是 Unix 秒）。文件被占用 ⇒ 用 `FileShare.ReadWrite` 读，或 `sqlite3 -readonly`：
     ```powershell
     sqlite3 -readonly C:\ProgramData\Huorong\Sysdiag\log.db "select datetime(ts,'unixepoch','localtime'), substr(detail,1,200) from HrLogV3_60 where fname='sysprot' order by ts;"
     ```
-  - **判据**：命令**无输出 ＋ 退出码 `-1`** ⇒ **先查上面那条 SQL 有没有对应时刻的 `sysprot` 行**：**有**才是火绒，**没有**就是沙箱/别的原因（别再一律赖杀软）。规范操作**不能**让规则不再匹配（形状由 harness 决定、agent 改不了），能避免的只是**额外叠加**。
+  - **判据**：命令**无输出 ＋ 退出码 `-1`** ⇒ **先查上面那条 SQL 有没有对应时刻的 `sysprot` 行**：**有**（且 `treatment=3`）才是火绒，**没有**就是沙箱/别的原因（别再一律赖杀软）。
+  - **"规范操作"能不能避免它？—— 本场证据说不支持这个因果**：三种惯用法**各自单独**用、一条 **7.3 KB 长内联命令**、以及**重跑同一份三种惯用法组合**，全部跑通且无匹配；而规则匹配的形状**永远是** harness 自己（`node.exe` ＋ `-NonInteractive` 隐藏起 PowerShell），agent 改不了。⇒ **别把"被掐"归因成"命令写得不规范"**；惯用法该避免（`Start-Process` 是沙箱自身的死路、`cmd /c` 是多余的一层），但那是**代码卫生**，不是这件事的成因。
+  - ✅ **2026-10-09 20:14:04 用户改过火绒配置后，规则不再匹配**：该时刻 `Sysdiag\user.db` 被写入，之后 20+ 次工具调用（含上面全部探针）**零匹配**；此前的匹配频率约"每十几分钟一条"。⇒ **配置变更的时间点与"不再匹配"高度吻合**，但**没有审计线索**能证明因果（也读不出到底改了哪一项）。
 
 ## 1. 改完必须过的门禁（都在仓库里，**不需要 TTS**）
 
