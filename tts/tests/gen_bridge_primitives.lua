@@ -117,7 +117,7 @@ end
 -- WHY: a card inside a Deck is not a separate object - getObjectFromGUID cannot find it and
 -- `move:` cannot reach it. Deck/hand takeObject is the only way out, and the top card is not always
 -- the one wanted (reveal a named card / undo a misdeal).
-local takeOne = function(m)
+DSH_takeOne = function(m)
     local deck = getObjectFromGUID(tostring(m.deckguid or ""))
     if not deck then return { ok = false, err = "no container with guid " .. S(m.deckguid) } end
     local before = nil
@@ -153,7 +153,7 @@ end
 -- machine and hand display do not work).
 -- NOTE: getPlayers().hand is a COUNT, not the cards. Use cmd=hand for the cards themselves, and
 -- that only works for MY OWN colour (hidden-information rules in tts\docs\TTS_RULES.md).
-local players = function(m)
+DSH_players = function(m)
     -- A member list, not getPlayers(): that function does not exist in this TTS build.
     local seated = {}
     local okS = pcall(function() seated = getSeatedPlayers() end)
@@ -201,7 +201,7 @@ end
 --     Prefer this when the mod already has the piece on the table.
 -- Declared as `local spawn = function`, NOT `local function spawn`, so the Lua globals
 -- spawnObject / spawnObjectJSON this body calls are never shadowed.
-local spawn = function(m)
+DSH_spawn = function(m)
     local x = tonumber(m.x) or 0
     local y = tonumber(m.y); if y == nil then y = 2 end
     local z = tonumber(m.z) or 0
@@ -250,7 +250,7 @@ end
 -- Remove an object from the table. pcall-wrapped because destroying something already gone, or
 -- something TTS refuses to destroy mid-animation, must come back as a failure the caller can see -
 -- never as a silent dead handler.
-local destroy = function(m)
+DSH_destroy = function(m)
     local guid = tostring(m.guid or "")
     if guid == "" then return { ok = false, cmd = "destroy", err = "no guid" } end
     local o = getObjectFromGUID(guid)
@@ -337,7 +337,7 @@ end
 
 -- ---- cases ----
 do
-    local pl = players({})
+    local pl = DSH_players({})
     check("players answers ok", pl.ok == true, pl.err)
     check("players count = 2", tostring(pl.count) == "2", pl.count)
     -- seats are flat "color|steam_name|hand|host|admin|seated|blindfolded" strings, because a
@@ -349,30 +349,30 @@ do
     check("players carries colour + hand count", f[1] == "Teal" and f[3] == "1", s1)
     check("players exposes the turn ORDER separately", tostring(pl.turn_order) ~= "", pl.turn_order)
 
-    local tk = takeOne({ deckguid = "deck-1", cardid = "card-eng-1", x = 1, y = 2, z = 3 })
+    local tk = DSH_takeOne({ deckguid = "deck-1", cardid = "card-eng-1", x = 1, y = 2, z = 3 })
     check("take of a named card answers ok", tk.ok == true, tk.err)
     check("take returns the new guid with rotZ=0", tk.guid == "taken-eng" and tostring(tk.rotZ) == "0", tostring(tk.guid) .. "/" .. tostring(tk.rotZ))
     check("take reports the container shrinking 5 -> 4", tostring(tk.remaining) == "4", tk.remaining)
-    local td = takeOne({ deckguid = "deck-1", x = 0, y = 2, z = 0, faceup = "0" })
+    local td = DSH_takeOne({ deckguid = "deck-1", x = 0, y = 2, z = 0, faceup = "0" })
     check("take face-down reports rotZ=180", tostring(td.rotZ) == "180", td.rotZ)
-    local tm = takeOne({ deckguid = "deck-1", cardid = "nope" })
+    local tm = DSH_takeOne({ deckguid = "deck-1", cardid = "nope" })
     check("take of a missing CardID fails loudly", tm.ok == false and tostring(tm.err):find("nothing taken") ~= nil, tm.err)
-    local tg = takeOne({ deckguid = "ghost" })
+    local tg = DSH_takeOne({ deckguid = "ghost" })
     check("take from a ghost container fails loudly", tg.ok == false, tg.err)
 
-    local sc = spawn({ copyguid = "deck-1", x = 5, y = 2, z = 5 })
+    local sc = DSH_spawn({ copyguid = "deck-1", x = 5, y = 2, z = 5 })
     check("spawn by copy answers ok with a new guid", sc.ok == true and tostring(sc.guid):sub(1, 6) == "clone-", sc.err)
-    local sj = spawn({ json = '{"Name":"Custom_Tile"}' })
+    local sj = DSH_spawn({ json = '{"Name":"Custom_Tile"}' })
     check("spawn from JSON answers ok with a new guid", sj.ok == true and tostring(sj.guid):sub(1, 6) == "spawn-", sj.err)
-    local sn = spawn({})
+    local sn = DSH_spawn({})
     check("spawn with nothing to spawn fails loudly", sn.ok == false and tostring(sn.err):find("need json") ~= nil, sn.err)
 
-    local ds = destroy({ guid = "deck-1" })
+    local ds = DSH_destroy({ guid = "deck-1" })
     check("destroy answers ok", ds.ok == true, ds.err)
     check("destroy really called destruct()", #calls.destroyed == 1 and calls.destroyed[1] == "deck-1", #calls.destroyed)
-    local dg = destroy({ guid = "ghost" })
+    local dg = DSH_destroy({ guid = "ghost" })
     check("destroy of a ghost fails loudly", dg.ok == false, dg.err)
-    local dn = destroy({})
+    local dn = DSH_destroy({})
     check("destroy without a guid fails loudly", dn.ok == false and tostring(dn.err):find("no guid") ~= nil, dn.err)
 end
 

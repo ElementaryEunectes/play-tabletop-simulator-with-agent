@@ -30,7 +30,7 @@ function between(startAnchor, endAnchor, what) {
 const DESTROY_TAIL = '    return { ok = true, cmd = "destroy", guid = guid }\nend';
 // `between` stops BEFORE its end anchor, so add it back: destroy's last two lines must be complete.
 const block = between('local placeFace = function(o, x, y, z, faceup)', DESTROY_TAIL, 'helpers + players + spawn + destroy') + DESTROY_TAIL;
-if (!block.includes('local takeOne = function') || !block.includes('local destroy = function')) {
+if (!block.includes('DSH_takeOne = function') || !block.includes('DSH_destroy = function')) {
     console.error('EXTRACT INCOMPLETE: takeOne/destroy missing'); process.exit(1);
 }
 if (!block.endsWith(DESTROY_TAIL)) { console.error('EXTRACT SHORT: destroy tail not included'); process.exit(1); }
@@ -174,7 +174,7 @@ const footer = [
     '',
     '-- ---- cases ----',
     'do',
-    '    local pl = players({})',
+    '    local pl = DSH_players({})',
     '    check("players answers ok", pl.ok == true, pl.err)',
     '    check("players count = 2", tostring(pl.count) == "2", pl.count)',
     '    -- seats are flat "color|steam_name|hand|host|admin|seated|blindfolded" strings, because a',
@@ -186,30 +186,30 @@ const footer = [
     '    check("players carries colour + hand count", f[1] == "Teal" and f[3] == "1", s1)',
     '    check("players exposes the turn ORDER separately", tostring(pl.turn_order) ~= "", pl.turn_order)',
     '',
-    '    local tk = takeOne({ deckguid = "deck-1", cardid = "card-eng-1", x = 1, y = 2, z = 3 })',
+    '    local tk = DSH_takeOne({ deckguid = "deck-1", cardid = "card-eng-1", x = 1, y = 2, z = 3 })',
     '    check("take of a named card answers ok", tk.ok == true, tk.err)',
     '    check("take returns the new guid with rotZ=0", tk.guid == "taken-eng" and tostring(tk.rotZ) == "0", tostring(tk.guid) .. "/" .. tostring(tk.rotZ))',
     '    check("take reports the container shrinking 5 -> 4", tostring(tk.remaining) == "4", tk.remaining)',
-    '    local td = takeOne({ deckguid = "deck-1", x = 0, y = 2, z = 0, faceup = "0" })',
+    '    local td = DSH_takeOne({ deckguid = "deck-1", x = 0, y = 2, z = 0, faceup = "0" })',
     '    check("take face-down reports rotZ=180", tostring(td.rotZ) == "180", td.rotZ)',
-    '    local tm = takeOne({ deckguid = "deck-1", cardid = "nope" })',
+    '    local tm = DSH_takeOne({ deckguid = "deck-1", cardid = "nope" })',
     '    check("take of a missing CardID fails loudly", tm.ok == false and tostring(tm.err):find("nothing taken") ~= nil, tm.err)',
-    '    local tg = takeOne({ deckguid = "ghost" })',
+    '    local tg = DSH_takeOne({ deckguid = "ghost" })',
     '    check("take from a ghost container fails loudly", tg.ok == false, tg.err)',
     '',
-    '    local sc = spawn({ copyguid = "deck-1", x = 5, y = 2, z = 5 })',
+    '    local sc = DSH_spawn({ copyguid = "deck-1", x = 5, y = 2, z = 5 })',
     '    check("spawn by copy answers ok with a new guid", sc.ok == true and tostring(sc.guid):sub(1, 6) == "clone-", sc.err)',
-    '    local sj = spawn({ json = \'{"Name":"Custom_Tile"}\' })',
+    '    local sj = DSH_spawn({ json = \'{"Name":"Custom_Tile"}\' })',
     '    check("spawn from JSON answers ok with a new guid", sj.ok == true and tostring(sj.guid):sub(1, 6) == "spawn-", sj.err)',
-    '    local sn = spawn({})',
+    '    local sn = DSH_spawn({})',
     '    check("spawn with nothing to spawn fails loudly", sn.ok == false and tostring(sn.err):find("need json") ~= nil, sn.err)',
     '',
-    '    local ds = destroy({ guid = "deck-1" })',
+    '    local ds = DSH_destroy({ guid = "deck-1" })',
     '    check("destroy answers ok", ds.ok == true, ds.err)',
     '    check("destroy really called destruct()", #calls.destroyed == 1 and calls.destroyed[1] == "deck-1", #calls.destroyed)',
-    '    local dg = destroy({ guid = "ghost" })',
+    '    local dg = DSH_destroy({ guid = "ghost" })',
     '    check("destroy of a ghost fails loudly", dg.ok == false, dg.err)',
-    '    local dn = destroy({})',
+    '    local dn = DSH_destroy({})',
     '    check("destroy without a guid fails loudly", dn.ok == false and tostring(dn.err):find("no guid") ~= nil, dn.err)',
     'end',
     '',

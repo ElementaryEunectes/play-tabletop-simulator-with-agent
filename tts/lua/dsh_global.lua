@@ -1572,7 +1572,7 @@ end
 -- WHY: a card inside a Deck is not a separate object - getObjectFromGUID cannot find it and
 -- `move:` cannot reach it. Deck/hand takeObject is the only way out, and the top card is not always
 -- the one wanted (reveal a named card / undo a misdeal).
-local takeOne = function(m)
+DSH_takeOne = function(m)
     local deck = getObjectFromGUID(tostring(m.deckguid or ""))
     if not deck then return { ok = false, err = "no container with guid " .. S(m.deckguid) } end
     local before = nil
@@ -1608,7 +1608,7 @@ end
 -- machine and hand display do not work).
 -- NOTE: getPlayers().hand is a COUNT, not the cards. Use cmd=hand for the cards themselves, and
 -- that only works for MY OWN colour (hidden-information rules in tts\docs\TTS_RULES.md).
-local players = function(m)
+DSH_players = function(m)
     -- A member list, not getPlayers(): that function does not exist in this TTS build.
     local seated = {}
     local okS = pcall(function() seated = getSeatedPlayers() end)
@@ -1656,7 +1656,7 @@ end
 --     Prefer this when the mod already has the piece on the table.
 -- Declared as `local spawn = function`, NOT `local function spawn`, so the Lua globals
 -- spawnObject / spawnObjectJSON this body calls are never shadowed.
-local spawn = function(m)
+DSH_spawn = function(m)
     local x = tonumber(m.x) or 0
     local y = tonumber(m.y); if y == nil then y = 2 end
     local z = tonumber(m.z) or 0
@@ -1705,7 +1705,7 @@ end
 -- Remove an object from the table. pcall-wrapped because destroying something already gone, or
 -- something TTS refuses to destroy mid-animation, must come back as a failure the caller can see -
 -- never as a silent dead handler.
-local destroy = function(m)
+DSH_destroy = function(m)
     local guid = tostring(m.guid or "")
     if guid == "" then return { ok = false, cmd = "destroy", err = "no guid" } end
     local o = getObjectFromGUID(guid)
@@ -1929,6 +1929,9 @@ local handlers = {
     container = function(m)
         local o = getObjectFromGUID(tostring(m.guid or ""))
         if not o then return { ok = false, cmd = "container", err = "no object with guid " .. S(m.guid) } end
+        local list = nil
+        local okList = pcall(function() list = o.getObjects() end)
+        if not okList or type(list) ~= "table" then return { ok = false, cmd = "container", err = "getObjects failed" } end
                 local lines = {}
                 for i, x in ipairs(list) do
                     -- flat "guid|name|nick|qty|tags" on purpose: see the players() note above.
@@ -1953,10 +1956,10 @@ local handlers = {
     -- deck (draw could only take the top); spawn = put a new piece on the table (json, a copy of an
     -- existing object, or a plain TTS type); destroy = remove one; player = act on a player
     -- (TTS's own turn marker, blindfold, or a passthrough to hand).
-    players = function(m) return players(m) end,
-    take = function(m) return takeOne(m) end,
-    spawn = function(m) return spawn(m) end,
-    destroy = function(m) return destroy(m) end,
+    players = function(m) return DSH_players(m) end,
+    take = function(m) return DSH_takeOne(m) end,
+    spawn = function(m) return DSH_spawn(m) end,
+    destroy = function(m) return DSH_destroy(m) end,
     player = function(m)
         local action = tostring(m.action or "")
         if action == "" or action == "get" or action == "take" then return hand(m) end
