@@ -1,4 +1,4 @@
-# run_all.ps1 - run every offline gate and refuse to be fooled by an empty exit code.
+﻿# run_all.ps1 - run every offline gate and refuse to be fooled by an empty exit code.
 #
 # WHY THIS EXISTS (2026-10-09): while the workspace-write confinement was failing to launch child
 # processes, `& powershell -File tts\tests\test_x.ps1` returned NOTHING and left $LASTEXITCODE empty
