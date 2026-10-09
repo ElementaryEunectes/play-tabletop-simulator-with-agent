@@ -1921,18 +1921,57 @@ local function findTurnToken()
     return nil
 end
 
+-- Art for the turn token, taken from a Custom_Tile that is already on this table.
+--
+-- WHY (2026-10-09, both measured): spawnObject on a CUSTOM type without its content parameter makes
+-- TTS put up its "自定义板块" dialog and ask for the image - that dialog is modal, so the bridge's
+-- reply never comes and the scripted change is reverted (this is what made spawn:type look "hung").
+-- Handing it the image up front avoids the dialog entirely. Reading it from the table rather than
+-- hardcoding a URL keeps this file free of mod content, which the open-source boundary requires.
+local function tokenArt()
+    local all = getObjects()
+    if type(all) ~= "table" then return nil end
+    for _, o in ipairs(all) do
+        local nm = ""
+        pcall(function() nm = tostring(o.getName()) end)
+        if nm == "Custom_Tile" then
+            local ci = nil
+            pcall(function() ci = o.getCustomObject() end)
+            if type(ci) == "table" and tostring(ci.image or "") ~= "" then
+                return {
+                    image = tostring(ci.image),
+                    image_secondary = tostring(ci.image_secondary or ""),
+                    type = tonumber(ci.type) or 0,
+                    thickness = tonumber(ci.thickness) or 0.2,
+                    stackable = ci.stackable == true,
+                }
+            end
+        end
+    end
+    return nil
+end
+
 local function turnToken(m)
     local o = findTurnToken()
     local created = false
     if not o then
-        local ok, res = pcall(function()
-            return spawnObject({ type = "Custom_Tile", position = { x = 0, y = 3, z = 0 } })
-        end)
+        local art = tokenArt()
+        local params = { type = "Custom_Tile", position = { x = 0, y = 3, z = 0 } }
+        if art then params.image = art.image; params.image_bottom = art.image_secondary end
+        local ok, res = pcall(function() return spawnObject(params) end)
         if not ok or res == nil then
-            return { ok = false, cmd = "turn_token", err = "spawn failed: " .. S(res) }
+            return { ok = false, cmd = "turn_token",
+                     err = "spawn failed: " .. S(res) .. (art and "" or " (no Custom_Tile art found - TTS will ask for an image)") }
         end
         o = res
         created = true
+        if art then
+            pcall(function() o.setCustomObject({ image = art.image, image_secondary = art.image_secondary,
+                                                 type = art.type, thickness = art.thickness,
+                                                 stackable = art.stackable }) end)
+        end
+        -- scale 1 so it is big enough to see and click (table tiles are often 0.38)
+        pcall(function() o.setScale({ 1, 1, 1 }) end)
     end
     local guid = o.getGUID()
     pcall(function() o.setName(TURN_TOKEN_NAME) end)
