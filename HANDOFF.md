@@ -86,6 +86,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 - **动手改 `.ps1` / 改流程 / 排查怪现象之前，先读那一份**（13 条，每条都付过真实代价）。
 - 本文件只留"现在到哪了 + 先干什么"；坑的细节不在这里重复（否则每次会话都在读参考材料）。
 
+## §7.9 待办：回合令牌要重装存档（**v13-turntoken**）
+
+桥接 Lua 已加 `turn_token` / `turn_state`（自制可点回合令牌：点一下把回合号写进昵称 ⇒ `diff_index.ps1` 现在也差 `nick`）。
+⛔ **尚未生效**：`dsh_global.lua` 是**烤进存档**的 ⇒ 需要一次 `install_save2.ps1` 重装 ＋ **请玩家重载**，然后 `{cmd="turn_token"}` 自举、`{cmd="turn_state"}` 读回验证。
+
 ## §8 上下文注入（摘要 —— 细节在 harness home 的 `platform\MAINTENANCE.md`）
 
 - **每请求注入三份**：通用 `$DSH_HOME\AGENTS.md`（2924 B）＋ 项目 `AGENTS.md`（**3656 B**，含开源边界铁律）＋ 机器 `AGENTS.local.md`（1048 B）＝ **7628 B**。

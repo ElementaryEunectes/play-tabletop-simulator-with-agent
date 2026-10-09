@@ -118,6 +118,9 @@ tts\
 - ⛔ **我点不了**：普通点击 / `-Absolute` / 绿星三种都试过全无效（TTS 不吃合成输入）。**目前永远由玩家点。**
   📌 **本节是这条判定的唯一真源**：`PLAY.md` · `USER_GUIDE.md` · `README*.md` · `BOOTSTRAP.md` **只留指针、不复述理由**（否则解决它的那天要改 9 份文档 19 处）。
   ⇒ 哪天有人真把那个按钮按下去了：改**这一节** ＋ `tts\lua\dsh_global.lua`（要重装存档并请玩家重载）＋ 跑 `tts\tests\` 四个测试；**别处不用动**。
+- ✅ **另有可检测信号（v13-turntoken）**：桥接可造一个**自制回合令牌** —— `{cmd="turn_token"}`（自举一次）建/修它；点一下它就把回合号写进**昵称**（`DSH-TURN <n>`）、存进 `script_state`、并翻转 180°。
+  读取：`{cmd="turn_state"}`（只读，回 `turn`/`nick`）或直接 `diff_index.ps1`（**`nick` 现在参与差分**，报 `NICK (昵称变化)`）。
+  意义：**mod 的横幅仍点不了**，但"玩家结束了回合"从此**在存档里留痕** ⇒ 不再依赖 `front_watch.ps1` 的前台判据（TTS 不在前台时它读不出 `TURN`）。⚠️ 需**重装存档并请玩家重载**才生效（见 `HANDOFF.md` §7.9）。
 - ✅ **自动叫醒**：`front_watch.ps1` 后台把"前台状态 ＋ `TURN=Pn`"写进 `cache\front.txt` → file 哨兵 pattern `TURN=P<我的席位>`
   ⇒ 玩家一点完就自动叫醒我。⚠️ sentinel 的 `command` 探测跑在只读沙箱（`Add-Type` 必崩）⇒ **只能 file 探测 ＋ 外部写文件**。
 - ⚠️ TTS 不在前台时 `front.txt` 只剩 `OTHER/TTSFRONT`（读不出 TURN）⇒ **轮次要靠 STATE ＋ 盘面计数交叉判断**，别只看它。

@@ -43,7 +43,7 @@ try {
     # case 1 - one of every change class: moved, flipped, reparented, state, removed, added
     $r = Run-Diff @('-Before', (Join-Path $fixtures 'before.csv'), '-After', (Join-Path $tmp 'live1.csv'), '-LiveIndex', $stub)
     Check 'diff: exit 0' ($r.code -eq 0) ("exit=$($r.code)")
-    $want = 'added=1 removed=1 moved=1 flipped=1 reparented=1 state=1'
+    $want = 'added=1 removed=1 moved=1 flipped=1 reparented=1 state=1 nick=0'
     Check 'diff: detects all six change classes' ($r.text -match [regex]::Escape($want)) (Summary $r.text)
 
     # case 2 - -Snapshot freezes the live snapshot into the baseline
@@ -54,7 +54,7 @@ try {
 
     # case 3 - a baseline compared against an identical snapshot must be silent
     $r = Run-Diff @('-Before', $base2, '-After', (Join-Path $tmp 'live3.csv'), '-LiveIndex', $stub)
-    $zero = 'added=0 removed=0 moved=0 flipped=0 reparented=0 state=0'
+    $zero = 'added=0 removed=0 moved=0 flipped=0 reparented=0 state=0 nick=0'
     Check 'diff: identical snapshots are quiet' ($r.text -match [regex]::Escape($zero)) (Summary $r.text)
 
     # case 4 - a snapshot carrying no parent/gm/ss values (exactly what live_index.ps1 produces)
@@ -76,6 +76,21 @@ try {
     # case 5 - positive control: when the snapshot DOES carry the columns, no NOTE
     $r = Run-Diff @('-Before', (Join-Path $fixtures 'before.csv'), '-After', (Join-Path $tmp 'live5.csv'), '-LiveIndex', $stub)
     Check 'capability: values present -> no warning' (-not ($r.text -match 'snapshot carries no parent/gm/ss values')) 'warning printed even though parent/gm/ss had values'
+
+    # case 6 - NICKNAME is a first-class signal: the turn token writes "DSH-TURN <n>" into it, and
+    # that channel needs no help from the mod's own turn machine.
+    $nickStub = Join-Path $tmp 'nick_stub.ps1'
+    $nickCsv  = Join-Path $tmp 'nick_after.csv'
+    $nrows = @(Import-Csv -LiteralPath (Join-Path $fixtures 'after.csv'))
+    foreach ($row in $nrows) { if ($row.guid -eq 'g0005') { $row.nick = 'DSH-TURN 1' } }
+    $nrows | Export-Csv -LiteralPath $nickCsv -NoTypeInformation -Encoding UTF8
+    Set-Content -LiteralPath $nickStub -Encoding UTF8 -Value @(
+        "param([string]`$Out = '', [int]`$Limit = 1200)",
+        ("Copy-Item -LiteralPath '{0}' -Destination `$Out -Force" -f $nickCsv)
+    )
+    $r = Run-Diff @('-Before', (Join-Path $fixtures 'before.csv'), '-After', (Join-Path $tmp 'live6.csv'), '-LiveIndex', $nickStub)
+    Check 'nick: a nickname change is reported as nick=1' ($r.text -match 'nick=1') (Summary $r.text)
+    Check 'nick: the section shows the transition' ($r.text -match 'NICK' -and $r.text -match 'DSH-TURN 1') (Summary $r.text)
 }
 finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue

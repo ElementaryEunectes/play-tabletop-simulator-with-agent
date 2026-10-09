@@ -77,7 +77,7 @@ if ($blind.Count -gt 0) {
 }
 Write-Host ("baseline {0} objs   now {1} objs" -f $old.Count, $new.Count)
 
-$added = @(); $removed = @(); $moved = @(); $flipped = @(); $reparented = @(); $stateChanged = @()
+$added = @(); $removed = @(); $moved = @(); $flipped = @(); $reparented = @(); $stateChanged = @(); $nickChanged = @()
 foreach ($g in $new.Keys) {
     if (-not $old.ContainsKey($g)) { $added += $new[$g]; continue }
     $o = $old[$g]; $n = $new[$g]
@@ -101,6 +101,11 @@ foreach ($g in $new.Keys) {
     if ("$($o.gm)" -ne "$($n.gm)" -or "$($o.ss)" -ne "$($n.ss)") {
         $stateChanged += [pscustomobject]@{ guid = $g; name = $n.name; nick = $n.nick; gm = ("'{0}' -> '{1}'" -f $o.gm, $n.gm) }
     }
+    # NICKNAME: the turn token writes its counter here ("DSH-TURN <n>"). It is the one channel that
+    # needs no help from the mod's own turn machine - and it was simply never compared before.
+    if ("$($o.nick)" -ne "$($n.nick)") {
+        $nickChanged += [pscustomobject]@{ guid = $g; name = $n.name; was = $o.nick; now = $n.nick }
+    }
 }
 foreach ($g in $old.Keys) { if (-not $new.ContainsKey($g)) { $removed += $old[$g] } }
 
@@ -122,6 +127,7 @@ Show 'MOVED (移动)'      $moved         @('name', 'nick', 'from', 'to', 'd')
 Show 'FLIPPED (翻面)'    $flipped       @('name', 'nick', 'rotZ', 'note')
 Show 'REPARENTED (换容器)' $reparented  @('name', 'nick', 'from', 'to')
 Show 'STATE (数值/脚本状态)' $stateChanged @('name', 'nick', 'gm')
+Show 'NICK (昵称变化)'     $nickChanged   @('name', 'was', 'now')
 
-Write-Host ("`nSUMMARY  added={0} removed={1} moved={2} flipped={3} reparented={4} state={5}" -f `
-    @($added).Count, @($removed).Count, @($moved).Count, @($flipped).Count, @($reparented).Count, @($stateChanged).Count)
+Write-Host ("`nSUMMARY  added={0} removed={1} moved={2} flipped={3} reparented={4} state={5} nick={6}" -f `
+    @($added).Count, @($removed).Count, @($moved).Count, @($flipped).Count, @($reparented).Count, @($stateChanged).Count, @($nickChanged).Count)

@@ -921,7 +921,7 @@ end
 -- and NOT the `index` field that list reports. Using those was the source of a long
 -- bug in which every write landed on the wrong tab (and once renamed it "Black").
 -- So the position is resolved at call time instead of being hard-coded.
-DSH_VERSION = 'v12-callx'
+DSH_VERSION = 'v13-turntoken'
 DSH_TAB_TITLE = DSH_TAB_TITLE or "DSH"
 
 -- Returns the 0-based position of the dialogue tab, plus the tab itself.
@@ -1484,6 +1484,96 @@ local function draw(m)
     return { ok = true, deck = deckGuid, n = #guids, guids = guids, remaining = left }
 end
 
+-- ============================ TURN TOKEN ============================
+-- A clickable object whose only job is to make "the player ended the turn" VISIBLE to the bridge.
+--
+-- WHY: TTS's own End Turn banner (the "Player N" banner) cannot be driven by synthetic input and
+-- leaves no usable state behind, so the turn had to be inferred from a foreground watcher
+-- (front_watch.ps1) - which reads nothing at all while TTS sits in the background.
+-- The token carries the turn number in its NICKNAME (the bulk index already emits `k`, and
+-- diff_index.ps1 diffs `nick`), keeps it in script_state across saves, and toggles its rotation
+-- so a rotation/position diff sees it too.
+--
+-- NOT spawned automatically on load: a save that gets re-baked must not grow objects merely
+-- because the bridge loaded. Run cmd=turn_token once (bootstrap), then probe cmd=turn_state.
+TURN_TOKEN_NAME = "DSH-TURN"
+
+TURN_TOKEN_LUA = [==[
+dshN = 0
+function onSave() return JSON.encode({ n = dshN }) end
+function onLoad(saved)
+    dshN = 0
+    if saved and saved ~= "" then
+        local ok, t = pcall(function() return JSON.decode(saved) end)
+        if ok and type(t) == "table" and tonumber(t.n) then dshN = tonumber(t.n) end
+    end
+    dshRepaint()
+end
+function dshRepaint()
+    pcall(function() self.setNickname("DSH-TURN " .. tostring(dshN)) end)
+end
+function dshBump()
+    dshN = dshN + 1
+    dshRepaint()
+    local ok, r = pcall(function() return self.getRotation() end)
+    if ok and type(r) == "table" then
+        pcall(function() self.setRotation({ x = r.x or 0, y = (r.y or 0) + 180, z = r.z or 0 }) end)
+    end
+    if type(broadcastToAll) == "function" then
+        pcall(function() broadcastToAll("[DSH] turn " .. tostring(dshN) .. " ended") end)
+    end
+    return dshN
+end
+function onClick(player_color) dshBump() end
+]==]
+
+local function findTurnToken()
+    local all = getObjects()
+    if type(all) ~= "table" then return nil end
+    for _, o in ipairs(all) do
+        local k, nm = "", ""
+        pcall(function() k = tostring(o.getNickname()) end)
+        pcall(function() nm = tostring(o.getName()) end)
+        if k:sub(1, #TURN_TOKEN_NAME) == TURN_TOKEN_NAME or nm == TURN_TOKEN_NAME then return o end
+    end
+    return nil
+end
+
+local function turnToken(m)
+    local o = findTurnToken()
+    local created = false
+    if not o then
+        local ok, res = pcall(function()
+            return spawnObject({ type = "Custom_Tile", position = { x = 0, y = 3, z = 0 } })
+        end)
+        if not ok or res == nil then
+            return { ok = false, cmd = "turn_token", err = "spawn failed: " .. S(res) }
+        end
+        o = res
+        created = true
+    end
+    local guid = o.getGUID()
+    pcall(function() o.setName(TURN_TOKEN_NAME) end)
+    pcall(function() o.setLuaScript(TURN_TOKEN_LUA) end)
+    if created then pcall(function() o.setNickname(TURN_TOKEN_NAME .. " 0") end) end
+    local nick, rot = "", ""
+    pcall(function() nick = tostring(o.getNickname()) end)
+    pcall(function()
+        local r = o.getRotation()
+        rot = string.format("%d,%d,%d", r.x or 0, r.y or 0, r.z or 0)
+    end)
+    return { ok = true, cmd = "turn_token", guid = guid, created = tostring(created), nick = nick, rot = rot }
+end
+
+local function turnState(m)
+    local o = findTurnToken()
+    if not o then return { ok = false, cmd = "turn_state", err = "no turn token yet: run cmd=turn_token once" } end
+    local nick, ss = "", ""
+    pcall(function() nick = tostring(o.getNickname()) end)
+    pcall(function() ss = tostring(o.script_state or "") end)
+    local n = nick:match("(%d+)%s*$") or "?"
+    return { ok = true, cmd = "turn_state", guid = o.getGUID(), nick = nick, turn = n, state = ss }
+end
 local handlers = {
     ping = function(m) return ping() end,
     -- call a function that lives in an OBJECT's own script.
@@ -1546,6 +1636,8 @@ local handlers = {
     getval = function(m) return getval(m.guid) end,
     index = function(m) return index(m.limit) end,
     run = function(m) return run(m, m.code) end,
+    turn_token = function(m) return turnToken(m) end,
+    turn_state = function(m) return turnState(m) end,
 }
 
 -- ============================ THE SILENT-REPLY BUG ============================
