@@ -38,6 +38,25 @@
 4. 本项目给两个注入文件都设了上限并由测试强制：`AGENTS.md` ≤ 3,840 B · `AGENTS.local.md` ≤ 4,096 B。装完跑 `tts\doctor.ps1` 看实测值。
 5. 跨项目那份的**可版本化源**是模板文件（`---` 以下正文＝要拷过去的内容）；本项目把平台层放在 harness home 的 `platform\` 目录（不在仓库里），clone 下来的人没有它也不影响使用。
 
+### 变体：**保留全局纪律，但按项目屏蔽**（推荐给"多项目共用一份纪律"的人）
+
+给**该项目**一个专属 profile，在其 `cordis.patch.yml` 里把指令插件的 `dshHome` 指向一个**空目录**：
+
+```yaml
+# ~/.dsh/profiles/<项目名>/cordis.patch.yml
+- id: agent-instructions
+  config:
+    maxBytes: 65536                      # README 的必填项，显式写全，避免"覆盖式 config"丢失
+    dshHome: <一个没有 AGENTS.md 的空目录>   # 全局指令文件的路径 = dshHome + 常量名 AGENTS.md
+```
+
+启动：`dsh <项目名> web`（首个位置参数即 `--profile`）。
+
+- ✅ **只有这个 profile** 的全局槽为空；默认 profile（`web`）照旧注入 ⇒ "全局纪律保留 ＋ 子项目可选屏蔽"。
+- ✅ **不用搬 harness 家**：会话与凭据仍在 `~\.dsh`；也不用 junction（避开坑 16）。
+- 🔎 原理：源码 `const userGlobal = join(config.dshHome, USER_GLOBAL_FILE)`，README 配置表亦写 `dshHome` = *"Directory containing the user-global `AGENTS.md`"*。
+- ⚠️ profile 目录要带 `package.json`（`dsh.profile.bundles`）与 `cordis.yml`；最省事的做法是**照抄默认 profile 的那几个文件**，只多这一条补丁。
+
 ## 5. ⛔ 两个别做（都有实测代价）
 
 - **别把 `DSH_HOME` 指向"链接拼出来的目录"**（junction / symlink 农场）：注入目标能达成，但 Windows 沙箱启动子进程时会崩 —— `0xc0000142`（DLL 初始化失败），且抓取输出会**静默变空**（`$LASTEXITCODE` 也为空 ⇒ 测试全哑，看起来像"跑过了"）。用**真目录**。
