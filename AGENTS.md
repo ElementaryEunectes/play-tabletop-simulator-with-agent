@@ -1,6 +1,6 @@
-# AGENTS.md —— TTS 代玩项目宪章（本仓库根 = `$DSH_HOME`）
+# AGENTS.md —— TTS 代玩项目宪章（**本仓库**）
 
-> 只讲**在这个仓库里怎么干活**；跨项目纪律在 harness home（本项目 profile 下不注入）。
+> 只讲**在这个仓库里怎么干活**；跨项目纪律在 `$DSH_HOME\AGENTS.md`（平台宪章，本机**照旧注入**；发布/开源时可用 `dsh tts-agent web` 屏蔽 ⇒ `tts\docs\INJECTION.md` §4 变体）。
 > ⛔ **具体某一款游戏的东西**（比分/待办/规则/卡面/卡库/牌）**不进仓库** ⇒ 放 `local\games\<游戏>\`（唯一真源在那里）。
 > 📌 接手先读 `HANDOFF.md`（现状 · 待办）· **动手改东西前读 `tts\docs\MAINTENANCE.md`**（本仓库要点；坑在 harness home 的 `platform\`）。
 
@@ -18,8 +18,8 @@
 powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 ```
 
-它只做一件必要的事：**把 cwd 切到本仓库**（否则项目链不注入本文件）。`$DSH_HOME` **不用动** —— 全局指令槽本来就是空的 ⇒ **任何启动方式都零注入**（改法见 `<harness home>\platform\MAINTENANCE.md`）。
-验证：`tts\doctor.ps1`（注入 = 项目 ＋ overlay，通用槽 0）· `play.ps1 status` 回 `bridge=v12-*`。
+它只做一件必要的事：**把 cwd 切到本仓库**（否则项目链不注入本文件）；`$DSH_HOME` **不用动**。
+验证：`tts\doctor.ps1`（应列出 **平台宪章 ＋ 项目 ＋ overlay**）· `play.ps1 status` 能通且 `objs` 与桌面相符。
 👤 **给人用**：让他双击 `start.cmd`（⛔ `.ps1` 会进记事本）。
 
 ## 每回合读什么（**别整份读手册**）
