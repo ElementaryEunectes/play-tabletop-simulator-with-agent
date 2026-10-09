@@ -11,6 +11,14 @@ REM
 REM ASCII ONLY on purpose: cmd.exe reads .cmd/.bat in the OEM code page, so Chinese text here
 REM would print as mojibake. The friendly/prose part is printed by start-agent.ps1 (UTF-8 + BOM).
 REM
+REM WHICH PROFILE THIS PROJECT BOOTS WITH
+REM   That is ONE line in start-agent.ps1: $ProjectDshProfile ('' = the harness default, `web`).
+REM   Pass -DshProfile <name> here to override it for one run, e.g.
+REM       start.cmd -DshProfile tts-agent
+REM   This file forwards its arguments (%*), so the switch reaches the script unchanged.
+REM   What a profile buys you (emptying the global instruction slot for this project only) and how
+REM   to create/install one: tts\docs\INJECTION.md, section 4 plan A'.
+REM
 REM %~dp0 is this file's own folder (handles spaces and non-ASCII paths). pause keeps the window
 REM open so an error is readable instead of flashing past.
 setlocal

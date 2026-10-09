@@ -36,6 +36,11 @@ param(
                                       # fails to start child processes through it (0xc0000142).
     [string]$ProfileName = '',        # profile folder name; '' = this repository's folder name
     [string]$Shared = '',             # '' = <user profile>\.dsh   (the home holding the real state)
+    [string]$DshProfile = '',         # ⭐ WHICH PROFILE THIS PROJECT BOOTS WITH - override on the command
+                                      #    line; the project's own default is the single line
+                                      #    $ProjectDshProfile below. '' = harness default (`web`).
+                                      #    Mechanism + how to create/install a profile:
+                                      #    tts\docs\INJECTION.md, section "A'".
     [switch]$RepoAsHome,
     [switch]$PlainHome                # explicit no-op form of the default
 )
@@ -43,12 +48,27 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -LiteralPath $root
 
+# ---- WHICH PROFILE: the one line that decides it (2026-10-09) -------------------------------
+# ⭐ CHANGE THIS LINE to boot this project with its own profile; '' = the harness default (`web`).
+#    A profile only changes what THAT profile composes: this project's profile empties the
+#    "user global" instruction slot for itself, while every other project keeps the global
+#    charter. That is the ONLY way to suppress it per project - there is no "ignore the global
+#    file" switch (see tts\docs\INJECTION.md section 2 and section 4, plan A').
+#    Creating/installing one is two commands; the launcher checks both and tells you.
+$ProjectDshProfile = ''
+if ($DshProfile -eq '') { $DshProfile = $ProjectDshProfile }
+# An explicit -DshCommand still wins; otherwise the profile name builds the command.
+if ($DshProfile -ne '' -and -not $PSBoundParameters.ContainsKey('DshCommand')) {
+    $DshCommand = ("dsh --profile {0}" -f $DshProfile)
+}
+
 if ($RepoAsHome) {
     $env:DSH_HOME = $root
     Write-Host ("DSH_HOME = {0}   (repo-as-home: global slot deduped, harness state now lives in the repo)" -f $env:DSH_HOME)
 } elseif (-not $Profile) {
-    Write-Host ("DSH_HOME = {0}   (untouched: default - no global slot anywhere, because" -f $env:DSH_HOME)
-    Write-Host '                        ~\.dsh\AGENTS.md is disabled; see platform\README.md)'
+    Write-Host ("DSH_HOME = {0}   (untouched: the harness home as the environment had it)" -f $env:DSH_HOME)
+    Write-Host '                        its AGENTS.md IS injected; to empty that slot for THIS project,'
+    Write-Host '                        set $ProjectDshProfile above (tts\docs\INJECTION.md, section 4 plan A'')'
 } else {
     $dshHome = ''
     try {
@@ -77,6 +97,23 @@ if ($RepoAsHome) {
 }
 
 Write-Host ("project  = {0}" -f $root)
+
+# ---- the profile must exist AND be installed, or the boot silently loses bundles -------------
+if ($DshProfile -ne '') {
+    # NOT $home: PowerShell variable names are case-insensitive and $HOME is read-only.
+    $profilesHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path ([Environment]::GetFolderPath('UserProfile')) '.dsh' }
+    $pdir = Join-Path $profilesHome ("profiles\{0}" -f $DshProfile)
+    Write-Host ("profile  = {0}   ({1})" -f $DshProfile, $pdir)
+    if (-not (Test-Path -LiteralPath $pdir)) {
+        Write-Host ("WARN profile folder does not exist - create it: dsh {0} --from-default-profile web" -f $DshProfile) -ForegroundColor Yellow
+    } elseif (-not (Test-Path -LiteralPath (Join-Path $pdir 'node_modules'))) {
+        # Verified 2026-10-09: without this, `dsh --profile <name> --dump-config` exits 1 with
+        # "cannot resolve profile bundle ..." - the boot loses plugins instead of failing loudly.
+        Write-Host ("WARN profile has no node_modules - install it: dsh plugin --profile {0} install" -f $DshProfile) -ForegroundColor Yellow
+    }
+} else {
+    Write-Host 'profile  = (default: web - the global charter IS injected)'
+}
 if (-not (Test-Path (Join-Path $root 'tts\config.ps1'))) {
     Write-Host 'WARN: tts\config.ps1 not found under this project root.' -ForegroundColor Yellow
 }

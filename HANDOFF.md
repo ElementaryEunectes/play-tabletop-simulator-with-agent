@@ -52,7 +52,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 
 ## §8 每请求注入（摘要；机制/预算/安装 ⇒ `tts\docs\INJECTION.md`）
 
-平台宪章 **3,950** ＋ 项目 `AGENTS.md` **3,518** ＋ 本机 `AGENTS.local.md` **2,299** ＝ **≈9.5 KB/请求**；发布时 `dsh tts-agent web`（该 profile 的全局槽为空）⇒ **≈5.7 KB**。
+平台宪章 **3,950** ＋ 项目 `AGENTS.md` **3,518** ＋ 本机 `AGENTS.local.md` **2,299** ＝ **≈9.5 KB/请求**；发布时**不用手打**：`start-agent.ps1` 的一行 `$ProjectDshProfile`（或 `-DshProfile tts-agent`，即 `dsh --profile tts-agent`；⚠️ **不是** `dsh tts-agent web`）⇒ **≈5.7 KB**。机制/目录结构/装法 ⇒ **`tts\docs\INJECTION.md` §4 方案 A′**。
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
