@@ -1,0 +1,5 @@
+{
+  "_purpose": "alias table fixture: the player's word -> card names in the fake card library",
+  "fire": ["火球术"],
+  "ice": ["冰锥术", "寒冰"]
+}

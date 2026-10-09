@@ -1,0 +1,53 @@
+{
+  "game": "fake",
+  "_schema": "see tts\\docs\\BOOTSTRAP.md, section objects.json",
+  "seats": {
+    "name": "HandTrigger",
+    "zBelow": -50,
+    "labels": ["P4", "P3", "P2", "P1"],
+    "player": "P1",
+    "note": "> 左→右 = P4/P3/P2/P1（假数据）。"
+  },
+  "sections": [
+    {
+      "title": "## 金币计数器",
+      "kind": "seatRow",
+      "where": { "name": "Custom_Token", "nick": "金币" },
+      "sort": "x",
+      "columns": ["guid", "pos", "scale"],
+      "note": "> 每人一枚（假数据）。"
+    },
+    {
+      "title": "## 资源计数器",
+      "kind": "seatGrid",
+      "where": { "name": "Custom_Tile" },
+      "byHash": { "AAAA1111": "矿石", "BBBB2222": "木材" },
+      "note": "> 按图 hash 认；每人一套（假数据）。"
+    },
+    {
+      "title": "## 事件牌堆",
+      "kind": "deckByHash",
+      "byHash": { "CCCC3333": "事件牌（2 张）" },
+      "note": "> 抽牌顺序 = 存档里该 Deck 的 ContainedObjects 顺序。"
+    },
+    {
+      "title": "## 分数标记（玩家标记）",
+      "kind": "nearRef",
+      "where": { "name": "BlockSquare", "nick": "玩家标记", "topLevel": true },
+      "ref": { "name": "Custom_Board", "minScale": 2 },
+      "within": 5,
+      "sort": "y",
+      "stepPerUnit": 1.5,
+      "stepAxis": "x",
+      "note": "> 每 +1 分 = 世界 x + 1.5（假数据）。"
+    },
+    {
+      "title": "## 具名容器",
+      "kind": "rows",
+      "where": { "nameRegex": "Bag", "nickNonEmpty": true },
+      "columns": ["guid", "nick", "pos"],
+      "sort": "x",
+      "note": "> 按 nick 认（假数据）。"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "_purpose": "the smallest useful objects.json: seats only, no game-specific sections",
+  "seats": {
+    "name": "HandTrigger",
+    "zBelow": -50,
+    "labels": ["P4", "P3", "P2", "P1"],
+    "player": "P1"
+  }
+}

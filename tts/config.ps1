@@ -72,6 +72,8 @@ Remove-Variable DshGame      -ErrorAction SilentlyContinue
 Remove-Variable DshGameDir   -ErrorAction SilentlyContinue
 Remove-Variable DshGameRules -ErrorAction SilentlyContinue
 Remove-Variable DshGameCards -ErrorAction SilentlyContinue
+Remove-Variable DshGameAlias -ErrorAction SilentlyContinue
+Remove-Variable DshGameObjects -ErrorAction SilentlyContinue
 $DshLocalGames = Join-Path $WorkspaceRoot 'local\games'
 $DshGame = ''
 $CurrentPointer = Join-Path $DshLocalGames '_current.md'
@@ -83,3 +85,10 @@ if (Test-Path -LiteralPath $CurrentPointer) {
 $DshGameDir   = if ($DshGame -ne '') { Join-Path $DshLocalGames $DshGame } else { '' }
 $DshGameRules = if ($DshGame -ne '') { Join-Path $DshCache ($DshGame + '_rules.json') } else { '' }
 $DshGameCards = if ($DshGame -ne '') { Join-Path $DshCache ($DshGame + '_cards.md') } else { '' }
+# Two more per-game files, added 2026-10-09 so that "which game" is decided in exactly ONE place:
+#   *_alias.json  = what the player says ("hex", "bow") -> which card name that means. GAME DATA,
+#                   hand-written, so it sits with the other generated per-game cache files.
+#   objects.json  = what to recognise on the table (image hashes / nicknames / labels / seat rule).
+#                   GAME DATA too, but it belongs to the game's own folder: local\games\<game>\.
+$DshGameAlias   = if ($DshGame -ne '') { Join-Path $DshCache ($DshGame + '_alias.json') } else { '' }
+$DshGameObjects = if ($DshGameDir -ne '') { Join-Path $DshGameDir 'objects.json' } else { '' }

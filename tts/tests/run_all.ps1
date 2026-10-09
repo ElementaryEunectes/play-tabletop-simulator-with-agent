@@ -33,6 +33,7 @@ $gates = @(
     @{ name = 'check_ps1 (BOM + parser)'; script = 'tts\check_ps1.ps1';               marker = 'parse errors'; args = @('-Quiet') },
     @{ name = 'param backfill';           script = 'tts\tests\test_param_backfill.ps1'; marker = 'all param defaults of' },
     @{ name = 'diff chain';               script = 'tts\tests\test_diff_index.ps1';    marker = 'all cases passed' },
+    @{ name = 'game data (files)';        script = 'tts\tests\test_game_data.ps1';    marker = 'all cases passed' },
     @{ name = 'instruction hygiene';      script = 'tts\tests\test_agents_hygiene.ps1'; marker = 'all checks passed' },
     @{ name = 'doc references';           script = 'tts\tests\test_doc_refs.ps1';      marker = 'all shipped path references resolve' }
 )
