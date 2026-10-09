@@ -27,17 +27,21 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
    少一个 `end`、尾巴多一个 ⇒ **总数平衡 ⇒ 照样编译、命令照样注册**，只是引用的名字从没被赋值。
    ⇒ 根因/证据链/为什么 7 条门禁全绿也看不见它 ⇒ **`tts\docs\VALIDATION.md` F8**；工具 ⇒ `tts\docs\MAINTENANCE.md` §1a。
    ✅ 仓库侧已修（`tts\lua\dsh_global.lua`）＋ `verify_f8.js` 阴性对照通过 ＋ **门禁新增"整块加载"一步**。
-   📊 **活体验收（2026-10-09 23:11 载入 `TS_Save_11.json`，3/4 过）**：
+   📊 **活体验收（载入 `TS_Save_11.json` 后逐条真跑）**：
       ✅ `ping` = `v15-tags-snap-hand`（重烤生效）· ✅ `players` ⇒ `ok count=2` ＋ 每座位一行 ·
       ✅ `take` 缺卡 ⇒ `no container with guid ...`（**不再 nil 崩溃**）· ✅ `destroy` 幽灵 ⇒ `no object with guid ...`
-      ⛔ `spawn` ⇒ `attempt to concatenate a nil value`（**又抓出两个缺陷**，均已修、见下）
-   🐞 **活体又抓出两个缺陷**（都是"命令本身通不了"，与拼接无关）：① `spawn:type` 把 **Lua 表**塞给了
-      `spawnObjectJSON`（文档：`spawnObject({type=...})` 与 `spawnObjectJSON(jsonString)` **是两个调用**）⇒ 它回 nil、却报成"需要 TTS v13.2+"；
-      ② **`S(v)` 对 nil 返回 nil** ⇒ 所有 `"..." .. S(x)` 在**要报错的那种值**上当场崩 —— 报错路径自己死了比没有报错路径更糟。
-      ⇒ 都已修 ＋ 离线补上 `spawn by type` 用例（阴性对照已验）⇒ `VALIDATION.md` F7。
+      ✅ **`spawn:copy`** ⇒ `ok mode=copy guid=...`（`clone`，主用途可用）· ✅ `turn_token` `created=true→false`（幂等）
+      ⛔ **`spawn:type`（通用造物）未解**：调 `spawnObject` 会**卡死桥接线程**、随后被 TTS **回滚**（连造物一起撤销）
+   🐞 **活体抓出的缺陷（都已修）**：① `spawn:type` 把 **Lua 表**塞给 `spawnObjectJSON`（文档：`spawnObject({type=…})`
+      与 `spawnObjectJSON(jsonString)` 是**两个调用**）⇒ 回 nil 却报成"需要 TTS v13.2+"；② **`S(v)` 对 nil 返回 nil**
+      ⇒ 所有 `"..." .. S(x)` 在**要报错的那种值**上当场崩（报错路径自己死了比没有报错路径更糟）。
+   ⛔ **`spawn:type` 已决定停止追查**（试了三种形状都不成立；`spawnObject` 只造内置件、造不出 mod 原件，主用途由 `spawn:copy` 覆盖）
+      ⇒ 现象 · 三次尝试 · 为什么值得停止 ⇒ **`tts\docs\VALIDATION.md` F10**（按"未解＋未验证"如实记账，别重走）。
    ⚠️ **那次 `spawn` 探测把 TTS 打挂了**（探测前 ping 正常，之后 API 直接不可达、进程还占着 `Player.log`）
-      ⇒ **`spawn` 以后一条一条探**，别连着发。
-   ▶ **下一步**：重启 TTS ⇒ 载入 **`TS_Save_11.json`**（已含三处修复：拼接 · `S(nil)` · `spawnObject`）⇒ 验 `spawn` ＋ **§7.9 回合令牌**。
+      ⇒ **以后一条一条探**，别连着发。
+   ▶ **下一步（按价值排序）**：① **§7.9 回合令牌收尾**（`turn_token` 已幂等过；缺"玩家点一下 ⇒ `turn_state` 0→1 ⇒ 差分出 `NICK` 段"）
+      ——⚠️ 令牌**不在当前存档里**（它是在更早会话造的，早于存档底稿）⇒ 先跑 `turn_token` 再造一次，坐标 = 桌面正中 `0,3,0`；
+      ② 游戏侧 5 条规则冲突（`local\games\<游戏>\STATE.md`）。
    📌 已顺带修好并活体验过的：`container:<guid>` ⇒ 列出容器内物件的 `guid|名称|昵称|数量|牌面文本(截60字)`。
    ⚠️ 根因是 **`getObjects()` 返回纯 Lua 表、没有方法**（字段直接读 `x.guid/x.name/x.description`）。
    ⇒ 这也是**卡库的来源**（`description` 就是整张牌面），不必再手抄。

@@ -114,11 +114,13 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 
 **F7 · 桥接原语的"活体"部分**（`🟡` 部分完成，2026-10-09）
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ 每条都得**重烤后真跑一次**。
-**已跑（载入 `TS_Save_11.json`，23:11）**：`ping` 版本对 · `players` 回 `ok count=2` ＋ 每座位一行 ·
-`take` 缺卡回 `no container with guid ...` · `destroy` 幽灵回 `no object with guid ...` —— **四条里三条过，且都不再是 nil 崩溃**。
-**仍缺**：`spawn` 的三条形态（`type` · `copy` · `json`）要各真跑一次；本次 `spawn` 的**第一次探测把 TTS 打挂了**
-（探测前 `ping` 正常，之后 API 不可达、进程仍占着 `Player.log`）⇒ **以后一条一条探**。
-⚠️ **两个新缺陷就是这次活体抓出来的**（离线门禁看不见，因为没有任何用例走 `type` 这条路、桩也从不回 nil）：
+**已跑（载入 `TS_Save_11.json` 后逐条真跑）**：`ping` 版本对 · `players` 回 `ok count=2` ＋ 每座位一行 ·
+`take` 缺卡回 `no container with guid ...` · `destroy` 幽灵回 `no object with guid ...` ·
+**`spawn:copy` 回 `ok mode=copy guid=...`（objs +1）** · `turn_token` `created=true→false`（幂等）。
+⇒ **`spawn:copy` 覆盖"造物"这个硬前提的主用途**（复制桌上现成棋子，连卡面/Lua/状态一起）。
+⛔ **`spawn:type`（通用造物）未解，已停止追查** ⇒ 见下 **F10**。`spawn:json` 同样走 `spawnObjectJSON`，**未单独验**。
+⚠️ 本次 `spawn` 的**第一次探测把 TTS 打挂了**（探测前 `ping` 正常，之后 API 不可达、进程仍占着 `Player.log`）⇒ **以后一条一条探**。
+⚠️ **两个缺陷就是这次活体抓出来的**（离线门禁看不见，因为没有任何用例走 `type` 这条路、桩也从不回 nil）：
 1. **`spawn:type` 把 Lua 表塞给了 `spawnObjectJSON`**。文档（`api.tabletopsimulator.com/base`）写得很清楚：
    `spawnObject({ type = ..., position = ... })` 收**表**，`spawnObjectJSON(jsonString)` 收 **JSON 字符串**（承载完整对象数据）。
    表给后者 ⇒ 回 nil，而报错却写成"needs TTS v13.2+" ⇒ **把 API 用错说成了版本不够**。
@@ -126,7 +128,23 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 2. **`S(v)` 对 nil 返回 nil** ⇒ 所有 `"..." .. S(x)` 在**正好要报错的那种值**上当场崩。活体原话：
    `spawn -> handler error: Global:(5704,8-122): attempt to concatenate a nil value`。
    ⇒ **报错路径自己死了，比没有报错路径更糟**（错误信息完全丢失）。现在 `S()` **永远返回字符串**（67 处调用，没有一处依赖 nil）。
-⇒ 离线补了 `spawn by type` 与"不可用 json"两条用例（31 条）；**阴性对照已验**：把表塞回 `spawnObjectJSON` ⇒ `spawn by type` 立刻红。
+⇒ 离线补了 `spawn` 各形态的用例；**阴性对照已验**：把表塞回 `spawnObjectJSON` ⇒ `spawn by type` 立刻红。
+
+**F10 · `spawn:type` 在活体上会卡死桥接线程并被 TTS 回滚 —— `⛔ 未解`，2026-10-09 决定停止追查**
+**现象**：`{cmd="spawn", type="Block", x=3,y=2,z=3}` ⇒ 调用方 `ERR no reply in 25s (skipped 1 broadcasts)`；
+事后 `objects` **不变**、`spawn_last`/`spawn_trace` 的后续埋点**永不写入**；桥接本身**仍然健康**（紧接着 `ping`/`players`/`diag` 都正常）。
+**证据（活体埋点，一次读清）**：处理函数**入口**写了 `__spawn_trace = "enter ... type=Block"`，
+而**紧跟在 `spawnObject(...)` 之后**的那句埋点**从未出现** ⇒ **卡的是这次调用本身**，
+不是"回执被吞"（没有回执可吞：处理没执行完）。TTS 随后把这次脚本改动**回滚** ⇒ **连"物件造出来了"都不能算**
+（早期曾观察到 `objs 115→116`，那是回滚**之前**的瞬时读数）。
+**三次尝试（都不成立，留证以免重走）**：
+1. **不再触碰新造物件**（去掉 `getLuaScript`/`call("onLoad")`／`type` 路径不再 `placeFace`）⇒ 仍静默；
+2. **改用 `callback_function`**（不等返回值，官方文档给的取对象方式）⇒ **仍静默**，说明卡的是**调用**而非"等返回值"；
+3. **拆成两条消息**（`spawn:type` 只入队并**立刻回执**，`spawn_step` 在下一条消息里才造物）⇒ **未验证即停止**。
+   ⇒ 该路已实现、门禁有用例（`spawn_step` 的队列/回空/回调 guid），但**活体未验**：**按未验证对待**。
+**为什么不值得再追**：`spawnObject` 只造 **TTS 内置件**，造不出 mod 的原件（那些是 Custom 对象，走 `clone`／`spawnObjectJSON`）；
+本局真正需要的是"复制桌上现成棋子" ⇒ 由 **`spawn:copy` 覆盖**（已活体验过）。⇒ 记录在此，等真的需要通用造物时再捡起来。
+🔎 **留着的诊断面**：`spawn_trace` / `spawn_last` 经 `{cmd="diag"}` 可读（入口/入队/回调 guid），`spawn_step` 命令仍在桥上。
 
 **F8 · `players` / `take` / `spawn` / `destroy` 在活体上不可达 —— ✅ 已定案并修复（2026-10-09）**
 **根因一句话**：v14 那段原语**被拼接进了 `setCount()` 的中间** —— 插在它最后一条语句 `out.state = ...`
