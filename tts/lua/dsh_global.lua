@@ -859,6 +859,10 @@ local function diag()
         loads = DSH_LOADS or -1,
         objects = #objs(),
         at = os.date("%H:%M:%S"),
+        -- set by the spawn handler on its way to the reply; see the marker in DSH_spawn
+        spawn_trace = tostring(__spawn_trace),
+        -- guid of the last asynchronous spawn, filled in by spawnObject's callback_function
+        spawn_last = tostring(__spawn_last),
     }
 end
 
@@ -1664,6 +1668,13 @@ end
 -- Declared as `local spawn = function`, NOT `local function spawn`, so the Lua globals
 -- spawnObject / spawnObjectJSON this body calls are never shadowed.
 DSH_spawn = function(m)
+    -- DIAGNOSTIC (2026-10-09): entry marker. `spawn:type` answers "no reply in 25s" and diag shows
+    -- __spawn_trace still nil with the object count unchanged, so the question is now "does the body
+    -- run at all, and if so where does it stop". Traces at entry, after the call and before the
+    -- return answer that in ONE live run: ask for cmd=diag and read spawn_trace. Remove all three
+    -- once the reply lands.
+    __spawn_trace = "enter " .. os.date("%H:%M:%S") .. " type=" .. tostring(m.type) ..
+                    " json=" .. tostring(m.json) .. " copy=" .. tostring(m.copyguid)
     local x = tonumber(m.x) or 0
     local y = tonumber(m.y); if y == nil then y = 2 end
     local z = tonumber(m.z) or 0
@@ -1705,7 +1716,30 @@ DSH_spawn = function(m)
             if t == "" then return { ok = false, cmd = "spawn", err = "json has neither Name nor type" } end
         end
         mode = "type"
-        ok, res = pcall(function() return spawnObject({ type = t, position = { x = x, y = y, z = z } }) end)
+        -- ASYNC ON PURPOSE (2026-10-09, measured live): calling spawnObject and waiting for its
+        -- return HANGS the bridge's own thread. The trace proved it - entry marker "enter ... type=Block"
+        -- was recorded, the marker after this call never was, the caller got "no reply in 25s", and the
+        -- object count was back to 115 afterwards because TTS rewound the scripted change. The
+        -- documented way to get the spawned object is callback_function, so ask for it and answer the
+        -- caller immediately with "pending"; cmd=diag reports the guid once TTS has built the piece.
+        ok = true
+        res = nil
+        __spawn_last = nil
+        pcall(function()
+            return spawnObject({
+                type = t,
+                position = { x = x, y = y, z = z },
+                callback_function = function(o)
+                    local cg = nil
+                    pcall(function() cg = o.getGUID() end)
+                    __spawn_last = tostring(cg)
+                end,
+            })
+        end)
+        __spawn_trace = __spawn_trace .. " | called type=" .. tostring(t)
+        -- answer NOW, before TTS has built the piece: cmd=diag reports __spawn_last once it exists
+        return { ok = true, cmd = "spawn", mode = "type", pending = true, type = t,
+                 at = tostring(x) .. "," .. tostring(y) .. "," .. tostring(z) }
     end
     if not ok or res == nil then
         return { ok = false, cmd = "spawn", mode = mode, err = "spawn returned nothing: " .. S(res) }
@@ -1725,6 +1759,12 @@ DSH_spawn = function(m)
     pcall(function() g = res.getGUID() end)
     pcall(function() nm = tostring(res.getName()) end)
     if mode == "copy" then placeFace(res, x, y, z, faceup) end
+    -- DIAGNOSTIC MARKER (2026-10-09): `spawn:type` creates the piece (objects +1) and yet the caller
+    -- gets "no reply in 25s", while `spawn:copy` answers normally. This records that the handler got
+    -- all the way to the reply, so the next live run can tell "finished, reply lost" apart from
+    -- "died mid-way": ask for cmd=diag and look at __spawn_trace. ⛔ NOT self.script_state - there is
+    -- no `self` in the Global script, the assignment would just be swallowed by the pcall.
+    __spawn_trace = __spawn_trace .. " | reached reply guid=" .. tostring(g)
     return { ok = true, cmd = "spawn", mode = mode, guid = g, name = nm }
 end
 

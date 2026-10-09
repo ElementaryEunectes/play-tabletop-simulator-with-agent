@@ -1,0 +1,6 @@
+{
+  "error": "[Global] executeScript:(1,82): ')' expected (to close '(' at line 1) near '<eof>'",
+  "guid": "-1",
+  "errorMessagePrefix": "[Global] Lua Error <executeScript>: [Global] executeScript:(1,82): ')' expected (to close '(' at line 1) near '<eof>'",
+  "messageID": 3
+}
