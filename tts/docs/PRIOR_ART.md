@@ -1,6 +1,6 @@
 # 先行研究：让 AI 在 Tabletop Simulator 里打桌游
 
-> **什么时候读我**：想查先例、或怀疑"这件事别人做过没有"的时候。**本文冻结 —— 别重搜、别重写**（可搬/不可搬结论都在 §7.4）。
+> **什么时候读我**：想查先例、或怀疑"这件事别人做过没有"的时候。**本文冻结 —— 别重搜、别重写**（可搬/不可搬结论都在 §7.4 与 §8.3）。
 
 **调研日期**：2026-10-04
 **调研动机**：本项目的架构（外部进程 + 游戏内 Lua RPC 层 + 代打三个座位）是否是正路？
@@ -250,3 +250,46 @@ Shino 的一手抱怨 + `TabletopSimulatorCompanion` 专门做 RAG 索引 + 玩�
 - 那篇的增益核心是 **SFT**（planner 造约 1 万条轨迹微调）＋ best-of-n 采样 ⇒ 我们**没有标注轨迹也没有仿真器**，只搬训练无关的那半。
 - `haive-games` 的 deception detection / trust modeling 是**绑定它自己 `GameStateManager` 的声明式外壳**（大量 `pass` 桩 ＋ personality 超参）；
   我们的真源是 **TTS state diff ＋ notebook**，接进来只会得到**与桌面不一致的镜像状态** ⇒ **不装**（仅作命名参考）。
+---
+
+## 8. 指令注入（`AGENTS.md` 等）的生态做法（**2026-10-09 追加调研**）
+
+> 动机：本项目为"**通用 ≠ 本局**"与"**全局槽污染**"做了一整套取舍（槽位定义见 `tts\docs\INJECTION.md`）。
+> 这里把生态做法核对一遍，**避免重复研究**；结论见 **§8.3**。
+
+### 8.1 五类做法（每类都有真实实现）
+
+| 家族 | 做法 | 代表实现 | 对"污染"的效果 |
+|---|---|---|---|
+| ① 标准只管项目内 | 仓库根 ＋ 可嵌套，**离被改文件最近的赢**；规范里**没有**用户级文件 | [agents.md](https://agents.md/)（Linux Foundation 托管，6 万+ 项目） | 说明**"全局槽"是各工具的私有扩展** ⇒ 不存在跨工具的统一开关 |
+| ② **按路径/文件作用域** ⭐ | `globs:`（相关文件进上下文才附加）· 嵌套 `AGENTS.md`（子目录更具体者优先）· 只在 `@`-提及时才用 | [Cursor 规则文档](https://cursor.com/docs/rules.md)：`alwaysApply` / `globs` / `description` / 手动 —— 四种生效方式 | **生态里最通用**：用"位置 + 匹配"表达作用域，而不是一个全局文件覆盖全世界 |
+| ③ 显式清单取代隐式全局 | 配置里**点名**要读哪些文件（支持 glob、甚至远程 URL） | [OpenCode `instructions`](https://opencode.ai/docs/rules/) · Aider `read:` · Gemini CLI `context.fileName` | 不列就不注入 ✓ |
+| ④ 给全局槽开关 | 环境变量/配置精确关掉某一类 | OpenCode `OPENCODE_DISABLE_CLAUDE_CODE_PROMPT=1` / `OPENCODE_DISABLE_CLAUDE_CODE=1` / [`instructionMode` PR](https://github.com/anomalyco/opencode/pull/33499)；Claude Agent SDK 可"不加载用户/项目/本地配置"；`CLAUDE_CONFIG_DIR` 可搬走配置目录 | 能关，但**都是工具私有**；**DSH 没有这个开关** |
+| ⑤ 一份源 → 生成到各项目 | 版本化规则源编译成各工具的规则文件 | [rulesync](https://github.com/dyoshikawa/rulesync/blob/main/skills/rulesync/cli-commands.md) | 跨项目一致性由**构建**保证 ⇒ 运行时的全局槽可以空着 |
+
+**两类"组织/工具级"补充机制**（不是解污染，但要知道它们存在）：
+
+- **按仓库开关"全局东西"的第三方层**：[`harness-scope`](https://github.com/shimo4228/harness-scope)（Claude Code mod）——"按仓库用命名 profile 开关全局 skills / agents / rules / tools；在写作仓库里一行关掉 101 个 skill 中的 94 个"⇒ 这正是"**按项目关掉全局污染**"的现成实现。
+- **组织强制**：Cursor 的 **Team Rules** 可 **Enforce**（成员无法关闭），优先级 **Team → Project → User**。⇒ 顺带确认一件事：**项目级本来就压过用户级**，"污染"是可被覆盖的；真正危险的是**把项目专属知识写进用户级**（无处覆盖，且每个项目都付费注入）。
+
+### 8.2 与本项目的对照
+
+| 维度 | 生态做法 | 本项目（2026-10-09 现状） |
+|---|---|---|
+| 全局槽 | 多数工具**保留 ＋ 给开关** | ⭐ **机器上不放**（方案 A）⇒ 任何启动方式零注入，不依赖任何工具的开关 |
+| 作用域 | **glob / 路径 / 嵌套** | 按**文档频率**分层（`PLAY.md` 每回合 · `MAINTENANCE.md` 改代码前 · `INJECTION.md` 装机器时）· ⚠️ **没有 glob 级作用域** |
+| 预算 | 只有"规则写短些"的建议 | ⭐ **可测量字节预算 ＋ 测试强制**（3,840 / 4,096 B，超限即红）—— 生态里未见同等做法 |
+| 漂移 | 生成器（rulesync）或人工纪律 | 指针制 ＋ `test_doc_refs.ps1` 查死链 |
+| 开源剥离 | 少见 | ⭐ `OPENSOURCE-TEMP` 标记 ＋ 发布前一条命令清理 |
+| 防假绿 | 未见 | ⭐ `run_all.ps1`：**退出码 0 且输出含成功标志**才算过 |
+
+**与生态对齐的两条官方建议**（可作"我们没走偏"的旁证）：
+
+- Cursor 官方：**"reference files instead of copying the contents —— keeps rules short and prevents them from becoming stale"** ⇒ 与我们"一处真源 ＋ 只留指针"一致 ✓
+- Cursor 官方：**"keep rules under 500 lines · split into composable rules · add rules only when the agent repeats a mistake"** ⇒ 与我们"按频率分层 ＋ 只在付过代价后才加规则"一致 ✓
+
+### 8.3 可搬 / 不可搬（**结论，别再重搜**）
+
+- ✅ **可搬（值得做）**：给规则文件加 **frontmatter（`alwaysApply` / `globs`）**，再用一个生成器把它们落到"每回合 / 按需"两条路上 —— 这正是 rulesync 的位置。当初不采用是因为"项目模式要配对模板"；现在 `INJECTION.md` 已把槽位与预算写死，**可以重新评估**。
+- ❌ **不可搬**：① `harness-scope` 是 **Claude Code 专属**（改它的 skill/agent 加载），DSH 侧没有对应面；② OpenCode 的开关与 `instructionMode` 是**该工具私有**，而 DSH 的 `USER_GLOBAL_FILE` 是常量 ⇒ 只能"不放那份"；③ Team Rules 那种**组织强制**我们不需要（单人 ＋ 开源）。
+- ⛔ **明确不做**：在**真的出现第二个消费者**之前，不引入"多工具规则生成流水线"（现在只有 DSH 一个消费者 ⇒ 生成器是纯开销）。
