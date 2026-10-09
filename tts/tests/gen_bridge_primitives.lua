@@ -63,13 +63,18 @@ local byGuid = { ["deck-1"] = theDeck, ["nodeal-1"] = noDeal }
 local sent = {}
 
 function getObjectFromGUID(g) return byGuid[g] end
-function getPlayers()
-    return {
-        { color = "Teal",  steam_name = "me",  steam_id = "1", host = true,  admin = true,  seated = true, hand = 5, turn = true },
-        { color = "Brown", steam_name = "you", steam_id = "2", host = false, admin = false, seated = true, hand = 7, turn = false },
-    }
-end
+-- The API here is the one that ACTUALLY EXISTS in TTS, established by probing a live table on
+-- 2026-10-09 - not the published docs: getPlayers() is nil, hand is a METHOD not a member, and
+-- Player.turn is neither readable nor writable. The stub mirrors the probe, so a future edit
+-- that goes back to the documented shapes fails here instead of on someone else s table.
+function getSeatedPlayers() return { "Teal", "Brown" } end
+-- Turns exists as userdata with getTurnOrder(); getTurnColor() does NOT exist in this build
+Turns = { getTurnOrder = function() return { "Teal", "Brown" } end }
 Player = { Teal = { turn = false, blindfolded = false }, Brown = {} }
+-- readable members of userdata<LuaPlayer> (probed): color/steam_name/steam_id/host/admin/seated
+Player.Teal.color, Player.Teal.steam_name, Player.Teal.steam_id = "Teal", "me", "1"
+Player.Teal.host, Player.Teal.admin, Player.Teal.seated, Player.Teal.blindfolded = true, true, true, false
+Player.Teal.getHandCount = function() return handCount end
 -- Player-side methods the hand actions use. handCount is the number of cards in the hand zone;
 -- draw bumps it through deal(), and the tests read it back through the returned `hand` field.
 Player.Teal.getHandObjects = function()
@@ -149,22 +154,40 @@ end
 -- NOTE: getPlayers().hand is a COUNT, not the cards. Use cmd=hand for the cards themselves, and
 -- that only works for MY OWN colour (hidden-information rules in tts\docs\TTS_RULES.md).
 local players = function(m)
-    local ok, list = pcall(function() return getPlayers() end)
-    if not ok then return { ok = false, cmd = "players", err = "getPlayers failed: " .. S(list) } end
-    local out = {}
-    for _, p in ipairs(list or {}) do
-        local e = {}
-        e.color = tostring(p.color or "")
-        pcall(function() e.steam_name = tostring(p.steam_name or "") end)
-        pcall(function() e.steam_id = tostring(p.steam_id or "") end)
-        pcall(function() e.host = tostring(p.host) end)
-        pcall(function() e.admin = tostring(p.admin) end)
-        pcall(function() e.seated = tostring(p.seated) end)
-        pcall(function() e.hand = tostring(p.hand) end)
-        pcall(function() e.turn = tostring(p.turn) end)
-        out[#out + 1] = e
+    -- A member list, not getPlayers(): that function does not exist in this TTS build.
+    local seated = {}
+    local okS = pcall(function() seated = getSeatedPlayers() end)
+    if not okS or type(seated) ~= "table" then
+        return { ok = false, cmd = "players", err = "getSeatedPlayers unavailable" }
     end
-    return { ok = true, cmd = "players", count = #out, items = out }
+    -- ONE STRING PER SEAT, fields joined by "|". Objects would be mangled: this reply is flattened
+    -- twice, and JSON.encode over the object proxies fails (measured live - see the header).
+    local seats = {}
+    for _, color in ipairs(seated) do
+        local pl = Player[color]
+        if pl ~= nil then
+            local function g(fn, fallback)
+                local ok, v = pcall(fn)
+                if not ok or v == nil then return fallback end
+                return tostring(v)
+            end
+            local hand = g(function() return pl.getHandCount() end, "?")
+            seats[#seats + 1] = table.concat({
+                tostring(color),
+                g(function() return pl.steam_name end, ""),
+                hand,
+                g(function() return pl.host end, "?"),
+                g(function() return pl.admin end, "?"),
+                g(function() return pl.seated end, "?"),
+                g(function() return pl.blindfolded end, "?"),
+            }, "|")
+        end
+    end
+    -- turn state, reported separately because it cannot be attached to a seat: Turns has
+    -- getTurnOrder() but no getTurnColor(), and Player.turn is neither readable nor writable.
+    local order = ""
+    pcall(function() order = table.concat(Turns.getTurnOrder() or {}, ",") end)
+    return { ok = true, cmd = "players", count = #seats, seats = seats, turn_order = order }
 end
 
 -- ============================ SPAWN / COPY / DESTROY ============================
@@ -317,9 +340,14 @@ do
     local pl = players({})
     check("players answers ok", pl.ok == true, pl.err)
     check("players count = 2", tostring(pl.count) == "2", pl.count)
-    check("players carries colour + hand + turn",
-        pl.items and pl.items[1] and pl.items[1].color == "Teal" and tostring(pl.items[1].hand) == "5" and tostring(pl.items[1].turn) == "true",
-        pl.items and pl.items[1] and pl.items[1].color)
+    -- seats are flat "color|steam_name|hand|host|admin|seated|blindfolded" strings, because a
+    -- nested reply loses every field (measured live before the fix).
+    local s1 = tostring(pl.seats and pl.seats[1] or "")
+    local f = {}
+    for part in string.gmatch(s1, "[^|]*") do f[#f + 1] = part end
+    check("players seat is a flat delimited string", #f == 7, s1)
+    check("players carries colour + hand count", f[1] == "Teal" and f[3] == "1", s1)
+    check("players exposes the turn ORDER separately", tostring(pl.turn_order) ~= "", pl.turn_order)
 
     local tk = takeOne({ deckguid = "deck-1", cardid = "card-eng-1", x = 1, y = 2, z = 3 })
     check("take of a named card answers ok", tk.ok == true, tk.err)

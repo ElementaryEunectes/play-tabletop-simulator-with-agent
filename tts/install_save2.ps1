@@ -70,6 +70,22 @@ try {
     if ($KeepLua -and $o.ContainsKey('LuaScript') -and $o['LuaScript']) { $prevLua = [string]$o['LuaScript'] }
     if ($prevLua -ne '') {
         L ('keep existing LuaScript chars = ' + $prevLua.Length)
+        # ⚠️ IDEMPOTENCY (added 2026-10-09 after it actually happened): a save that was ALREADY baked
+        # carries the bridge, and the player may have loaded it before we bake again - then the
+        # source save's LuaScript already holds bridge #1, and -KeepLua would keep it and append
+        # bridge #2. Result measured on a real save: DSH_VERSION assigned THREE times, bridge code
+        # duplicated, the file doubled (2.9 MB vs 1.5 MB), and two onExternalMessage definitions
+        # racing (last one wins - it "worked", which is the dangerous part).
+        # So: cut any previous bridge out first and keep only the MODULE's own script. The bridge
+        # starts at its own separator, which is also where __dsh_prev_onLoad was captured, so
+        # everything before that line is the module's untouched script.
+        $marker = "`n-- ===== DSH bridge (appended) =====`n"
+        $cut = $prevLua.IndexOf($marker)
+        if ($cut -ge 0) {
+            L ('previous bridge found at ' + $cut + ' - stripped before appending the new one')
+            $prevLua = $prevLua.Substring(0, $cut)
+        }
+        L ('module Lua kept chars = ' + $prevLua.Length)
         # ⚠️ 2026-10-07：Global 脚本槽只有一份，**后定义的 onLoad 会盖掉模组自己的 onLoad**。
         # 所以在桥接**之前**先抓住模组的 onLoad，桥接**之后再调用它** ⇒ 两边都能跑。
         $sep1 = "`n-- ===== DSH bridge (appended) =====`nlocal __dsh_prev_onLoad = onLoad`n"
@@ -78,6 +94,11 @@ try {
     } else {
         $o['LuaScript'] = $lua
     }
+    # Refuse to write a save that carries more than one bridge: count the version stamp (the module's
+    # own v13 copy is stripped above, so anything above 1 here means the de-duplication failed).
+    $stamps = ([regex]::Matches([string]$o['LuaScript'], 'DSH_VERSION\s*=\s*''')).Count
+    L ('DSH_VERSION stamps in the result = ' + $stamps)
+    if ($stamps -gt 1) { throw ('refusing to write: ' + $stamps + ' bridge copies in the save (de-duplication failed)') }
     $expectedLua = [string]$o['LuaScript']   # -KeepLua 时要比对**拼好的全文**，不能只比对桥接片段
     $o['XmlUI'] = ''
 

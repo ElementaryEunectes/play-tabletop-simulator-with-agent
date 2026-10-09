@@ -1609,22 +1609,40 @@ end
 -- NOTE: getPlayers().hand is a COUNT, not the cards. Use cmd=hand for the cards themselves, and
 -- that only works for MY OWN colour (hidden-information rules in tts\docs\TTS_RULES.md).
 local players = function(m)
-    local ok, list = pcall(function() return getPlayers() end)
-    if not ok then return { ok = false, cmd = "players", err = "getPlayers failed: " .. S(list) } end
-    local out = {}
-    for _, p in ipairs(list or {}) do
-        local e = {}
-        e.color = tostring(p.color or "")
-        pcall(function() e.steam_name = tostring(p.steam_name or "") end)
-        pcall(function() e.steam_id = tostring(p.steam_id or "") end)
-        pcall(function() e.host = tostring(p.host) end)
-        pcall(function() e.admin = tostring(p.admin) end)
-        pcall(function() e.seated = tostring(p.seated) end)
-        pcall(function() e.hand = tostring(p.hand) end)
-        pcall(function() e.turn = tostring(p.turn) end)
-        out[#out + 1] = e
+    -- A member list, not getPlayers(): that function does not exist in this TTS build.
+    local seated = {}
+    local okS = pcall(function() seated = getSeatedPlayers() end)
+    if not okS or type(seated) ~= "table" then
+        return { ok = false, cmd = "players", err = "getSeatedPlayers unavailable" }
     end
-    return { ok = true, cmd = "players", count = #out, items = out }
+    -- ONE STRING PER SEAT, fields joined by "|". Objects would be mangled: this reply is flattened
+    -- twice, and JSON.encode over the object proxies fails (measured live - see the header).
+    local seats = {}
+    for _, color in ipairs(seated) do
+        local pl = Player[color]
+        if pl ~= nil then
+            local function g(fn, fallback)
+                local ok, v = pcall(fn)
+                if not ok or v == nil then return fallback end
+                return tostring(v)
+            end
+            local hand = g(function() return pl.getHandCount() end, "?")
+            seats[#seats + 1] = table.concat({
+                tostring(color),
+                g(function() return pl.steam_name end, ""),
+                hand,
+                g(function() return pl.host end, "?"),
+                g(function() return pl.admin end, "?"),
+                g(function() return pl.seated end, "?"),
+                g(function() return pl.blindfolded end, "?"),
+            }, "|")
+        end
+    end
+    -- turn state, reported separately because it cannot be attached to a seat: Turns has
+    -- getTurnOrder() but no getTurnColor(), and Player.turn is neither readable nor writable.
+    local order = ""
+    pcall(function() order = table.concat(Turns.getTurnOrder() or {}, ",") end)
+    return { ok = true, cmd = "players", count = #seats, seats = seats, turn_order = order }
 end
 
 -- ============================ SPAWN / COPY / DESTROY ============================
@@ -1911,24 +1929,24 @@ local handlers = {
     container = function(m)
         local o = getObjectFromGUID(tostring(m.guid or ""))
         if not o then return { ok = false, cmd = "container", err = "no object with guid " .. S(m.guid) } end
-        local list = nil
-        local ok = pcall(function() list = o.getObjects() end)
-        if not ok or type(list) ~= "table" then return { ok = false, cmd = "container", err = "getObjects failed" } end
-        local out = {}
-        for i, x in ipairs(list) do
-            local e = {}
-            pcall(function() e.guid = x.getGUID() end)
-            pcall(function() e.name = x.getName() end)
-            pcall(function() e.nick = x.getNickname() end)
-            pcall(function() e.qty = x.getQuantity() end)
-            local tags = {}
-            pcall(function() tags = x.getTags() or {} end)
-            e.tags = table.concat(tags, ",")
-            out[#out + 1] = e
-        end
-        local q = nil
-        pcall(function() q = o.getQuantity() end)
-        return { ok = true, cmd = "container", guid = m.guid, count = #out, quantity = q, items = out }
+                local lines = {}
+                for i, x in ipairs(list) do
+                    -- flat "guid|name|nick|qty|tags" on purpose: see the players() note above.
+                    local g = ""
+                    local nm = ""
+                    local nk = ""
+                    local q = ""
+                    local tg = ""
+                    pcall(function() g = tostring(x.getGUID()) end)
+                    pcall(function() nm = tostring(x.getName()) end)
+                    pcall(function() nk = tostring(x.getNickname()) end)
+                    pcall(function() q = tostring(x.getQuantity()) end)
+                    pcall(function() tg = table.concat(x.getTags() or {}, ",") end)
+                    lines[#lines + 1] = g .. "|" .. nm .. "|" .. nk .. "|" .. q .. "|" .. tg
+                end
+                local qty = nil
+                pcall(function() qty = o.getQuantity() end)
+                return { ok = true, cmd = "container", guid = m.guid, count = #lines, quantity = qty, lines = lines }
     end,
     -- Added 2026-10-09 (tts\docs\VALIDATION.md F6 - the primitives a trained control layer kept
     -- missing): players = who is at the table / whose turn; take = pull ONE NAMED card out of a

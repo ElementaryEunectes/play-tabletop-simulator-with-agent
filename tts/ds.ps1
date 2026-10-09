@@ -264,12 +264,13 @@ switch ($cmOut) {
     # because sendExternalMessage cannot serialise a nested table - see the SILENT-REPLY note in
     # dsh_global.lua). Parse it back and print one line per seat.
     'players'  {
-        Write-Host ("ok players count={0}" -f $resp.count)
-        $items = @()
-        if ($resp.items) { try { $items = @($resp.items | ConvertFrom-Json) } catch { $items = @() } }
-        foreach ($p in $items) {
-            Write-Host ("  {0,-6} hand={1,-4} turn={2,-6} host={3,-6} seated={4,-6} {5}" -f `
-                $p.color, $p.hand, $p.turn, $p.host, $p.seated, $p.steam_name)
+        Write-Host ("ok players count={0} turn_order={1}" -f ($resp.count -join ','), ($resp.turn_order -join ','))
+        # The bridge hands back ONE DELIMITER-JOINED STRING PER SEAT on purpose: nested objects do NOT
+        # survive the reply's flattening (measured live - every field came back empty).
+        foreach ($s in @($resp.seats)) {
+            $f = @($s -split '\|')
+            Write-Host ("  {0,-6} hand={1,-4} seated={2,-6} host={3,-6} admin={4,-6} blind={5,-6} {6}" -f `
+                $f[0], $f[2], $f[5], $f[3], $f[4], $f[6], $f[1])
         }
     }
     'take'     {
@@ -286,14 +287,19 @@ switch ($cmOut) {
         Write-Host ("ok hand player={0} action={1} count={2} hand={3}" -f $resp.player, $resp.action, $resp.count, $resp.hand)
         $items = @()
         if ($resp.items) { try { $items = @($resp.items | ConvertFrom-Json) } catch { $items = @() } }
-        foreach ($it in $items) { Write-Host ("  {0,-9} {1}" -f $it.guid, $it.name) }
+        foreach ($it in $items) { Write-Host ("  {0,-9} {1}" -f ($it.guid -join ','), ($it.name -join ',')) }
     }
-    # container: what is inside a Bag/Deck right now, with tags (hashes, not names)
+    # container: what is inside a Bag/Deck right now, with tags (hashes, not names).
+    # Every field goes through `-join`: ConvertFrom-Json can return a 1-element ARRAY for what looks
+    # like a scalar, and `-f` then prints "System.Object[]" instead of the value (seen live).
     'container' {
-        Write-Host ("ok container guid={0} count={1} quantity={2}" -f $resp.guid, $resp.count, $resp.quantity)
-        $items = @()
-        if ($resp.items) { try { $items = @($resp.items | ConvertFrom-Json) } catch { $items = @() } }
-        foreach ($it in $items) { Write-Host ("  {0,-9} {1,-24} qty={2} tags={3}" -f $it.guid, $it.name, $it.qty, $it.tags) }
+        Write-Host ("ok container guid={0} count={1} quantity={2}" -f `
+            ($resp.guid -join ','), ($resp.count -join ','), ($resp.quantity -join ','))
+        # each line is "guid|name|nick|qty|tags" - flat on purpose (see the players note above)
+        foreach ($s in @($resp.lines)) {
+            $f = @($s -split '\|')
+            Write-Host ("  {0,-9} {1,-26} nick={2,-14} qty={3} tags={4}" -f $f[0], $f[1], $f[2], $f[3], $f[4])
+        }
     }
     'draw'     {
         Write-Host ("ok draw deck={0} took={1} remaining={2} guids={3}" -f $resp.deck, $resp.n, $resp.remaining, ($resp.guids -join ','))
