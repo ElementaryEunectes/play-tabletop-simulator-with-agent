@@ -24,7 +24,7 @@
 | 换了游戏 / 开了新局 | `local\games\_current.md` 的 **`GAME=` 行** ＋ 新建 `local\games\<游戏>\{STATE,FLOW,MYHAND}.md` | ❌（但脚本会报"no current game"） |
 | 改了 `tts\config.ps1` 暴露的变量 | 用它的脚本（`grep` 变量名） | ❌ |
 
-## 3. 提交前必跑（4 条，全部不需要 TTS）
+## 3. 提交前必跑（6 条，全部不需要 TTS）
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1                      # 递归补 BOM ＋ 真解析器
@@ -32,16 +32,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1           
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfill.ps1      # 每个 '' 默认值有解或判空
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps1          # 离线索引/差分
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_game_data.ps1           # 游戏数据必须在文件里，不在代码里
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_agents_hygiene.ps1      # 三个指令槽
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_doc_refs.ps1            # 文档里的路径必须存在
 ```
 
 ### 若你的 agent 沙箱限制子进程（本项目本机就是：DSH 的 `workspace-write`）
 
-- ⛔ **抓子进程输出一律"重定向到文件再读"**：在这种沙箱里 `& x 2>&1`（或 `$o = & x`）会**静默丢输出** —— 退出码**仍是 0**、文本为空 ⇒ 看起来像"没跑"甚至"全绿"。（本仓库的三个测试与 `run_all.ps1` 都已按此改写。）
+- ⛔ **抓子进程输出一律"重定向到文件再读"**：在这种沙箱里 `& x 2>&1`（或 `$o = & x`）会**静默丢输出** —— 退出码**仍是 0**、文本为空 ⇒ 看起来像"没跑"甚至"全绿"。（本仓库的测试与 `run_all.ps1` 都已按此改写。）
 - ⛔ **别用 `Start-Process`**（含 `-WindowStyle Hidden` / `-NoNewWindow`）：Windows ACL 后端文档明写，这类"隐藏控制台"启动会以 **`0xC0000142`** 死在 DLL 初始化。
-- ⚠️ **"测试里 spawn 测试"**（内层再起 `powershell.exe`）在受限模式下会被拦 ⇒ **`tts\tests\test_diff_index.ps1` 需要完全权限**才能跑；其余四个门禁在受限模式下可用。
-- ✅ 门禁入口统一用 `tts\tests\run_all.ps1`：它已按上面两条写（全部走文件），并坚持"**空输出 = `NOT RUN`**，不算通过"。
+- ✅ **门禁脚本一律"同进程调用"，不 spawn 子 PowerShell**（2026-10-09 起）：受限于"命令**及其后代**"的沙箱把内层 `powershell.exe` 当成恶意软件的典型手法拦掉，而那个 spawn 本来就是多余的 —— 现在**六个门禁在受限模式下都能跑**，不再需要完全权限。做法是让被测脚本**不用顶层 `exit`**（改 `return` ＋ 返回码，调用方用 `& ... 6>&1` 抓 `Write-Host`），`test_diff_index.ps1` 的 case 8 用**解析器 token**钉死这条契约。
+  - 两条例外，都写进代码头：**stdout 就是结果**的终端工具（`card.ps1` / `bootstrap.ps1`）保留 `exit`（同进程 `&` 调用方仍能从 `$LASTEXITCODE` 拿到码，且 stdout 不被退出码污染）；**输出会被调用方 `6>&1` 合并**的脚本（`diff_index` / `live_index` / `ds`）必须 `return`。
+- ✅ 门禁入口统一用 `tts\tests\run_all.ps1`：它已按上面几条写（全部走文件），并坚持"**空输出 = `NOT RUN`**，不算通过"。
 
 **测试是契约，不是装饰**：
 - 改测试的判定逻辑时，**必须先造一个"坏"的阳性对照**，确认它真的会红（本项目已两次出现"校验器假绿/假红"）。

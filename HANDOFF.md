@@ -125,6 +125,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 - **`PRIOR_ART.md` §8**：生态如何解"AGENTS.md 污染"（五类做法 ＋ 可搬/不可搬，含 Cursor/OpenCode/rulesync/harness-scope）。
 - **清理**：删掉 `local\scratch` 下 **15,094** 个死依赖文件（工作区 18,489 → **3,395**）。
 
+### 9.1b 2026-10-09 第二场（接手会话：D0 → D，两件都做完了）
+
+- **D0 完成**（`e22911d`）—— `tts\diff_index.ps1` · `live_index.ps1` · `fake_live_index.ps1` **不再有 `exit`**，失败路径 `return 1`；`tests\test_diff_index.ps1` 改成**同进程调用**（`& ... 6>&1`），**不再 spawn 内层 PowerShell** ⇒ **六个门禁在受限模式下全绿**（实测），「需要完全权限」那条权宜作废（`CONTRIBUTING.md` §3 已改）。新增两个用例：case 7 钉"错误路径把码**当值**返回给调用方"（旧的 `exit 1` 在这里读到的是 0），case 8 用**解析器 token** 静态禁止这条链里的脚本出现 `exit`。
+- **D 完成**（`2f7e5cd`）—— "本款数据进代码"清干净：
+  - `card.ps1` 的两处：别名表 → `cache\<game>_alias.json`（**缺文件不是错误**：退化为纯文本匹配，提示只在**查不到时**打印一行）；"最接近的候选"里写死的四个牌名 → 按同一个字重合度现算。
+    ⚠️ **本局功能没丢**：老表是 **dicethrone 自己**的（不是游城拓荒的）⇒ 已按原样写到 **`cache\dicethrone_alias.json`**（`hex→厄运缠身` · `bow→长弓` · `moon→月精灵/月光/月之/月影` · `witch/scarlet/scar→猩红女巫` · `cp` · `draw` · `block` 全保留），**实测** `-Q hex` / `-Q bow` / `-Q 厄运缠身` / `-Q zzzz`（NOT FOUND）四条都对。**换新游戏要自己建这一份**。
+  - `bootstrap.ps1`：整份重写成**通用渲染器**，认物规则全部来自 `local\games\<游戏>\objects.json`（schema 写进 `BOOTSTRAP.md` **§1b**：seats ＋ `seatRow`/`seatGrid`/`rows`/`deckByHash`/`nearRef` 五种区块）。**缺文件 ⇒ 报错并指出它要的路径**，不再打空表冒充答案。新增 **`-Inventory`**＝ name/nick/图 hash 三个直方图（**不需要** objects.json，因为它就是用来写出第一份的）；在真索引上实测：1659 行 → 19 names / 1077 nicks / 245 hashes → `cache\obj_inventory.md`。
+  - `config.ps1` 新增 `$DshGameAlias` / `$DshGameObjects`（**路径只有这一处定义**）。
+  - 新增第 6 个门禁 `tts\tests\test_game_data.ps1`：拿**假游戏** fixture 跑两个工具，**决定性的两条是否定用例**（没有别名文件时英文词必须查不到；换成"只有座位"的最小 objects.json 时专属区块必须消失）—— 这是"数据不在代码里"唯一能被证明的方式。阳性对照：往 `card.ps1` 里塞回一条硬编码别名 ⇒ 门禁红 2 条（随后按字节还原，SHA256 核对）。
+  - ⚠️ **代价与教训**：`bootstrap.ps1` 的重写踩了三个 PowerShell 坑（`$L`/`$l` 是同一个变量 · `return @(一个)` 会退化成标量而标量 PSCustomObject 的 `.Count` 是 `$null` · 双引号里 `` ` `` 会吃掉 markdown 反引号）＋ 一个参数名坑（`-Db` 撞 `-Debug` 的**参数别名**，而 `Get-Alias db` **看不见**它）。细节都写进代码注释了。
+- **本项目没有 `local\games\dicethrone\objects.json`** ⇒ 现在 `bootstrap.ps1` 对它**报错是设计如此**（旧版是对它打一份空表）。要恢复"盘点"能力：照 `cache\obj_inventory.md` 写一份，或先跑 `-Inventory` 再看。
+- **`exit` 语义被实测纠正**（见 §9.6）—— 平台上那句"`&` 调别人的脚本、它会 `exit` ⇒ 终止你的整个会话"**不成立**（至少 PS 5.1 不是这样）；真正会杀掉调用者的是**没有脚本边界**的 `exit`（`iex` / 手贴代码）。
+
 **今天的提交（最新在下）**
 
 ```textcd1a234 test(gates): the gate runner stops using cmd, stops trusting a stale exit code, and writes where a confined child can actually write
@@ -148,7 +161,11 @@ ae78e06 charter: add a code-consistency section to the cross-project AGENTS.md (
 11e35b2 feat(profile): give each project its own harness home, so the user-global AGENTS.md injects nothing
 3347c7b feat(launcher): start.cmd - double-clickable, and the docs now say so first
 c5d622f docs: correct three statements that config.ps1 made obsolete, and the launcher's own header
-71ad408 docs: make TTS_RULES section 4 the single source of truth for the End Turn verdict```
+71ad408 docs: make TTS_RULES section 4 the single source of truth for the End Turn verdict
+6e643c1 test(gates): run_all.ps1 was committed without its BOM, so every gate run dirtied the tree
+e22911d fix(diff): the diff chain can be called in-process - no exit statements, and its gate stops spawning PowerShell
+2f7e5cd feat(data): game recognition data moves out of the code - card aliases and table objects become files
+```
 
 ### 9.2 本机环境的三条限制（**都付过代价**；细节见平台层坑 16 / 17）
 
@@ -157,19 +174,21 @@ c5d622f docs: correct three statements that config.ps1 made obsolete, and the la
 3. **管道会静默丢输出 ＋ 不可见 PowerShell 被拦（后者是*安全属性*，不是 bug）**
    - `& x 2>&1` 在受限模式下是"子进程跑了、退出码 0、文本为空" ⇒ 抓输出**一律写文件再读** ✓
    - **内层再起 `powershell.exe`（不可见执行）会被沙箱/杀软拦** —— 沙箱的职责就是约束"命令**及其后代**"（后端 README L12）；而"隐藏执行 PowerShell"本身是恶意软件的典型手法 ⇒ **拦得对**。原来 `tts\tests\test_diff_index.ps1` 会去 spawn `diff_index.ps1`，**这个 spawn 本来多余**。
-   - ✅ **正解（顺从而不是绕过）**：把 `tts\diff_index.ps1` 改成**用 `return` 而不是顶层 `exit`**（`ds.ps1` 早就这么做 ✓，理由同：能被同进程调用、不会杀掉调用者）⇒ 测试**同进程调用**它 ⇒ 五个门禁在受限模式下也能全绿。「完全权限」只是权宜，不是修法。
+   - ✅ **正解（顺从而不是绕过）**：把 `tts\diff_index.ps1` 改成**用 `return` 而不是顶层 `exit`**（`ds.ps1` 早就这么做 ✓）⇒ 测试**同进程调用**它 ⇒ 门禁在受限模式下也能全绿。「完全权限」只是权宜，不是修法。
+   - ✅ **2026-10-09 已做完**（`e22911d`）：`diff_index` / `live_index` / `fake_live_index` 全部去掉 `exit`，`test_diff_index.ps1` 同进程调用 ⇒ **六个门禁实测在 `workspace-write` 下全绿**；契约由 token 级静态检查钉死。⚠️ 但**理由要按 §9.6 的实测改写**：`exit` 并不会杀掉 `&` 调用者，"去掉 `exit`"换来的是**返回码当值**＋不再依赖"内层 spawn"这条被沙箱拦掉的路。
 
-⇒ **工位建议**：干活的会话切「**完全权限**」（五个门禁都能跑）；受限模式下只用"**裸调用 ＋ 读文件/看控制台**"。
+⇒ **工位建议**：**不必再切「完全权限」**（2026-10-09 起六个门禁在受限模式下可跑）。受限模式下的规矩只剩两条：**抓子进程输出写文件再读**；**别用 `Start-Process`**。注意**门禁脚本本身也不再 spawn 子 PowerShell**（`run_all.ps1` 仍会起一层——它需要读退出码与输出标志；那一层实测可用）。
 
 ### 9.3 待办（**下一步从这里挑**）
 
-- **D0（新增，优先，~30 分钟）** —— 顺沙箱的安全属性修门禁：`tts\diff_index.ps1` 去掉顶层 `exit`（改 `return` ＋ 返回码）⇒ `tts\tests\test_diff_index.ps1` **同进程调用**它 ⇒ **五个门禁在受限模式下全绿**，不再需要"完全权限"这个权宜。
-- **D ⭐（建议先做）** —— 清掉"本款数据进代码"：`tts\card.ps1` 第 63-76 行的**别名表**抽成数据（`cache\<game>_alias.json`；缺文件则退化为纯文本匹配 ＋ 一行提示）；`tts\bootstrap.ps1` 的认物改成读 `local\games\<游戏>\objects.json`。**验证**：造一个假 `GAME=fake` ＋ 最小数据，跑通"查牌 / 认物"。
+- ✅ **D0**（2026-10-09 完成，`e22911d`）—— 顺沙箱的安全属性修门禁：diff 链去掉顶层 `exit` ⇒ 测试同进程调用 ⇒ **六个门禁在受限模式下全绿**，不再需要"完全权限"这个权宜。
+- ✅ **D**（2026-10-09 完成，`2f7e5cd`）—— 清掉"本款数据进代码"：别名表 → `cache\<game>_alias.json`；`bootstrap.ps1` 认物 → `local\games\<游戏>\objects.json`（＋ `-Inventory` 半自动产出）；**验证**＝假 `GAME=fake` fixture 的第 6 个门禁（含两条否定用例）。
+- 🔴 **D2（D 的尾巴，建议接着做）—— 给当前这局写 `local\games\dicethrone\objects.json`**：现在 `bootstrap.ps1` 对 dicethrone **报错**（设计如此）。原料已经生成好：`cache\obj_inventory.md`（1659 行索引 ⇒ 19 names / 1077 nicks / 245 hashes）。填完就能重新"一条命令盘点"。⚠️ 这是**本局数据**，写进 `local\`（不进仓库）；schema 见 `BOOTSTRAP.md` §1b。（别名表那一份**已经做完**：`cache\dicethrone_alias.json`。）
 - **A** —— `STATE` / `FLOW` 模板（新游戏起手；`BOOTSTRAP.md` §6 有清单但无模板）。
 - **C** —— `setup.ps1` 向导（检测 ＋ 写 `local\games\_current.md` ＋ 生成模板 ＋ 打印下一步）。
 - **E** —— demo / 录屏（需要 TTS）。
-- **回合令牌验收** —— `install_save2.ps1` 重装 ＋ **玩家重载存档** ⇒ 按 **§7.9 的 6 条清单**逐条验（第 1 条：`{cmd="ping"}` 应回 `v13-turntoken`）。
-- **火绒放行** —— 否则工具调用会**间歇**被整条掐掉。
+- **回合令牌验收**（`v13-turntoken`）—— **仍未做**：需 `install_save2.ps1` 重装存档 ＋ **玩家重载** ⇒ 按 **§7.9 的 6 条清单**逐条验（第 1 条：`{cmd="ping"}` 应回 `v13-turntoken`）。本次会话**没碰它**（要玩家在场；且它需要 TTS 在跑）。⚠️ 重装前先 `tts\play.ps1 status` 看桥接版本，别把重装与"存档没重载"混为一谈。
+- **火绒放行** —— 否则工具调用会**间歇**被整条掐掉（本场没遇到；真遇到先看 §9.2 第 1 条）。
 
 ### 9.4 开源可用性体检（结论）
 
@@ -181,6 +200,26 @@ c5d622f docs: correct three statements that config.ps1 made obsolete, and the la
 ### 9.5 关键数字
 
 - **每请求注入 ≈ 9.1 KB**：平台宪章 3,752 ＋ 项目 `AGENTS.md` 3,518 ＋ 本机 overlay 1,826；发布时切 `dsh tts-agent web` ⇒ ≈ **5.4 KB**。
-- 工作区文件 **3,395**；跟踪 `.md` 14 份；`tts\` 下 39 个 `.ps1`。
+- 工作区文件 **3,395**；跟踪 `.md` 14 份；`tts\` 下 **40** 个 `.ps1`（＋ fixtures 里 5 份测试数据）。
 - 平台层：宪章模板 6.9 KB · `MAINTENANCE.md` ≈ 24 KB（坑 ×17）· 快照 `local\archive\platform_2026-10-09\`。
-- 门禁：`powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1`（要证据时加 `-OutFile <路径>`）。
+- 门禁：`powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1`（要证据时加 `-OutFile <路径>`）⇒ 现在 **6 条**（新增 `game data (files)`）。
+
+### 9.6 本次实测纠正：`exit` 到底会不会杀掉调用者（**平台宪章那句话不准确**）
+
+平台宪章说："`&` 调别人的脚本前，确认它不 `exit` —— `exit` 会终止**调用者的整个会话**。"（项目 `AGENTS.md` 同款）
+本场为了 D0 做了**四种调用形态**的实测（PowerShell 5.1，脚本文件 `b.ps1` 里 `exit 3`）：
+
+| 调用形态 | 结果 |
+|---|---|
+| `$o = & 'b.ps1' 6>&1`（**捕获**） | 调用者**继续跑**，`$LASTEXITCODE = 3` |
+| `& 'b.ps1'`（裸调用） | 调用者**继续跑**，码同上 |
+| `. 'b.ps1'`（点源，含**顶层**点源） | 调用者**继续跑**，码同上 |
+| `iex (Get-Content -Raw 'b.ps1')`（**无脚本边界**） | ⛔ **进程当场以 3 结束**，后面的语句一条都不执行 |
+
+⇒ **准确的说法**：`exit` 在**脚本文件**里会被**那个文件自己的边界**接住（点源也是），所以 `&`/`.` 调用者不会死；**真正危险的是"没有脚本边界"的 `exit`** —— `iex`、手贴进控制台的代码、或直接跑 `-File` 的那个文件自己（后者是**期望**行为）。
+⇒ 因此"D0 去掉 `exit`"的**收益**应该这样说：**返回码变成调用方拿得到的一个"值"**（`return 1`），不再依赖 `$LASTEXITCODE` 这个全局副作用；**不是**"修掉了一个会杀掉调用者的 bug"。
+⚠️ **顺带纠正一条旧记录**：`CONTRIBUTING.md` / `AGENTS.local.md` 原先写"`test_diff_index.ps1` 只能在**完全权限**下跑"。本场在 `workspace-write` 下**先跑了一次基线**，那时门禁**就已经 5/5 全绿**（内层 spawn 也起来了）⇒ 那条限制在本机**当前状态下已不复现**（火绒放行或别的原因，未查明）。所以 D0 的收益**不是**"救活一个跑不了的门禁"，而是：**删掉一个不必要、且被文档记为会被拦的进程形态** ＋ 返回码当值 ＋ 契约可被 token 检查钉死。
+⚠️ **两处要改的文档**（本场没动，因为平台那份**是用户的文件**）：
+1. `$DSH_HOME\AGENTS.md`（平台宪章，含"`&` … 会终止调用者的整个会话"）—— 建议改成上面的准确说法 ＋ 点名 `iex` 这个真正的坑。
+2. 本仓库 `AGENTS.md` 同款那句（⛔ 它**每个请求都计费**，改前想清楚措辞）。
+（另：`tts\docs\MAINTENANCE.md` 未新增条目——新的三个 PowerShell 坑都写在**代码注释**里就近可查，避免又一次"同一事实两处定义"。）

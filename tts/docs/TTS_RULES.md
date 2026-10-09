@@ -45,7 +45,7 @@
 | `say.ps1` | 往笔记本对话频道发一条（**中文走 `-MessageFile`**）；**单进程就地 TCP**（2026-10-08 去掉两次子进程 `ds.ps1`，每条消息省 ~0.9s） |
 | `live_index.ps1` · `diff_index.ps1` | 整桌**实时**快照（CSV）· 差异（`-Snapshot` 冻结基线） |
 | **`diff_hidden.ps1`** | **带隐藏区遮蔽的 diff —— 对外显示一律用它**（规则在 `cache\hidden_zones.csv`） |
-| `card.ps1` | 查卡面文本库 `cache\dicethrone_cards.md`（`-Q '<名字>'`）；**无 `-Q` 只回一行用法 + `exit 2`**（以前是 PowerShell 自己吐 600 字节的强制参数报错） |
+| `card.ps1` | 查卡面文本库 `cache\<game>_cards.md`（`-Q '<名字>'`），别名表 `cache\<game>_alias.json`（英文/简写 → 牌名）；**无 `-Q` 只回一行用法 + `exit 2`**（以前是 PowerShell 自己吐 600 字节的强制参数报错）。两份路径都能用 `-CardsFile` / `-AliasFile` 覆盖（测试与"另一款游戏"用） |
 | `front_watch.ps1` | 后台：写 `cache\front.txt`（前台状态 ＋ `TURN=Pn`）→ 配 file 哨兵叫醒 |
 | `channel_watch.ps1` | 后台：写 `cache\chan.txt`（笔记本尾部变化 → `NEW`）→ 配 file 哨兵 |
 | `check_ps1.ps1` | **改完 `.ps1` 必跑**：补 BOM ＋ 真解析器校验 |
@@ -58,7 +58,7 @@
 | `obj_index.ps1` | **存档**侧全量物件索引 → `cache\obj_index.csv`（含 url hash / **url 来源 `src`** / **规则书 `pdfurl`** / 容器关系 / GMNotes；**滞后 ~5 分钟**）。输出默认 2 行，名称直方图加 **`-Hist`**（25 行，按需） |
 | `guidinfo.ps1` | 给定 guid → 从存档里切出 CardID / deck / 位置等身份字段（**认牌用**） |
 | `bags_dump.ps1` · `bag_list.ps1` | 展开容器（牌堆/袋）内容 → `cache\bag_contents.txt` |
-| `bootstrap.ps1` | **换局/新存档**时重新认一遍关键物件（guid 全变的场合）：**默认 stdout 只打座位表 + 摘要**（13 行），全表写进 `cache\session_map.md`（~490 行）；要打全表加 **`-Full`**。⚠️ 它的认物规则是按**上一局《游城拓荒》**写死的（金券/源石/事件牌堆）⇒ **换游戏要重写那几节** |
+| `bootstrap.ps1` | **换局/新存档**时重新认一遍关键物件（guid 全变的场合）：**默认 stdout 只打座位表 + 摘要**，全表写进 `cache\session_map.md`；要打全表加 **`-Full`**。认物规则**不在代码里** ⇒ 读 `local\games\<游戏>\objects.json`（schema：`BOOTSTRAP.md` §1b）；**没有它就报错并指出路径**。教一款新 mod：`bootstrap.ps1 -Inventory` ⇒ `cache\obj_inventory.md`（name/nick/图 hash 直方图）|
 | `install_save2.ps1` | **写存档的唯一通道**（把 `lua\dsh_global.lua` 灌进存档 ＋ 修 notebook tab id；需一次提权） |
 | `crop_zoom.ps1` | 裁图 + 放大转真 PNG（**读卡面/查图用**；`Mods\Images` 里扩展名常与真实格式不符） |
 | `read_turn.ps1` | 采样 mod 横幅色块 → `PLAYER=n`（TTS 不在前台时报 `NOTFOREGROUND`，**不给假数据**） |
@@ -78,6 +78,7 @@
 | 脚本 | 干什么 |
 |---|---|
 | `tests\test_diff_index.ps1` | `diff_index.ps1` 的**离线自测**：`fake_live_index.ps1` 冒充 `live_index.ps1`，`fixtures\*.csv` 是合成数据 ⇒ 六类变化各 1、`-Snapshot` 写基线、相同快照必须安静 |
+| `tests\test_game_data.ps1` | **游戏数据必须在文件里、不在代码里**：拿**假游戏**的 fixture 跑 `card.ps1`（别名表）与 `bootstrap.ps1`（`objects.json`）；**决定性的两条是否定用例** —— 没有别名文件时英文词**必须查不到**、换成"只有座位"的最小 `objects.json` 时专属区块**必须消失** |
 | `tests\test_param_backfill.ps1` | **每个 `''` 默认值都必须被回填或判空** —— 就是那次"5 个脚本能解析、一跑却写空路径"的 bug 类 |
 | `tests\test_agents_hygiene.ps1` | **三个指令槽各守其位**：项目 `AGENTS.md` ≤3 KB ＋ 必含 5 个承载性指针 · 被跟踪文件里**不许有真实用户名/绝对用户路径** · `AGENTS.local.md` 必须被 gitignore · **全局那份必须与模板正文逐字一致**（漂移检查） |
 | `tests\fake_live_index.ps1` | 上面用到的桩（只认 `-Out`） |
