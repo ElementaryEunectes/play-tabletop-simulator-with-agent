@@ -29,9 +29,20 @@ function Check([string]$Name, [bool]$Ok, [string]$Detail) {
     else { $script:failed++; Write-Host ("FAIL  {0}   <- {1}" -f $Name, $Detail) -ForegroundColor Red }
 }
 function Run-Diff([string[]]$Extra) {
-    $argv = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $diff) + $Extra
-    $out = & powershell @argv 6>&1
-    return [pscustomobject]@{ code = $LASTEXITCODE; text = ($out | Out-String) }
+    # Through cmd into a FILE, then read it. WHY (2026-10-09): under the workspace-write confinement
+    # a grandchild's stdout is silently lost when a PowerShell pipe captures it ($LASTEXITCODE stays
+    # 0 and the text is empty), while a file redirect survives - so a pipe-based runner reports
+    # failures that are really just invisible output.
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ('diff_run_' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.txt')
+    $line = 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"{1} > "{2}" 2>&1' -f $diff, (($Extra | ForEach-Object { ' "' + $_ + '"' }) -join ''), $tmp
+    & cmd /c $line
+    $code = $LASTEXITCODE
+    $text = ''
+    if (Test-Path -LiteralPath $tmp) {
+        $text = [System.IO.File]::ReadAllText($tmp, [System.Text.Encoding]::UTF8)
+        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    }
+    return [pscustomobject]@{ code = $code; text = $text }
 }
 function Summary([string]$Text) {
     $m = [regex]::Match($Text, 'SUMMARY\s+(.*)')

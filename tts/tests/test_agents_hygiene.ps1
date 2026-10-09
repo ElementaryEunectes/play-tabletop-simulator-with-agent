@@ -49,7 +49,17 @@ if ($null -ne $agents) {
 # ---- 2. nothing tracked may carry a machine path or the real user name ----
 $user = [string]$env:USERNAME
 $tracked = @()
-try { $tracked = @(& git -C $Root ls-files) } catch { }
+# Through cmd into a FILE: piped capture of a grandchild is silently lost under the workspace-write
+# confinement, which made the audit see zero tracked files (2026-10-09).
+$tracked = @()
+try {
+    $tmpLs = Join-Path ([System.IO.Path]::GetTempPath()) ('hyg_' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.txt')
+    & cmd /c ('git -C "{0}" ls-files > "{1}" 2>&1' -f $Root, $tmpLs)
+    if (Test-Path -LiteralPath $tmpLs) {
+        $tracked = @([System.IO.File]::ReadAllLines($tmpLs, [System.Text.Encoding]::UTF8) | Where-Object { $_ })
+        Remove-Item -LiteralPath $tmpLs -Force -ErrorAction SilentlyContinue
+    }
+} catch { }
 Check 'git ls-files works (audit needs git)' ($tracked.Count -gt 0) 'run this from a git checkout'
 if ($tracked.Count -gt 0) {
     $leaks = @()

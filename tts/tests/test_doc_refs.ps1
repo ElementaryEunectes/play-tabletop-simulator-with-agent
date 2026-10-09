@@ -28,7 +28,15 @@ $Root = (Resolve-Path -LiteralPath $Root).Path
 $informRoots = @('cache\', 'out\', 'local\', 'logs\', 'shots\', 'archive\')
 $rootFiles = @('AGENTS.md', 'HANDOFF.md', 'README.md', 'README.en.md', 'CONTRIBUTING.md', 'LICENSE', 'start-agent.ps1', 'start.cmd')
 $missing = @(); $informed = @(); $checked = 0
-$files = @(& git -C $Root ls-files '*.md')
+# Through cmd into a FILE: under the workspace-write confinement piped capture of a grandchild is
+# silently lost, which used to make this test report "no tracked .md files found" (2026-10-09).
+$tmpGit = Join-Path ([System.IO.Path]::GetTempPath()) ('docrefs_' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.txt')
+& cmd /c ('git -C "{0}" ls-files "*.md" > "{1}" 2>&1' -f $Root, $tmpGit)
+$files = @()
+if (Test-Path -LiteralPath $tmpGit) {
+    $files = @([System.IO.File]::ReadAllLines($tmpGit, [System.Text.Encoding]::UTF8) | Where-Object { $_ -and $_ -notmatch '^(fatal|warning|error)' })
+    Remove-Item -LiteralPath $tmpGit -Force -ErrorAction SilentlyContinue
+}
 if ($files.Count -eq 0) { Write-Host 'FAIL  no tracked .md files found (run this inside the repo)'; exit 1 }
 
 foreach ($rel in $files) {

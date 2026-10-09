@@ -31,10 +31,17 @@ $failed = 0
 foreach ($g in $gates) {
     $path = Join-Path $Root $g.script
     if (-not (Test-Path -LiteralPath $path)) { Write-Host ("NOT RUN  {0}  <- missing {1}" -f $g.name, $g.script); $failed++; continue }
-    $argv = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $path) + @($g.args)
-    $out = & powershell @argv 2>&1
+    # Launch through cmd with the output redirected to a FILE, then read that file. WHY (2026-10-09):
+    # under the workspace-write confinement a grandchild's stdout is silently lost when it is
+    # captured through a PowerShell pipe (`& powershell ... 2>&1` returns nothing while
+    # $LASTEXITCODE stays 0), and a numbered file handle works. Reading a file also keeps the
+    # positive-evidence rule honest: an empty file means NOT RUN, never "passed".
+    $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ('dsh_gate_' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.txt')
+    $cmdLine = 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"{1} > "{2}" 2>&1' -f $path, (($g.args | ForEach-Object { ' ' + $_ }) -join ''), $tmp
+    & cmd /c $cmdLine
     $code = $LASTEXITCODE
-    $text = ($out | Out-String)
+    $text = ''
+    if (Test-Path -LiteralPath $tmp) { $text = [System.IO.File]::ReadAllText($tmp, [System.Text.Encoding]::UTF8); Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue }
     $ran  = ($text.Trim().Length -gt 0)          # a child that never started returns NOTHING
     $hit  = ($text -match [regex]::Escape($g.marker))
     if (-not $ran) { Write-Host ("NOT RUN  {0}  <- no output at all (child process did not start?)" -f $g.name); $failed++; continue }
