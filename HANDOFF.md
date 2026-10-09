@@ -1,4 +1,4 @@
-# HANDOFF.md —— 交接简报（最近更新 2026-10-09 夜）
+# HANDOFF.md —— 交接简报（最近更新 2026-10-09 夜 · F8 已定案）
 
 > **怎么读**：本文件 = "现在到哪了 + 先干什么"（**按需读，不注入**）。
 > 长期规矩 ⇒ `AGENTS.md`（本项目）＋ `$DSH_HOME\AGENTS.md`（平台宪章）；改东西前 ⇒ `tts\docs\MAINTENANCE.md`；坑 ×17 ＋ 注入机制 ⇒ harness home 的 `platform\MAINTENANCE.md`。
@@ -21,20 +21,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 
 ## §4 待办（按优先级）
 
-0. 🔴 **【最高】活体原语 F8：4 条命令在 TTS 里不可达，原因未查明**（2026-10-09）
-   - 症状：`players` / `take` / `spawn` / `destroy` 一律回 `handler error: Global:(行,列): attempt to call a nil value`，
-     且**列区间正好等于注册处调用**（如 `DSH_players(m)`）的宽度 ⇒ 注册表里的名字在调用时是 nil。
-   - **台账 F8 里列了全部已排除项**（定义不在表之后 · 无顶层 return · 非 200 局部量上限 · 三种声明形式都试过 ·
-     桥接未重复）＋**矛盾证据**（chunk 内测：`hand=function` 而那四个 nil；检查点显示"跑到了表之后却没跑表之前"）。
-   - ✅ 工具已就位：`tts\tools\gen_bridge_alone_test.js`（从**运行中脚本**或本地文件生成桩环境）＋
-     `tts\tools\bisect_run.js`（在指定行注入 `error()`，报告是否到达）＋ `tts\tools\run_lua.js`（fengari）。
-   - ▶ **下一步唯一正确动作**：用 `bisect_run.js` 把运行脚本**二分到最小复现片段**（纯离线、可反复）—— 拿到片段通常一眼定案。
-     运行脚本可从 `tts_api.ps1 -Action getscripts` 落到 `cache\tts_scripts_raw.json`，取 `scriptStates[Global].script`
-     写成 `local\scratch\running_global.lua`（`gen_bridge_alone_test.js` 的默认输入）。
-   - ⛔ **在这条通过之前，那 4 条命令一律按"活体不可用"对待**：26 条离线桩用例全绿也**看不见**它。
-   - 📌 已顺带修好并活体验过的：`container:<guid>` ⇒ 列出容器内物件的 `guid|名称|昵称|数量|牌面文本(截60字)`。
-     ⚠️ 根因是 **`getObjects()` 返回纯 Lua 表、没有方法**（字段直接读 `x.guid/x.name/x.description`）。
-     ⇒ 这也是**卡库的来源**（`description` 就是整张牌面），不必再手抄。
+0. ✅ **F8 已定案并修好（2026-10-09）**：`players` / `take` / `spawn` / `destroy` 在活体上**不是"名字是 nil"那么简单** ——
+   v14 那段原语被**拼接进了 `setCount()` 的中间**（插在它最后一条语句和它自己的 `return out` / `end` 之间）⇒
+   `setCount` 的收尾被甩到 `DSH_destroy` 之后，而**从拼接点起的一切都变成了 `setCount` 的函数体**，加载时从不执行。
+   少一个 `end`、尾巴多一个 ⇒ **总数平衡 ⇒ 照样编译、命令照样注册**，只是引用的名字从没被赋值。
+   ⇒ 根因/证据链/为什么 7 条门禁全绿也看不见它 ⇒ **`tts\docs\VALIDATION.md` F8**；工具 ⇒ `tts\docs\MAINTENANCE.md` §1a。
+   ✅ 仓库侧已修（`tts\lua\dsh_global.lua`，5 增 2 删）＋ `verify_f8.js` 阴性对照通过。
+   ▶ **下一步**：`install_save2.ps1` 重烤存档 ⇒ 活体把 **F8 那 4 条**和 **§7.9 回合令牌**一起验（两件事都已烤进 `TS_Save_10.json`）。
+   📌 已顺带修好并活体验过的：`container:<guid>` ⇒ 列出容器内物件的 `guid|名称|昵称|数量|牌面文本(截60字)`。
+   ⚠️ 根因是 **`getObjects()` 返回纯 Lua 表、没有方法**（字段直接读 `x.guid/x.name/x.description`）。
+   ⇒ 这也是**卡库的来源**（`description` 就是整张牌面），不必再手抄。
 
 1. ✅ **D2 已完成（2026-10-09）**：**对局型 mod** 的 `local\games\<游戏>\objects.json` 写好（8 个区块）⇒ `bootstrap.ps1` 恢复可用（`cache\session_map.md` = 92 行 / 3.9 KB；HP·CP 4 行 · 牌堆 2 · 骰子 5+5 · 英雄板 2 · 规则书 1）。
    📌 关键：**索引里同一物件常有两行**（容器副本 1523/1659）⇒ 每个区块都要 `topLevel: true`；这条已写进 `BOOTSTRAP.md` §1b 与数据文件自身的 `_note`。换英雄/换局：`bootstrap.ps1 -Inventory` 取新 hash 加一行。
@@ -42,7 +38,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
    🟢 这一路**全过**（传话 · 存档侧索引 · 认物 · 地图）。🔴 但 **`play.ps1` 在这款上 FAIL**（`NO PART`：它要 `cache\<game>_rules.json` 且 `status` 也走 `$Rules.dice/seats`）⇒ **这条缺陷已写进 `TTS_RULES.md` §二 方框**；"通用"目前**只是这一路证据，不是全链证据**。
    📌 学到的两条：① **`obj_index.ps1 -File` 要绝对路径**（相对 cwd 解析，给裸文件名会报 not found）；② 这类 mod 把教学写在 **Notecard** 上（地图有专门一节 ⇒ 开局先读它，再写 `FLOW.md`）。
    ⛔ 仍然**不要**为了验证去造假的第二款游戏（fixture 只验"数据不在代码里"这条契约）。
-2. 🔴 **回合令牌验收（`v15-tags-snap-hand`，仍未做）** ⇒ **§7.9**（要 TTS 在跑 ＋ 玩家重载存档）。与 **F8** 一起验最省事：都已重烤进 `TS_Save_10.json`。
+2. 🔴 **重烤存档 ⇒ 一次活体验收（仍未做）**：**F8 那 4 条**（见 §4 第 0 条）＋ **回合令牌 `v15-tags-snap-hand`**（⇒ **§7.9**）。
+   两件事都已在 `TS_Save_10.json` 里，所以要**一起去验**（要 TTS 在跑 ＋ 玩家重载存档）。⛔ 重烤前那 4 条一律按**活体不可用**对待。
 3. 🔴 **游戏侧待办**（5 条规则冲突 · 卡面文本）⇒ **当前游戏的 `local\games\<游戏>\STATE.md`**（⛔ 不进仓库，本文件不复述）。
 4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后三块**：**A** `STATE`/`FLOW` 模板（新游戏起手）· **C** `setup.ps1` 向导 · **E** demo ＋ 30 秒录屏（需 TTS）。
    判据：陌生人只有**公开仓库 ＋ Windows ＋ TTS ＋ 一个 workshop mod**，能否在**一小时内**打完一回合？
@@ -108,6 +105,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
   - 📌 **查了官方 API 才写的**（`api.tabletopsimulator.com`）：⚠️ **`Player.takeObject` 根本不存在** —— Player 只能 `getHandObjects(hand_index)`/`getHandTransform`/`getHoldingObjects`，所以"摸牌进手"的正路是**物件侧**的 `deal`/`dealToColorWithOffset`（我上一轮的设想是错的）。TTS = v14.2.2。
   - 测试从 **16 条扩到 25 条**（新增 9 条 hand 动作；`act` 的深层分支**离线抽不出来** ⇒ 只能源码级断言，真行为留给活体）。
   - ⚠️ 三个**新坑**（都当场抓到）：① 拼接脚本自己的 Lua 文本里有**反引号** ⇒ 把 JS 模板字符串提前闭合（改成数组 join）；② 单行锚点**不许假设行尾**（同一函数里两种行尾都有）；③ `hand` 的 if 链在 `take` 分支后就 `end` 了 ⇒ 新 `elseif` 插在**链内**才对（插到 `end` 之后 Lua 直接报语法错，已验证）。
+- **2026-10-09 场 7**（**F8 定案：拼接进函数体内**）：
+  - 🔍 **根因**：v14 那段原语被拼接进了 `setCount()` 中间 ⇒ 少一个 `end`、尾巴多一个 ⇒ **平衡 ⇒ 能编译、能注册、名字全 nil**。
+    `hand` 活着是因为它在**拼接点之前**；那四个死在**之后**。台账里那条"矛盾证据"**根本不矛盾**（推论/证据 ⇒ `VALIDATION.md` F8）。
+  - 🧰 **新工具 4 个**（`tts\tools\`，用法 ⇒ `MAINTENANCE.md` §1a）：`run_and_capture.js`（**抓子进程输出的唯一可靠姿势**）·
+    `scan_exec.js`（逐行首语句报 `IN`/`NOT-IN`）· `check_block_depth.js`（每行块深度 ＋ 是否平衡）· `verify_f8.js`（每个行首定义的函数加载后是否真的存在）。
+  - ⚠️ **两个假信号，各花掉一轮**（最值钱的一课）：
+    ① `execFileSync` 在本沙箱**抛异常且 stdout/stderr 都是空** ⇒ 读起来就是"子进程什么都没打印"；
+    ② 这些 Lua 文件是 **CRLF** ⇒ `split('\n')` 后每行**尾带 `\r`** ⇒ 行首判定全失配、**往行尾追加的标记永远不到达** ⇒
+       看起来像"这一大片代码根本没执行"。⛔ **按行处理必须先 `.replace(/\r\n/g,"\n")`**。
+  - 📌 **"门禁全绿"只证明它检查了的东西**：第 7 条门禁的抽取块**起点在拼接点下方** ⇒ 整段跳过死区 ⇒ 7 条全绿也看不见它。
+    所以要单独问一句：**"这块 chunk 装得上、名字都在吗"** —— 现在 `test_bridge_primitives.ps1` 里加了第 2b 步
+    （`verify_f8.js`：**每条行首定义的函数**加载后是否真的存在，判定看子进程写的 `VERDICT=` 状态文件）。
+    **阴性对照已验**：装回"平衡但错位"的坏版本 ⇒ 门禁**立刻转红**（以前它是全绿的）。
 
 ## §10 关键数字（2026-10-09）
 

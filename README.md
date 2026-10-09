@@ -85,7 +85,7 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
 ## 已知状态
 
 - ✅ **`tts\` 下 40 个 `.ps1` 全部通过真解析器**（`check_ps1.ps1`，递归）：0 解析错误、BOM 齐。
-- ✅ **离线门禁 6 条**（不需要 TTS）：唯一入口 `tts\tests\run_all.ps1`（清单 ⇒ `CONTRIBUTING.md` §3）。
+- ✅ **离线门禁 7 条**（不需要 TTS）：唯一入口 `tts\tests\run_all.ps1`（清单 ⇒ `CONTRIBUTING.md` §3）。
 - ✅ **无个人路径**：树里已无 `C:\Users\<名字>` 之类硬编码（`tts\config.ps1` 是唯一解析层）· `LICENSE` = **MIT**。
 - ⏸ 对局处于**挂起**态：**现状与续局步骤不在仓库里**（`local\games\_current.md` 指到具体文件）。
 - ⚡ **每回合成本**（2026-10-08 实测）：回合开局一条 `tts\play.ps1 turn` ≈ **1.5s**（替代 `status`+`roll`+`tabread` 的 ~2.9s）；`say.ps1` 每条 **0.79s**。**每个 PowerShell 进程固定 ~0.35s ⇒ 合并命令就是省时间**，TTS 往返不是瓶颈。

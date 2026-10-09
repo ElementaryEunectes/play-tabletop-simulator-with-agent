@@ -13,7 +13,12 @@
   ⇒ **纯 ASCII 的文件对 BOM 免疫**（`tts\tests\test_agents_hygiene.ps1` 的淘汰名单就用"运行时按码位拼字"写成纯 ASCII，并自带一条"本文件除 BOM 外不得有非 ASCII 字节"的自检）。
 - 跑脚本一律 `powershell -NoProfile -ExecutionPolicy Bypass -File '<绝对路径>'`；**工具壳是 Windows PowerShell 5.1** ⇒ 读中文文件要 `-Encoding UTF8` / `[IO.File]::ReadAllText`（否则乱码，文件没坏）。
 - 写工作区之外 ⇒ `[sandbox: file access denied]`（**策略不是 bug**，一次提权重试）；判端口用 `netstat -ano | findstr :39999`（`Get-NetTCPConnection` 在本沙箱假报"没人在听"）。
-- **沙箱限制子进程时的姿势**：抓子进程输出**写文件再读**（`& x 2>&1` 静默丢输出、退出码仍是 0）· ⛔ 别用 `Start-Process`（隐藏控制台 → `0xC0000142`）。门禁已改**同进程调用**、不再 spawn 内层 PowerShell ⇒ 受限模式下 6 条全绿（清单 ⇒ `CONTRIBUTING.md` §3）。
+- **沙箱限制子进程时的姿势**：抓子进程输出**写文件再读**（`& x 2>&1` 静默丢输出、退出码仍是 0）· ⛔ 别用 `Start-Process`（隐藏控制台 → `0xC0000142`）。门禁已改**同进程调用**、不再 spawn 内层 PowerShell ⇒ 受限模式下 7 条全绿（清单 ⇒ `CONTRIBUTING.md` §3）。
+- ⛔ **别给 `$LASTEXITCODE` 赋值**（2026-10-09 实测，害了一次假红）：在**函数里**写 `$LASTEXITCODE = $null`
+  本意是"清掉上一次的值"，实际是**让 PowerShell 建了一个同名的普通局部变量**，它**遮住**了那个自动变量 ——
+  而外部命令更新的是**自动变量** ⇒ 之后再读**永远是空**。实测：先赋值 → `[]`；不赋值 → `[0]`。
+  ⇒ 直接读、不赋值；要在同一次调用里保证新鲜度，清 `[System.Environment]::ExitCode` 或干脆**让子进程自己写状态文件**
+  （`verify_f8.js` 就是这么做的：`VERDICT=PASS|FAIL` 落盘，调用方读文件判，不碰退出码）。
 - **火绒 HIPS（2026-10-09 实测）**：命中规则 `rp_name_execcreate_powershell_hidden`，**触发者永远是 harness 自己**（`node.exe` ＋ `-NonInteractive` 隐藏起 PowerShell）⇒ **每次工具调用都是这个形状**，agent 改不了。
   - 匹配**罕见且间歇**：日志里该规则**总共 5 条**（18:53:47 · 18:54:16 · 18:55:54 · 18:59:16 · 20:13:58），而这两天起了几百次 PowerShell。**触发条件未查明** —— "叠加惯用法才触发"这条结论**已被重复实验推翻**（同一份组合重跑正常、无匹配）。
   - 可用的是相关性：**已知被掐的调用带 `treatment=3`**（`action` 恒 0、`risk` 恒 2，不区分；规则库 `db\hips.db` 加密 ⇒ 枚举读不出来）。
@@ -31,6 +36,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 - ⚠️ **`bridge primitives (Lua)` 这条门禁要先有 `fengari`**（JS 里的 Lua 虚拟机；本机没有 lua 二进制，TTS 也不自带可调用的）：
   `npm i fengari --cache local\scratch\luatest\.npm-cache --prefix local\scratch\luatest`（**缓存必须落在工作区内**，默认 npm 缓存目录在沙箱外会被拒）。缺它时门禁报 `fengari not found` 并以退出码 2 失败 —— **是 NOT RUN，不是 PASS**。
   它跑的是 `gen_bridge_primitives_test.js` → `tts\tests\gen_bridge_primitives.lua` → `run_lua.js`；**生成物必须与源文件一致**，门禁会重生成一次并对齐（不一致即红）。
+
+### 1a. 诊断 Lua 桥接的 Node 工具（`tts\tools\`）
+
+桥接是**烤进存档**的 ⇒ 活体上改不动、看不见；这几个工具让"它到底加载成什么样"在离线可复现。
+`run_lua.js` = fengari 跑一个 `.lua`（门禁用）· `gen_bridge_alone_test.js` = 从**运行中脚本**或本地文件生成桩环境。
+
+- `run_and_capture.js <lua> <outFile>` —— **抓子进程输出的唯一可靠姿势**（见 §0）。⛔ `execFileSync` 在本沙箱会**抛出且 stdout/stderr 都是空的**，那读起来和"子进程什么都没打印"一模一样 —— F8 排查时为这个假信号白花了一轮。
+- `scan_exec.js [from] [to]` —— 逐条**行首语句**打标记，报告 `IN` / `NOT-IN`（**两个都打印**，因为"没打印"太容易被读成"没执行"）。
+- `check_block_depth.js <file>` —— 打印每一条行首语句的**块深度**、末尾是否平衡。F8 的根因就是一处错位：少一个 `end` ⇒ **250 行变成了某个函数的函数体**，而总数恰好还是平衡的 ⇒ **能编译、能加载、名字全是 nil**。深度表一眼就能看出"从哪一行起进了不该进的层"。
+- `verify_f8.js`（回归检查，**已进门禁流程之外、手动跑**）—— 加载仓库里的桥接，核对**每一条行首定义的函数**在加载后是否真的存在（阴性对照：把 `setCount` 的收尾删掉 ⇒ 立刻报 `LOAD ERROR`）。
+- ⚠️ **工具自己先归一 `\r\n`**：这些文件是 CRLF ⇒ `readFileSync(...).split('\n')` 会让每行**末尾带 `\r`**，于是
+  ① `^local ` 这类行首判定**全部失配**、② 往行尾追加语句会追加到 `\r` **之后** ⇒ 注入的标记**永远不到达**，
+  看起来就像"这段代码根本没执行"——**这正是 F8 排查里那个假线索的成因**。凡按行处理都要 `.replace(/\r\n/g, '\n')`。
 
 ## 2. 三个指令槽（**上限写在门禁里，不在这里复述**）
 

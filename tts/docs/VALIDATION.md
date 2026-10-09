@@ -98,8 +98,9 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 | 撤回 / 交易 | 杂项 | ⛔ **仍缺**（`cut`/`paste`/`drop` 已在 `act` 白名单里，但**未验证**；`copy`/交易无文档 API） |
 
 ⇒ 三条 🔴 硬前提（点名取牌 · 造物 · 座位权威）**已落地**，由 `tts\tests\test_bridge_primitives.ps1` 用
-**真 Lua VM ＋ 从真文件抽取的代码**守着（**25 条用例**：16 条覆盖 v14 原语 ＋ 9 条覆盖 v15 的 hand 动作，
-含"缺卡 / 幽灵容器 / 未知动作必须报错而非静默"）。
+**真 Lua VM ＋ 从真文件抽取的代码**守着（**27 条用例**：覆盖 v14 原语 ＋ v15 的 hand 动作，
+含"缺卡 / 幽灵容器 / 未知动作必须报错而非静默"），**外加第 2b 步**：整块桥接加载后**每条定义是否可达**
+（F8 ⇒ 见下；这条是 2026-10-09 补的，因为抽取块**跳过了**坏区）。
 **兜底**：External Editor API（39999）能 `ExecuteLua` 任意代码 ⇒ 缺的原语"做不到"比"做得别扭"少，
 但**它无回执、要状态前后对比验证**，不能当常规路径（`BOOTSTRAP.md` §2 B 第 3 条）。
 
@@ -115,7 +116,38 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ `spawn`/`take`/`destroy` 各需**重烤后真跑一次**
 （尤其 `spawnObjectJSON` 的入参放宽：`{Name=..., Transform={posX=...}}` 与 `{type=..., position=N}` 两种都要试）。
 
-**F8 · `players` / `take` / `spawn` / `destroy` 在活体上不可达，原因**未查明**（`❌`，2026-10-09）**
+**F8 · `players` / `take` / `spawn` / `destroy` 在活体上不可达 —— ✅ 已定案并修复（2026-10-09）**
+**根因一句话**：v14 那段原语**被拼接进了 `setCount()` 的中间** —— 插在它最后一条语句 `out.state = ...`
+和它自己的 `return out` / `end` **之间**。于是 `setCount` 的结尾被甩到 `DSH_destroy` 之后，而**从新块开始的
+一切**（`placeFace` · `takeOne` · `players` · `spawn` · `destroy` · 连同后面整张 `handlers` 表）**都变成了
+`setCount` 的函数体** ⇒ 加载时**从不执行**。补上 `setCount` 的收尾、删掉错位的那两行即可。
+
+- **为什么表现成"名字是 nil"**：chunk 照样**编译通过**（少一个 `end`、尾巴又多一个，总数恰好平衡），
+  `handlers` 表**建得起来**、命令**注册得上**，可它引用的那些名字**从没被赋值** ⇒
+  `attempt to call a nil value`，且**列区间正好等于注册处那次调用**的宽度（`DSH_players(m)`）。
+- **为什么之前所有推断都跑偏**：那些"定义形式 / 200 局部量上限 / 顶层 return"的排除项**都是真的**，
+  但**没一个是原因** —— 定义行本身**根本没执行**。台账里那条"矛盾证据"（`hand=function` 却另四个 nil、
+  "跑到了表之后却没跑表之前"）**并不矛盾**：`hand` 是**更早**、在拼接点**之前**定义的，所以活着；
+  新块里的四个在拼接点**之后**，死在 `setCount` 里。
+- **证据链**（都可在离线复现，工具 ⇒ `MAINTENANCE.md` §1a）：
+  1. `check_block_depth.js` 显示 `SHARED MOVE HELPERS` 那一段的块深度比预期深一层；
+  2. `scan_exec.js` 在**运行中的字节**上：`setCount` / `draw` / `handlers` 都 `IN`，而
+     `placeFace` / `takeOne` / `players` / `spawn` / `destroy` **全部 `NOT-IN`**；
+  3. `debug.getlocal` 直接回答"它们**根本不是** local"（本来那条 `SCOPE ... takeOne=nil` 只说明值是 nil，
+     说明不了**有没有这个名字**）；
+  4. 修完 `verify_f8.js`：`DEFINITIONS=49 MISSING=0`；阴性对照（删掉收尾）立刻 `LOAD ERROR`。
+- ⚠️ **为什么 7 条门禁全绿也看不见它**：`test_bridge_primitives.ps1` 的抽取块**起点在 1600 行附近**，
+  也就是**在拼接点下方** ⇒ 它**整段跳过了那一大片死区**。**"门禁全绿"只证明它检查了的东西，
+  从不证明"这块 chunk 装得上"** —— 这是本轮最值钱的一课。
+- ✅ **已补上门禁**：`test_bridge_primitives.ps1` 新增第 2b 步 —— `verify_f8.js` 加载**整块桥接**，
+  核对**每一条行首定义的函数**在加载后是否真的存在（判定看子进程写的 `VERDICT=` 状态文件，不看退出码）。
+  **阴性对照已验**：把"平衡但错位"的坏版本装回去 ⇒ 该步转红、门禁 `exit 1`。
+- ✅ **已修**：`tts\lua\dsh_global.lua`（`fix(lua): F8 ...`，`git diff --numstat` = 5 增 2 删）。
+  ⚠️ **桥接烤在存档里** ⇒ 必须 `install_save2.ps1` 重烤 ＋ 玩家重载，活体才会变；重烤后 `ping` 应回 `v15-tags-snap-hand`。
+
+<details>
+<summary>原始排查记录（保留：里面的排除项和"矛盾证据"是这次定案的基础）</summary>
+
 症状（活体实测原始回执）：
 ```
 players -> handler error: Global:(5975,26-47): attempt to call a nil value
@@ -136,18 +168,19 @@ destroy -> handler error: Global:(5972,26-47): attempt to call a nil value
 - **执行检查点**显示 chunk **执行到了 `handlers` 表之后**的代码，却**从未执行表之前**那些定义行（同一 chunk、顺序执行 —— 这互相矛盾）；
 - 用 `error()` 做对分探测，在 `local function takeOne(m)`（1592 行，列首语句）处注入错误，**脚本仍能跑完并打出尾部输出** ⇒ 那里的"语句"似乎不在主 chunk 的执行路径上。
 
-**下一步（唯一正确的做法）**：把运行脚本**二分**到"仍能观察到 `hand=function` 但 `takeOne=nil`"的最小片段，把它作为回归用例；工具已就位：`tts\tools\bisect_run.js`（在指定行注入 `error()`，报告是否到达）＋ `gen_bridge_alone_test.js`（从运行脚本或本地文件生成桩环境）。
+⚠️ **当时定的纪律**：在这些命令通过最小复现之前，一律按"活体不可用"对待 —— 离线门禁（含桩用例）**看不见这个问题**。
 
-⚠️ **在这些命令通过上面那条最小复现之前，一律按"活体不可用"对待** —— 离线门禁（含 26 条桩用例）**看不见这个问题**，这是本轮最值钱的一课。
+</details>
 
 **F9 · `dsh_global.lua` 的行尾从"故意混用"漂移成了单一风格**（`⚠️`，2026-10-09）
 **先说结论：`.gitattributes` 的字节一致性承诺没问题** —— 用可靠方法验过：`git diff HEAD -- <file>` 为空，且
 `git cat-file -s HEAD:<file>` = **96789 B** ＝ 工作区文件（`.NET` 直读）**96789 B** ⇒ 逐字节相同。
+（F8 修复后该文件是 **96791 B / 2048 行**——就是那 5 增 2 删，字节数对得上。）
 ⚠️ 但我一开始用**不可靠的方法**（`git show ... > 文件` 经 PowerShell 重定向落盘）得到"HEAD 是全 LF、工作区是全 CRLF"，
 据此写下了"承诺被打破"的结论 —— **那是方法造成的假象**。教训：核对二进制/编码相关的事实，**必须走 `git cat-file -s`
 与 `[IO.File]::ReadAllBytes`**，别用 shell 重定向。
 
-**真实且仍待处理的部分**：该文件现在是 **2045 行全 CRLF、0 行裸 LF**，而 `.gitattributes` 的注释写明本仓库
+**真实且仍待处理的部分**：该文件现在是 **全 CRLF、0 行裸 LF**，而 `.gitattributes` 的注释写明本仓库
 **故意混用**（原为 1607 CRLF ＋ 93 裸 LF）。本次会话的多次"文本模式编辑"（丢掉 `\r` 再统一补成 CRLF）逐步把它推成了单一风格。
 ⇒ 功能无影响（`validate_lua.js`、TTS 都过），但**与文件自身声明的意图不符**。要处理的话应一次性决定统一到哪一种，
 并用 `[IO.File]::WriteAllBytes` 写入（不经任何文本模式编辑）。

@@ -72,6 +72,6 @@
 ## 7. 想自己核一遍（**不需要开 TTS**）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # 6 条门禁一起跑（"退出码 0 ＋ 输出含成功标志"才算过）
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # 7 条门禁一起跑（"退出码 0 ＋ 输出含成功标志"才算过）
 ```
 逐条清单/限制 ⇒ `CONTRIBUTING.md` §3；本机沙箱注意事项 ⇒ `MAINTENANCE.md` §0。

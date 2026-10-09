@@ -92,7 +92,7 @@
 
 ### 🧪 测试（**不开 TTS 也能跑**）
 
-6 条、唯一入口 `tts\tests\run_all.ps1`（"退出码 0 ＋ 输出含成功标志"才算过）⇒ **逐条清单与限制见 `CONTRIBUTING.md` §3**；每条测试的**头部注释**说明自己验什么。
+7 条、唯一入口 `tts\tests\run_all.ps1`（"退出码 0 ＋ 输出含成功标志"才算过）⇒ **逐条清单与限制见 `CONTRIBUTING.md` §3**；每条测试的**头部注释**说明自己验什么。
 `tests\fixtures\` = 合成数据（**不是真实存档**）· `tests\fake_live_index.ps1` = 冒充 `live_index.ps1` 的桩。
 ⚠️ 改测试判定逻辑前必须先造一个"坏"的**阳性对照**（`test_param_backfill.ps1` 第一版就因正则锚在行首而**完全看不见**单行 `param(...)`）；`check_ps1.ps1` 是**递归**的 ⇒ 测试自身也受 BOM ＋ 真解析器校验。
 
