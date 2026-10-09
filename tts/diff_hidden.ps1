@@ -7,7 +7,7 @@
 #   两次顺带看到隐藏区物件的 nick。=> **凡是要看 diff，都走这个脚本。**
 #
 # 与 diff_safe.ps1 的关系
-#   diff_safe.ps1 是《游城拓荒》专用的（写死"x>=30 且 z<-30 那一列"），换局即作废。
+#   diff_safe.ps1 是**已终局那一局**专用的（写死"x>=30 且 z<-30 那一列"），换局即作废。
 #   本脚本把"隐藏区"外置成配置数据 cache\hidden_zones.csv，任何游戏都能用，
 #   加一个游戏只需往里加一行，不用再写一个脚本。
 #
@@ -21,7 +21,7 @@
 #     => 一律按隐藏处理，并在输出里报告有多少项是这么判的。
 #
 # 用法
-#   powershell -NoProfile -ExecutionPolicy Bypass -File diff_hidden.ps1 -Game dicethrone
+#   powershell -NoProfile -ExecutionPolicy Bypass -File diff_hidden.ps1 -Game <游戏>
 #   diff_hidden.ps1 -Snapshot     # 透传：冻结基线（等价 diff_index.ps1 -Snapshot）
 #   diff_hidden.ps1               # 不传 -Game => 所有规则都生效（第一条命中的生效）
 param(

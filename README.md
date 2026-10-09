@@ -28,8 +28,8 @@
 | **做 TTS 工作**（工具地图 · 按钮 · 桥接坑 · 一句话约定） | `tts\docs\TTS_RULES.md` |
 | 每局开工 | `tts\docs\PLAY.md`（**通用**每回合卡）＋ `local\games\<游戏>\STATE.md`（该局状态，**不进仓库**）· 换 mod 才需 `tts\docs\BOOTSTRAP.md` |
 | 本局规则/技能/骰面 | `local\games\<游戏>\FLOW.md`（**不进仓库**）·
-    卡面文本 `cache\dicethrone_cards.md`（`cache\` 不入库，脚本会重建/手抄） |
-| 脚本清单（⭐常用 / 💤休眠 / 改名前必读的引用图） | `tts\docs\TTS_RULES.md（§二 工具清单）` |
+    卡面文本 `cache\<游戏>_cards.md`（`cache\` 不入库，脚本会重建/手抄） |
+| 脚本清单（⭐常用 / 💤休眠 / 改名前必读的引用图） | `tts\docs\TTS_RULES.md` §二 工具清单 |
 | 换局 / 冷启动 | `tts\docs\BOOTSTRAP.md` |
 | **人怎么用（拿给玩家看）** | `tts\docs\USER_GUIDE.md` |
 | 文档与目录总索引 | `tts\docs\README.md` |
@@ -112,4 +112,6 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
 它**不覆盖**：**Tabletop Simulator**（Berserk Games）· **《王权骰铸》/ Dice Throne** 及其卡面文本与美术（Roxley / MINDVG）·
 创意工坊模组本身。**规则/卡面文本不随仓库分发**（自用便签在 `local\games\`）：那份便签转抄了部分卡面文字，**不含任何卡图** ——
 图片与卡面文本库都在 `cache\`，不进仓库。
+> ⚠️ **上面这一处是全仓库唯一的"点名"**（法律声明必须让权利人可识别）。其余任何地方**都不准出现真游戏名**：
+> 一律用 `<游戏>` / "对局型 mod" 这类占位或描述 —— 门禁 `tts\tests\test_agents_hygiene.ps1` 会逐字检查（`README.en.md` 的对应段同理）。
 `tts\validate_lua.js` 依赖 **`luaparse`**（MIT），但**未随仓库分发**：`npm i luaparse`，或设 `LUAPARSE_DIR`。

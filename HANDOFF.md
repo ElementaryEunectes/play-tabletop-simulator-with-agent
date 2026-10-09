@@ -21,13 +21,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 
 ## §4 待办（按优先级）
 
-1. ✅ **D2 已完成（2026-10-09）**：`local\games\dicethrone\objects.json` 写好（8 个区块）⇒ `bootstrap.ps1` 恢复可用（`cache\session_map.md` = 92 行 / 3.9 KB；HP·CP 4 行 · 牌堆 2 · 骰子 5+5 · 英雄板 2 · 规则书 1）。
+1. ✅ **D2 已完成（2026-10-09）**：**对局型 mod** 的 `local\games\<游戏>\objects.json` 写好（8 个区块）⇒ `bootstrap.ps1` 恢复可用（`cache\session_map.md` = 92 行 / 3.9 KB；HP·CP 4 行 · 牌堆 2 · 骰子 5+5 · 英雄板 2 · 规则书 1）。
    📌 关键：**索引里同一物件常有两行**（容器副本 1523/1659）⇒ 每个区块都要 `topLevel: true`；这条已写进 `BOOTSTRAP.md` §1b 与数据文件自身的 `_note`。换英雄/换局：`bootstrap.ps1 -Inventory` 取新 hash 加一行。
-   ✅ **"任何 mod 都成立"真验证已完成（2026-10-09 晚）**：用户给的第二款 mod = **七圣召唤**（`GAME=qisheng`）⇒ `install_save2.ps1 -KeepLua -KeepTabs` 烤进 `TS_Save_9.json`（模组自带的 116 KB Global 脚本与 12 页笔记本**原样保留**）⇒ 玩家重载后 **`ping` 回 `v13-turntoken`**（§7.9 第 1 条过）⇒ `obj_index.ps1 -File <绝对路径>`（625 行）⇒ `bootstrap.ps1 -Inventory`（190 nicks / 41 hashes）⇒ 写 `objects.json`（7 区块）⇒ `bootstrap.ps1` 出 **115 行地图**。
-   📌 学到的两条：① **`obj_index.ps1 -File` 要绝对路径**（相对 cwd 解析，给 `TS_Save_9.json` 会报 not found）；② 这个 mod 把教学写在 **Notecard** 上（地图有专门一节 ⇒ 开局先读它，再写 `FLOW.md`）。
+   ⚠️ **"任何 mod 都成立"：第二款 mod 实测 = 半过（2026-10-09 晚，详情见 `tts\docs\VALIDATION.md`）**：**非对局型** mod（自带 116 KB Global 脚本 ＋ 12 页笔记本）⇒ `install_save2.ps1 -KeepLua -KeepTabs` 烤进存档、模组自带脚本**原样保留** ⇒ 玩家重载后 **`ping` 回 `v13-turntoken`** ⇒ `obj_index.ps1 -File <绝对路径>`（625 行）⇒ `bootstrap.ps1 -Inventory`（190 nicks / 41 hashes）⇒ 写 `objects.json`（7 区块）⇒ **115 行地图**。
+   🟢 这一路**全过**（传话 · 存档侧索引 · 认物 · 地图）。🔴 但 **`play.ps1` 在这款上 FAIL**（`NO PART`：它要 `cache\<game>_rules.json` 且 `status` 也走 `$Rules.dice/seats`）⇒ **这条缺陷已写进 `TTS_RULES.md` §二 方框**；"通用"目前**只是这一路证据，不是全链证据**。
+   📌 学到的两条：① **`obj_index.ps1 -File` 要绝对路径**（相对 cwd 解析，给裸文件名会报 not found）；② 这类 mod 把教学写在 **Notecard** 上（地图有专门一节 ⇒ 开局先读它，再写 `FLOW.md`）。
    ⛔ 仍然**不要**为了验证去造假的第二款游戏（fixture 只验"数据不在代码里"这条契约）。
 2. 🔴 **回合令牌验收（`v13-turntoken`，未做）** ⇒ **§7.9**（要 TTS 在跑 ＋ 玩家重载存档）。
-3. 🔴 **游戏侧待办**（5 条规则冲突 · 卡面文本）⇒ **`local\games\dicethrone\STATE.md`**（⛔ 不进仓库，本文件不复述）。
+3. 🔴 **游戏侧待办**（5 条规则冲突 · 卡面文本）⇒ **当前游戏的 `local\games\<游戏>\STATE.md`**（⛔ 不进仓库，本文件不复述）。
 4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后三块**：**A** `STATE`/`FLOW` 模板（新游戏起手）· **C** `setup.ps1` 向导 · **E** demo ＋ 30 秒录屏（需 TTS）。
    判据：陌生人只有**公开仓库 ＋ Windows ＋ TTS ＋ 一个 workshop mod**，能否在**一小时内**打完一回合？
 5. 🟡 **开源收尾**：`LICENSE`(MIT) ✅ · `README.en.md` ✅ · 路径/隐私 ✅（树里 0 处 `C:\Users\<名字>`）· 离线门禁 **6 条** ✅ ⇒ 剩下"首次上手的时间/成本期望"写进 README 顶部。
@@ -66,6 +67,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 - **两条实测纠正**（细节见 `tts\docs\MAINTENANCE.md` §0 / 平台宪章）：
   - **`exit`**：在**脚本文件**里被该文件自己的边界接住（`&`/`.` 调用者不死，码只进 `$LASTEXITCODE`）；只有**没有脚本边界**的 `exit`（`iex`、手贴代码）才当场结束进程 ⇒ 宪章那句**已改准确**。
   - **火绒**：命中规则 `rp_name_execcreate_powershell_hidden`，**触发者永远是 harness 自己**（`node.exe` ＋ `-NonInteractive` 隐藏起 PowerShell）；**触发条件未查明**（"叠加惯用法才触发"这条我自己的结论**已被重复实验推翻**）；**用户 20:14:04 改配置后 20+ 次调用零匹配**（时间吻合、因果未证）；已知被掐的调用带 `treatment=3`。**查法 ⇒ `MAINTENANCE.md` §0**。
+
+- **2026-10-09 场 3**（**验证转向**：目标从"打游戏"改成"验项目"）：
+  - **通用性首次有了反例**：第二款真 mod（**非对局型**）⇒ 传话/存档/索引/认物/地图**全过**，`play.ps1` **FAIL**。
+    ⇒ 逐层台账（断言 · 证据 · **未验就写未验**）＝ **`tts\docs\VALIDATION.md`**；`play.ps1` 的边界写进 `TTS_RULES.md` §二 方框。
+  - **硬线落地**：受跟踪文件里 **0 处真游戏名**（唯一例外 = 两个 README 的授权声明）⇒ 门禁 `test_agents_hygiene.ps1` 新增扫描 ＋ **4 条自检**（看见植入名 / 分支数 / 条目数 / 除 BOM 外纯 ASCII）。上线即抓出 **14 个文件**的违规。
+  - ⚠️ **这次"假绿"抓了两回**：① 淘汰名单写成 `@('a' + 'b', 'c' + 'd')` ⇒ 数组只有 1 个元素、正则**没有 `|`**、扫描器全瞎，而阳性对照因为**用同一个坏串**照样 PASS；② 后来一次合并编辑**吃掉一行** ⇒ 某个名字悄悄不再被扫（分支数检查 7/7 也照样 PASS）⇒ 补"条目数必须等于 N"。
+  - ⚠️ **真事故两条**（⇒ `MAINTENANCE.md` §0/§4）：**丢 BOM → 工具壳按 ANSI 读 → 语法错 → `check_ps1` 把乱码固化**；**编辑工具把 `dsh_global.lua` 行尾归一**（2 行注释变 95 增 95 删，靠 `git diff --numstat` 抓出并重做）。
 
 ## §10 关键数字（2026-10-09）
 

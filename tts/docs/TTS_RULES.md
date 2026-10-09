@@ -51,11 +51,11 @@
 | `check_ps1.ps1` | **改完 `.ps1` 必跑**：补 BOM ＋ 真解析器校验 |
 | **`doctor.ps1`** | **新机器 / 新 clone 第一步**（**只读**体检）：PowerShell · 路径解析 · TTS 目录 · 39999 端口 · node · **每请求注入字节数** ⇒ `VERDICT: ready` 或带修复建议的问题清单 |
 
-> ### ⚠️ `play.ps1` ≠ 通用控制层（2026-10-09 实测更正：七圣召唤）
+> ### ⚠️ `play.ps1` ≠ 通用控制层（2026-10-09 实测更正）
 > 它的**每个动词都要 `cache\<game>_rules.json`**：`play.ps1` 在**读规则之前**就 `Fail 'NO PART'`，
 > 且 `status` 也经 `Seat-Obj`（= `$Rules.dice.<seat>`）＋ `(…).hp_counter`／`heroes` ⇒ **schema 是"对局型"的**
 > （座位 · 计数板 · 骰盘 · 招式表）。⇒ 对该游戏**没写这份规则 JSON 之前，连 `status` 都跑不了**；
-> 而像**七圣召唤**这种"没有那套计数板/骰盘"的 mod，**不是缺文件，是根本没有可读之物**。
+> 而"没有那套计数板/骰盘"的 mod，**不是缺文件，是根本没有可读之物**。
 > **通用层只有这些**：`ds.ps1`/`ttsx.ps1`/`ttslib.ps1`（传话）· `obj_index`/`live_index`/`diff_index`/`diff_hidden`（看）·
 > `bootstrap.ps1`（认物，数据在 `local\games\<游戏>\objects.json`）· `card.ps1`（查卡库）· `say.ps1`。
 > ✅ 判"桥接在不在"**永远**用 `ds.ps1 -Do ping`（版本号即凭据）—— **别拿 `play.ps1 status` 当连通性检查**。
@@ -145,7 +145,7 @@ tts\
 - **`Infinite_Bag` 取物后数量不减** ⇒ 验证看**物件总数**（`ping`）；且**从袋里取出的 token 常常没有图案 ⇒ 这类摆放交给玩家**。
 - ⚠️ **延迟/挂账效果不会自己冒出来**：卡面写"本回合收尾阶段…"的，**收尾第 1 步必须倒查本回合用过的牌有没有挂账**。
 - 含中文的 `.ps1` 手写时**尽量用 ASCII 注释**（PS 5.1 把无 BOM 文件按 ANSI 读 ⇒ 中文注释变乱码并**语法报错秒挂**；`check_ps1.ps1` 能补 BOM）。
-- 🕰️ 上一局（游城拓荒）留下的**跨游戏通用教训**已归档在 `local\archive\NOMADCITY_FLOW.md §18.10`（要重开那类游戏时看）。
+- 🕰️ 已终局那一局留下的**跨游戏通用教训**已归档在 `local\archive\` 下该局手册的 §18.10（要重开那类游戏时看）。
 
 ## 六、换局 / 新游戏
 

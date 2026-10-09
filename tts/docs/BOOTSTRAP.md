@@ -1,6 +1,6 @@
 # 冷启动 / 换局 / 换模组 —— **唯一一份**工作流（2026-10-07 合并）
 
-> 以前分成两份（《游城拓荒》的"换局流程" 与 `NEWMOD_DEPLOY.md` 的"异地部署"），
+> 以前分成两份（某一局的"换局流程" 与 `NEWMOD_DEPLOY.md` 的"异地部署"），
 > **本质是同一件事**：让"我"在一个（可能陌生的）桌面状态里重新获得"能读 + 能操作"的能力。
 > 所以合并成这一份，按**三种情形**走，前 4 步是**共同核心**。
 
@@ -42,7 +42,7 @@ ds.ps1 -Do ping        # 期望 ok v=<DSH_VERSION> objs=<n> loads=<n>
 obj_index.ps1          # 存档侧全量（含 url hash / 容器）—— 滞后 ~5 分钟
 live_index.ps1         # 实时全表（guid/name/x/z）
 ds.ps1 -Do count       # 名称直方图
-# 同一模组重开（《游城拓荒》专用旧入口，已归档）：archive\tts-legacy\init.ps1（面板核对 + 拼图 + cache\init_report.md）
+# 同一模组重开（某一局的专用旧入口，已归档）：archive\tts-legacy\init.ps1（面板核对 + 拼图 + cache\init_report.md）
 ```
 - **顶层物件数 ≪ 真实件数**：组件多在 Bag/Deck 里 ⇒ `act:<guid>:getQuantity` / `read:<guid>` 深入看。
 - 通用做法：**直接从存档 JSON 里读模组的脚本**（§2 D 步）。
@@ -89,8 +89,8 @@ ds.ps1 -Do count       # 名称直方图
   - `INIT` = 本轮第一次读；`SAME` = 没变；`ERR-<原因>` = 没读到，原因已内联（见下）
   - ⚠️ `channel_watch.ps1` **不再 spawn `ds.ps1`**（2026-10-07 改）：它是后台作业 ⇒ 再 spawn 就是**两层**嵌套子进程
     ⇒ 沙箱掐网络 ⇒ **整个监听静默失效**。现在它 **dot-source `ttslib.ps1` 在自身进程内直接 TCP**（与 `ttsx.ps1` 同一份代码）。
-- **《游城拓荒》专用（换游戏即失效，别指望）**：`front_watch.ps1` 写 `cache\front.txt` = 前台状态 + `TURN=Pn`
-  （靠**读 TTS 横幅的颜色方块**判断轮到谁）⇒ 那是那一局的机制。**王权骰铸没有那个横幅**，该文件永远出不了 `TURN=`。
+- **某一局专用（换游戏即失效，别指望）**：`front_watch.ps1` 写 `cache\front.txt` = 前台状态 + `TURN=Pn`
+  （靠**读 TTS 横幅的颜色方块**判断轮到谁）—— 那是**那一局 mod 自己画的横幅**。没有该横幅的 mod，这个文件永远出不了 `TURN=`。
 - **换游戏后必做三步**：① 确认新存档里有**对话笔记本页**（没有就用 `install_save2.ps1` 的 `-KeepTabs` 加一页
   「DSH 对话频道」）；② **重启 `channel_watch`**（旧进程还指着旧存档/已退出）；③ 确认 **file 哨兵还注册着**
   （pattern `^NEW \d`，指向 `cache\chan.txt`）——哨兵不跨会话持久，**每次开工重新注册**。
@@ -166,7 +166,7 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
 
 **C. 找规则书，只读"开局必需"的部分**（**新模组必做，别跳过**）
 1. **先定位**：`find:规则` / `find:Rule` / `find:说明` / `find:手册`，或从 `count` 直方图里挑名字可疑的物件。
-   （例：王权骰铸桌上就有「规则书（中2.3英2.4版本）」，`0f4dfd` @ (190,−0.01)。）
+   （例：对局型 mod 桌上常有一本「规则书（中x.y英x.y版本）」，`0f4dfd` @ (190,−0.01)。）
 2. **先判形态，再决定怎么读**（省 token 的关键）：
    - `Custom_Model`/`Custom_Tile` 贴图 ⇒ 用「附录A / TTS_WORKFLOW §2b」的图素↔世界换算**裁图读**，只裁要用的区域；
    - `Deck`/`Bag`（一叠卡）⇒ `act:<guid>:getQuantity` 看几张，再决定逐张 `draw` 或按 hash 认；
@@ -183,10 +183,13 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
 ## §3 状态页规范（**一个游戏一份，绝不共用**）
 > 规则/边界全在 `AGENTS.md`（常驻宪章）；本节只讲**换局时怎么落状态页**。
 - **`local\games\_current.md`** = 当前在玩哪一款 → 指向该游戏的状态页（**先读它**；`local\` 不进仓库）。
-- 每款游戏一份 **`local\games\<游戏>\STATE.md`**（旧局 `local\archive\NOMADCITY_STATE_final.md`），内容=**只写"现在是什么"**：
-  比分/资源/位置/**待办** + 本局 guid 对照。**规则、坐标、工具用法、纪律都不放这里**（规则→`<游戏>_FLOW.md`，纪律→`AGENTS.md`）。
-- 一局结束 ⇒ 归档到 `local\archive\`（**不进仓库**），状态页重置或另开新的。
-- ⛔ **不要把 A 游戏的坐标/guid/规则写进 B 游戏的状态页**（《游城拓荒》的"本局…"数据换模组即作废）。
+- 每款游戏一份 **`local\games\<游戏>\STATE.md`**（旧局归档在 `local\archive\` 下、以该局命名），内容=**只写"现在是什么"**：
+  比分/资源/位置/**待办** + 本局 guid 对照。**规则、坐标、工具用法、纪律都不放这里**（规则→ 同目录 `FLOW.md`，纪律→`AGENTS.md`）。
+- ⭐ **两层的命名规矩不一样，别搞混**：`local\games\<游戏>\` 下用**裸名**（`STATE.md`/`FLOW.md`/`MYHAND.md`/`objects.json` —— **目录就是命名空间**）；
+  一局结束 ⇒ 归档到 `local\archive\`（**不进仓库**），而归档层是**平的** ⇒ 必须**加游戏名前缀**（`<GAME>_FLOW.md` · `<GAME>_STATE_final.md`），否则几局的文档互相撞概念。
+  ⛔ 所以**搬进/搬出 `local\archive\` 时要改名**——这是唯一一处需要人工改名的地方。
+- 归档动作本身：状态页重置或另开新的（旧局状态封存进上面那份带前缀的归档）。
+- ⛔ **不要把 A 游戏的坐标/guid/规则写进 B 游戏的状态页**（某一局的"本局…"数据换模组即作废）。
 - ⭐ **看 diff 一律走 `tts\diff_hidden.ps1 -Game <游戏>`**（隐藏区规则在 `cache\hidden_zones.csv`，换游戏只加一行）。
 - ⛔ **STATE 同一时刻只允许一个写入者**（多子代理并发编辑会互相覆盖/留下过期行；改前先 read、改后回报字节数）。
 - ⚠️ **改完任何 `.ps1` 都要跑 `tts\check_ps1.ps1`**（补 BOM ＋ 真解析器校验）；死脚本一律移进 `archive\tts-legacy\`，别留在 `tts\`。
@@ -200,12 +203,12 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
 ## §5 已知空白（待补，诚实清单）
 - `exec` 的边界：已知对"带脚本的物件"有效；**无脚本物件 / 反复调用 / 并发**未验证。
 - 桥接的 `callx`（带参数调用）**加了但未实测**（本次走的是 `exec`）。
-- 部分模组的**规则书就在桌上**（如王权骰铸的「规则书（中2.3英2.4版本）」物件）⇒ 新模组应先读它再开局。
+- 部分模组的**规则书就在桌上**（如对局型 mod 的「规则书（中x.y英x.y版本）」物件）⇒ 新模组应先读它再开局。
 
 ## §6 新游戏初始化清单（可勾选）
 
 > **什么时候读我**：换局 / 换模组时**照单走一遍**。
-> 每条括号里给两个实例（`骰`=王权骰铸 2026-10-07 · `城`=游城拓荒 2026-10-04），用来判断"这一步长什么样"。
+> 每条括号里给两个**已实测的实例**（`对局型` 2026-10-07 · `资源地图型` 2026-10-04），用来判断"这一步长什么样"。
 
 **两份骨架**（新游戏起手：拷进 `local\games\<游戏>\` 再填 —— 骨架留在仓库，填好的不进）
 
@@ -248,11 +251,12 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
       〔骰=`blue_postable`(14 摆位) + 英雄入口函数；城=城市面板/资源点脚本〕
 - [ ] **6. 找规则书，只读开局必需四件事**（起始 HP/CP · 阶段流程 · 胜负条件 · 初始设置）
       ⚠️ **先判形态**：贴图 ⇒ 裁图；`Custom_PDF`/远端 ⇒ **读不了就直说，请玩家念**〔骰=远端 PDF，靠标准规则补；城=面板贴图〕
-- [ ] **7. 找状态载体**（HP/资源到底存在哪）〔骰=**`getScriptState.saved_count`**（`read`/`getGMNotes` 全空！）；
-      城=资源计数器在 `GMNotes` + `call:plusOne`〕
+- [ ] **7. 找状态载体**（HP/资源到底存在哪）〔对局型=**`getScriptState.saved_count`**（`read`/`getGMNotes` 全空！）；
+      资源地图型=资源计数器在 `GMNotes` + `call:plusOne`〕
 - [ ] **8. 在桌上生成自己的座位**（**用模组自己的入口函数**，`-Exec <guid> -Lua "..."`，**靠物件数前后差验证**）
-      〔骰=`moon(getObjectFromGUID('285719'),'Blue',false)` ⇒ 101→119；城=`init.ps1` 链〕
+      〔对局型=`moon(getObjectFromGUID('<guid>'),'Blue',false)` ⇒ 101→119；资源地图型=自写的 `init` 链〕
 - [ ] **9. 确认唤醒机制**（§1 D：`channel_watch` 起没起 · 对话页在不在 · 哨兵注册没有）〔骰=`cache\chan.txt`；
       城=`chan.txt` + `front_watch.ps1` 的 `TURN=Pn`〕
-- [ ] **10. 定先手 → 第 1 回合**〔骰=**未定**（FLOW §5 待确认）；城=按规则定〕
-- [ ] **11.（收尾）写状态页**：`<游戏>_STATE.md` 只写"现在是什么"，规则进 `<游戏>_FLOW.md`〔骰=`DICETHRONE_*.md`〕
+- [ ] **10. 定先手 → 第 1 回合**〔对局型=**未定**（FLOW §5 待确认）；资源地图型=按规则定〕
+- [ ] **11.（收尾）写状态页**：`local\games\<游戏>\STATE.md` 只写"现在是什么"，规则进同目录 `FLOW.md`
+      （⚠️ **若这一局已终局要归档**，才改成 `local\archive\<GAME>_*.md` 的**带前缀**命名 —— 见 §3）

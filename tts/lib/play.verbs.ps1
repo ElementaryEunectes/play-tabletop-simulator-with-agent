@@ -98,7 +98,7 @@ function Cmd-Roll {
     Write-Host ("     symbols {0}" -f ($sym -join ''))
     $res = Top-Abilities $Seat $faces 3
     if (@($res.top).Count -eq 0) {
-        Write-Host ("NO SKILL (can reroll / lock dice; tries used unknown, pass -Tries). All skill rows are in cache\dicethrone_rules.json")
+        Write-Host ("NO SKILL (can reroll / lock dice; tries used unknown, pass -Tries). All skill rows come from the game's rules JSON")
     } else {
         foreach ($a in @($res.top)) { Write-Host ("  -> " + (Ability-Line $a $res.counts)) }
     }
@@ -251,7 +251,7 @@ function Cmd-Turn {
 function Cmd-SelfTest {
     Write-Host "selftest (offline, no TTS contact)"
     $tally = @{ bad = 0 }
-    # Every case verified by hand against the face->symbol map in dicethrone_rules.json:
+    # Every case verified by hand against the face->symbol map in the game's rules JSON:
     #   moon: 1/2/3=bow  4/5=foot  6=moon(+star, one at a time)
     #   scar: 1/2/3=swirl  4=star  5=blood  6=M
     $cases = @(

@@ -399,7 +399,7 @@ local function act(m)
         -- the stack; cloning leaves the supply intact.
         clone = true,        getQuantity = true, getStates = true, getTags = true,
         flip = true, setInvisibleTo = true,
-        -- 2026-10-07: 骰子。装到《王权骰铸》(Dice Throne) 这类模组上必须能掷骰。
+        -- 2026-10-07: 骰子。装到"带骰盘的对局型模组"上必须能掷骰。
         -- roll() 无参数、无返回值，走的就是 flip 那条路径。
         roll = true,
     }
@@ -1436,7 +1436,7 @@ end
 -- cannot find it and `move:` cannot reach it - verified the hard way when 6 cards were
 -- stacked into a pile and all 7 old guids vanished. TTS's only primitive for "take the
 -- top card off a deck" is Deck.takeObject(), so without this handler a deck can never be
--- drawn from. Needed for 游城拓荒's "翻开一张事件牌" (city move / explore onto an unmarked
+-- drawn from. Needed for a "flip an event card" move (resource-map mods: explore onto an unmarked
 -- resource point).
 --
 -- rotZ is what makes a card face up or face down when it lies flat:

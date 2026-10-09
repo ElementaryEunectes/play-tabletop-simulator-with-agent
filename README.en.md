@@ -34,7 +34,7 @@ Simulator** (Steam, paid) + subscribe to the target mod → **bake the bridge in
 | **Doing TTS work**: tool map, the End Turn button, bridge traps, the one-line conventions | `tts\docs\TTS_RULES.md` |
 | Starting a round | `tts\docs\PLAY.md` (generic per-turn card) + `local\games\<game>\STATE.md` (that match's state, not shipped); `tts\docs\BOOTSTRAP.md` only when changing mods |
 | This game's rules, skills and dice faces | `local\games\<game>\FLOW.md` (not shipped) · card text in `cache\` |
-| Script inventory (core / dormant / rename-time reference graph) | `tts\docs\TTS_RULES.md（§二 工具清单）` |
+| Script inventory (core / dormant / rename-time reference graph) | `tts\docs\TTS_RULES.md` section 2 |
 | New game, cold start | `tts\docs\BOOTSTRAP.md` |
 | **How a human uses it** (hand this to the player) | `tts\docs\USER_GUIDE.md` (Chinese) |
 | Doc and directory index | `tts\docs\README.md` |

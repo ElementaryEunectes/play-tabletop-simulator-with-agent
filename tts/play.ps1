@@ -1,4 +1,4 @@
-﻿# play.ps1 - Dice Throne: ONE COMMAND PER ROUND.
+﻿# play.ps1 - per-round console for "match-shaped" games (see TTS_RULES.md §2 box).
 #
 # WHY THIS EXISTS
 #   Mid-game the main agent's context fills up, so every turn used to cost either a
@@ -107,7 +107,7 @@ switch ($Action) {
     'status' { Cmd-Status }
     'income' { Cmd-Income }
     'roll' { Cmd-Roll }
-    'attack' { if ($Ability -eq '') { Fail 'LOOKUP' 'attack needs -Ability <name from cache\dicethrone_rules.json>' } ; Cmd-Attack }
+    'attack' { if ($Ability -eq '') { Fail 'LOOKUP' 'attack needs -Ability <name from the game rules JSON>' } ; Cmd-Attack }
     'defense' { Cmd-Defense }
     'say' { Cmd-Say }
 }

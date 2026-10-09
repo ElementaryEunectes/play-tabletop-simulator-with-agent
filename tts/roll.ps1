@@ -1,9 +1,9 @@
-﻿# roll.ps1 - Dice Throne: roll the hero dice and READ THE FACES, one line per die.
+﻿# roll.ps1 - roll dice in a tray and READ THE FACES, one line per die.
 #
 # WHY THIS EXISTS
-#   "Who goes first" and every attack/defence roll in Dice Throne is "roll 5 dice,
-#   read the faces, match a skill pattern". Doing that by hand cost a tool call per
-#   die per step. This is the one command a round needs:
+#   In a dice-and-skill-table game, "who goes first" and every attack/defence roll is
+#   "roll N dice, read the faces, match a skill pattern". Doing that by hand cost a tool
+#   call per die per step. This is the one command a round needs:
 #       powershell -NoProfile -ExecutionPolicy Bypass -File tts\roll.ps1 -Roll
 #   => rolls both trays, waits for them to SETTLE, prints the face of each die.
 #
@@ -26,8 +26,8 @@
 #
 # GOTCHAS BAKED IN HERE (each one cost a debugging round)
 #   * Dice GUIDs are hex strings and MUST stay strings. Sent through
-#     ttsx.ps1 -Cmd '...' the quotes around a guid get eaten and 187cc1/656b32/
-#     26745c/240f79/033d23 come back as bad JSON or as the NUMBER 910636. So this
+#     ttsx.ps1 -Cmd '...' the quotes around a guid get eaten and a guid like
+#     <hex guid> comes back as bad JSON or as a NUMBER. So this
 #     script does NOT build JSON text: it dot-sources ttslib.ps1 and hands
 #     Invoke-Tts a hashtable, so every guid is serialised as a quoted string.
 #   * roll() only STARTS a roll. Reading a face immediately returns the PREVIOUS face.

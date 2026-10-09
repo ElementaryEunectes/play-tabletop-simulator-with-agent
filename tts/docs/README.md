@@ -25,8 +25,9 @@
 | 按需（维护） | **`MAINTENANCE.md`** | **本仓库**要点（门禁 · 两个指令槽 · 路径纪律）；坑 ×16 与注入机制已迁出 ⇒ harness home 的 `platform\MAINTENANCE.md` | 学到新坑时 |
 | 按需（给人） | `USER_GUIDE.md` | **人怎么用**：开局 · 你只做两件事 · AI 何时请你帮忙 · 在哪说话 · 常见问题 | 低 |
 | 按需（先例） | `PRIOR_ART.md` | 二手调研与先例（**冻结，别重搜**；含可搬/不可搬结论） | 冻结 |
+| 按需（**验证**） | **`VALIDATION.md`** | **"对任何 TTS mod 都成立"这句验到哪了**：逐层断言 · 实测证据 · 已知缺陷（F1…）· 下一款 mod 怎么续验。**要写"通用"二字之前先读我** | 每验一款 mod |
 | 不读（**已迁出仓库** ⇒ harness home 的 `platform\HARNESS_HOME_AGENTS.template.md`） | ~~HARNESS_HOME_AGENTS.template.md~~ | `$DSH_HOME\AGENTS.md` 的**源**：`---` **以下是正文**（改完拷过去）；`tts\tests\test_agents_hygiene.ps1` 会核对两者逐字一致 | 低 |
-| 永不 | `local\archive\`（**gitignore**） | 过期留档：旧简报 ×4 · 旧 STATE · 游城拓荒全部文档 · 旧 init 产物 —— **未随仓库分发** | 冻结 |
+| 永不 | `local\archive\`（**gitignore**） | 过期留档：旧简报 ×4 · 旧 STATE · 已终局那一局的全部文档 · 旧 init 产物 —— **未随仓库分发** | 冻结 |
 
 ## 目录约定（保持干净 = 省 token）
 
@@ -39,6 +40,6 @@
 - `tts\tools\` = **跨语言小工具**：`fetch_pdf.js`（用 **Node 的 TLS 栈**下载 —— 沙箱里 `curl`/`Invoke-WebRequest` 会报 TLS 凭证错）·
   `pdf_images.js`（从**图片型** PDF 抽整页图）—— 规则书那条链用的就是这两个（见 `local\games\<游戏>\FLOW.md` 附录 A）。
 - `tts\docs\` = 上面那张表里的文档。
-- `cache\` = **产物**（可重建）：`front.txt` / `chan.txt`（哨兵心跳）· `dicethrone_cards.md`（游戏数据）·
+- `cache\` = **产物**（可重建）：`front.txt` / `chan.txt`（哨兵心跳）· `<游戏>_cards.md`（游戏数据）·
   `live_index.csv` / `baseline.csv` / `obj_index.csv`（快照）· `hidden_zones.csv`（隐藏区规则）· 规则书 PDF 与整页图。
 - **不进仓库的**（都在 `.gitignore`）：`AGENTS.local.md`（本机事实）· `local\`（私有：手牌 / 归档 / scratch）· `cache\` · `out\` · `logs\` · `shots\`。
