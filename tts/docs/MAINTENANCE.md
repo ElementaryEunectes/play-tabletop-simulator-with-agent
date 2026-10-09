@@ -24,6 +24,7 @@
   - 可用的是相关性：**已知被掐的调用带 `treatment=3`**（`action` 恒 0、`risk` 恒 2，不区分；规则库 `db\hips.db` 加密 ⇒ 枚举读不出来）。
   - **查法**（只读、不用 GUI）：`C:\ProgramData\Huorong\Sysdiag\log.db`（SQLite，表 `HrLogV3_60`，HIPS = `fname='sysprot'`，`detail` 是 JSON；文件被占用 ⇒ `FileShare.ReadWrite` 或 `sqlite3 -readonly`）。`applog.db` 的 `AppRunInfoList_60` = 程序运行记录，⚠️ 其 `ts` 是 **FILETIME**：
     `sqlite3 -readonly C:\ProgramData\Huorong\Sysdiag\log.db "select datetime(ts,'unixepoch','localtime'), json_extract(detail,'$.detail.treatment'), substr(detail,1,160) from HrLogV3_60 where fname='sysprot' order by ts;"`
+  - **修法**（把"看不到的拦截"变回可见）：给 `node.exe` · `@deepseek-ai\dsh\` · `powershell`/`pwsh`/`cmd`/`git` · `~\.dsh\` · `%TEMP%\dsh-*` · 工作区**加信任**，或把该规则从"阻止"改成**询问/允许**。⚠️ **效果未单独验证**（用户 20:14:04 改配置后零匹配，时间吻合但因果未证）⇒ 换机器照做即可，别当成"已证有效"。
   - **判据**：**无输出 ＋ 退出码 `-1`** ⇒ 查上面那条 SQL 有没有对应时刻的 `sysprot` 行：**有**（`treatment=3`）才是火绒，**没有**就是沙箱/别的原因 ⇒ **别一律赖杀软，也别归因成"命令写得不规范"**。
   - 2026-10-09 20:14:04 用户改配置后 **20+ 次调用零匹配**（时间吻合、**因果未证**，读不出改了哪一项）。
 

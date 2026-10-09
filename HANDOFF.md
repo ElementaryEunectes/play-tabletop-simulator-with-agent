@@ -77,7 +77,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 
 ## §8 每请求注入（摘要；机制/预算/安装 ⇒ `tts\docs\INJECTION.md`）
 
-平台宪章 **3,950** ＋ 项目 `AGENTS.md` **3,518** ＋ 本机 `AGENTS.local.md` **2,299** ＝ **≈9.5 KB/请求**；发布时**不用手打**：`start-agent.ps1` 的一行 `$ProjectDshProfile`（或 `-DshProfile tts-agent`，即 `dsh --profile tts-agent`；⚠️ **不是** `dsh tts-agent web`）⇒ **≈5.7 KB**。机制/目录结构/装法 ⇒ **`tts\docs\INJECTION.md` §4 方案 A′**。
+平台宪章 **3,950** ＋ 项目 `AGENTS.md` **3,539** ＋ 本机 `AGENTS.local.md` **1,787** ＝ **≈9.3 KB/请求**（2026-10-09 瘦身：**原 10.5 KB**，省 **1,178 B**）；
+瘦身的做法 = **凡"门禁已经守着"的判定，注入里不再复述**（火绒修法/profile/`start.cmd`/路径纪律/`param` 版式 ⇒ 只留指针，细则进 `MAINTENANCE.md` §0 · `INJECTION.md` §4 · `USER_GUIDE.md`）。
+⚠️ 两条硬约束：**`instruction hygiene` 会抓**"承载性指针被删"（本次真抓到 `check_ps1.ps1` 被删）＋ **`AGENTS.local.md` ≤ 4096 B**。
+发布时**不用手打**：`start-agent.ps1` 的一行 `$ProjectDshProfile`（或 `-DshProfile tts-agent`；⚠️ **不是** `dsh tts-agent web`）⇒ **≈5.7 KB**。机制/目录结构/装法 ⇒ **`tts\docs\INJECTION.md` §4 方案 A′**。
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
