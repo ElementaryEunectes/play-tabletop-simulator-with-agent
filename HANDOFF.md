@@ -21,7 +21,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 
 ## §4 待办（按优先级）
 
-1. 🔴 **D2 —— 给当前这局写 `local\games\<游戏>\objects.json`**：`bootstrap.ps1` 现在对它**报错是设计如此**（旧版是打一份空表冒充答案）。原料已生成好：`cache\obj_inventory.md`（1659 行索引 ⇒ 19 names / 1077 nicks / 245 hashes）；schema ⇒ `tts\docs\BOOTSTRAP.md` §1b。别名表那份**已做完**（`cache\dicethrone_alias.json`）。
+1. ✅ **D2 已完成（2026-10-09）**：`local\games\dicethrone\objects.json` 写好（8 个区块）⇒ `bootstrap.ps1` 恢复可用（`cache\session_map.md` = 92 行 / 3.9 KB；HP·CP 4 行 · 牌堆 2 · 骰子 5+5 · 英雄板 2 · 规则书 1）。
+   📌 关键：**索引里同一物件常有两行**（容器副本 1523/1659）⇒ 每个区块都要 `topLevel: true`；这条已写进 `BOOTSTRAP.md` §1b 与数据文件自身的 `_note`。换英雄/换局：`bootstrap.ps1 -Inventory` 取新 hash 加一行。
 2. 🔴 **回合令牌验收（`v13-turntoken`，未做）** ⇒ **§7.9**（要 TTS 在跑 ＋ 玩家重载存档）。
 3. 🔴 **游戏侧待办**（5 条规则冲突 · 卡面文本）⇒ **`local\games\dicethrone\STATE.md`**（⛔ 不进仓库，本文件不复述）。
 4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后三块**：**A** `STATE`/`FLOW` 模板（新游戏起手）· **C** `setup.ps1` 向导 · **E** demo ＋ 30 秒录屏（需 TTS）。

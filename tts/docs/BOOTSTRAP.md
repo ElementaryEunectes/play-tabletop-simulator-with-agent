@@ -111,7 +111,7 @@ ds.ps1 -Do count       # 名称直方图
 
 **顶层键**：`seats.name`（座位区物件的 `name`，TTS 通用 `HandTrigger`）· `seats.zBelow`（只留 `z` 更小的，**用来排除桌外多余的 zone**；不写就全留）· `seats.labels`（从左到右，按 x 升序）· `seats.player`（哪个是我，只影响一句提示）· `seats.note`（座位表后的 markdown，字符串或数组）· `sections[]`（每项一个区块，见下）。
 
-**`where`（选物件，多个条件是 AND）**：`name` · `nameRegex` · `nick` · `nickRegex` · `nickNonEmpty`(true) · `topLevel`(true＝父为空) · `urlHash`(url 前 8 位十六进制) · `minScale`(`sx` 下限)
+**`where`（选物件，多个条件是 AND）**：`name` · `nameRegex` · `nick` · `nickRegex` · `nickNonEmpty`(true) · `topLevel`(true＝父为空 —— ⭐ **存档索引里同一物件常有两行**：顶层那行是权威坐标，容器里那份是副本；`obj_index.csv` 里副本占 1523/1659 ⇒ **几乎每个区块都该加它**) · `urlHash`(url 前 8 位十六进制) · `minScale`(`sx` 下限)
 
 **`kind`**
 
