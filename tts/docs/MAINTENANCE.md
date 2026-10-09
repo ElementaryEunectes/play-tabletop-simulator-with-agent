@@ -14,6 +14,12 @@
 - 跑脚本一律 `powershell -NoProfile -ExecutionPolicy Bypass -File '<绝对路径>'`；**工具壳是 Windows PowerShell 5.1** ⇒ 读中文文件要 `-Encoding UTF8` / `[IO.File]::ReadAllText`（否则乱码，文件没坏）。
 - 写工作区之外 ⇒ `[sandbox: file access denied]`（**策略不是 bug**，一次提权重试）；判端口用 `netstat -ano | findstr :39999`（`Get-NetTCPConnection` 在本沙箱假报"没人在听"）。
 - **沙箱限制子进程时的姿势**：抓子进程输出**写文件再读**（`& x 2>&1` 静默丢输出、退出码仍是 0）· ⛔ 别用 `Start-Process`（隐藏控制台 → `0xC0000142`）。门禁已改**同进程调用**、不再 spawn 内层 PowerShell ⇒ 受限模式下 7 条全绿（清单 ⇒ `CONTRIBUTING.md` §3）。
+- ⛔ **`spawnObject` 造"自定义件"必须带内容参数，否则 TTS 会弹「自定义板块」窗口跟你要贴图**（2026-10-09 实测 + 官方文档）：
+  `Custom_Tile`/`Custom_Token`/`Custom_Model`/`Custom_Board`/`CardCustom`/`DeckCustom` 这些**自定义**类型，
+  `spawnObject({type="Custom_Tile"})` **不带 `image`** ⇒ 游戏主线程被那个模态窗口挂住 ⇒ **回执永远不来**、脚本改动随后被回滚。
+  ⇒ 内置件（`Block`·`Checker`·…）不需要内容参数、不弹；**要造东西优先两条路**：
+  ① **`clone`**（`spawn:copy`，复制桌上现成件 —— 不弹窗、活体验过）；② 真要新造 ⇒ 参数一次给全（`image=` 等，取自存档里同类的 `CustomImage`）。
+  📄 依据：`api.tabletopsimulator.com/custom-game-objects/`；社区同类反馈 `tabletopsimulator.nolt.io/2326`（"spawnObject 弹自定义窗口"）。
 - ⛔ **别给 `$LASTEXITCODE` 赋值**（2026-10-09 实测，害了一次假红）：在**函数里**写 `$LASTEXITCODE = $null`
   本意是"清掉上一次的值"，实际是**让 PowerShell 建了一个同名的普通局部变量**，它**遮住**了那个自动变量 ——
   而外部命令更新的是**自动变量** ⇒ 之后再读**永远是空**。实测：先赋值 → `[]`；不赋值 → `[0]`。
