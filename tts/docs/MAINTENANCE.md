@@ -19,16 +19,25 @@
 - **写工作区之外**会报 `[sandbox: file access denied]` ⇒ 那是策略不是 bug，**一次提权重试**，别硬绕。
 - 工具壳是 **Windows PowerShell 5.1** ⇒ 直接读中文文件会按 ANSI 解码成**乱码**（文件没坏）⇒ 加 `-Encoding UTF8` 或 `[IO.File]::ReadAllText`。
 - 判端口用 `netstat -ano | findstr :39999`
-- **沙箱限制子进程时的门禁姿势**（抓输出走文件 · 别用 `Start-Process` · `test_diff_index` 需完全权限）⇒ 见 `CONTRIBUTING.md` 的门禁小节。（⛔ `Get-NetTCPConnection` 在本沙箱会假报"没人在听"）。
+- **沙箱限制子进程时的门禁姿势**（抓子进程输出走文件再读 · 别用 `Start-Process`）⇒ 见 `CONTRIBUTING.md` 的门禁小节。（⛔ `Get-NetTCPConnection` 在本沙箱会假报"没人在听"）。
+- **火绒 HIPS 实测（2026-10-09，可复核）**：命中的规则是 `rp_name_execcreate_powershell_hidden`（"隐藏执行 PowerShell"），**触发者是 DSH 自己** —— 日志里 `p_procname = node.exe`（`dsh web` / `dsh-subprocess-local` / `dsh-sandbox-windows-acl`），被创建的是 `powershell.exe -NoLogo -NoProfile -NonInteractive -Command "<本次工具调用的脚本文本>"` ⇒ **每一次工具调用都是这个形状**，不是某条命令格外可疑。
+  - **但不是每次都拦**：全天 `sysprot` 事件共 5 条（4 条在上一场 18:53–18:59；1 条在 20:13:58）。20:13:58 那条正是**把三种"隐藏执行"惯用法塞进同一条命令**的探针（`cmd /c powershell` ＋ 嵌套 `powershell` ＋ `Start-Process -WindowStyle Hidden`）⇒ **整条被掐**（无输出、退出码 `-1`）；而三种惯用法**各自单独**用、以及一条 **7.3 KB 的长内联命令**，都跑通了、日志里**没有**新事件 ⇒ **单次不触发、叠加才触发**（`clsname":"risk_prot_v6"`＝行为评分）。`action:0` 的枚举含义读不出来（规则库 `db\hips.db` 是加密的 `VARDYHFS` 头）。
+  - **查法**（只读，不需要 GUI）：`C:\ProgramData\Huorong\Sysdiag\` 下 `log.db`（SQLite：表 `HrLogV3_60(fname,ts,detail)`，HIPS 事件 = `fname='sysprot'`，`detail` 是 JSON）与 `applog.db`（`AppRunInfoList_60` = 程序运行记录，⚠️ 它的 `ts` 是 **FILETIME** 不是 Unix 秒）。文件被占用 ⇒ 用 `FileShare.ReadWrite` 读，或 `sqlite3 -readonly`：
+    ```powershell
+    sqlite3 -readonly C:\ProgramData\Huorong\Sysdiag\log.db "select datetime(ts,'unixepoch','localtime'), substr(detail,1,200) from HrLogV3_60 where fname='sysprot' order by ts;"
+    ```
+  - **判据**：命令**无输出 ＋ 退出码 `-1`** ⇒ **先查上面那条 SQL 有没有对应时刻的 `sysprot` 行**：**有**才是火绒，**没有**就是沙箱/别的原因（别再一律赖杀软）。规范操作**不能**让规则不再匹配（形状由 harness 决定、agent 改不了），能避免的只是**额外叠加**。
 
 ## 1. 改完必须过的门禁（都在仓库里，**不需要 TTS**）
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1                    # 补 BOM ＋ 真解析器
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfill.ps1    # param() 默认值必须有出处
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps1        # 差分链离线自测
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_doc_refs.ps1          # 文档里的路径必须存在
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_agents_hygiene.ps1    # 指令槽的体积/漂移/泄露
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1                  # ⭐ 入口：6 条全跑，要求"退出码 0 ＋ 输出含成功标志"
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\check_ps1.ps1                      # 补 BOM ＋ 真解析器
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfill.ps1      # param() 默认值必须有出处
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps1          # 差分链离线自测
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_game_data.ps1           # 游戏数据必须在文件里、不在代码里
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_doc_refs.ps1            # 文档里的路径必须存在
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_agents_hygiene.ps1      # 指令槽的体积/漂移/泄露
 ```
 
 ⭐ **门禁绿了才提交**（别把"跑测试"和"提交"无条件串成一条命令）；改测试判定逻辑前，**先造一个"坏"的阳性对照**确认它真会红。
