@@ -31,16 +31,19 @@ $ErrorActionPreference = 'Stop'
 #   * ds.ps1 now uses `return` instead of a top-level `exit`, so it cannot kill us;
 #   * `6>&1` -- NOT `|` -- is required to capture its output, because ds.ps1 prints
 #     with Write-Host, which goes to the INFORMATION stream and bypasses the pipeline.
+# We owe the same courtesy upward (2026-10-09): diff_index.ps1 calls THIS script with `&`, and
+# diff_hidden.ps1 calls that one. The failure paths below print their ERR/FAIL text and `return 1`,
+# so an in-process caller gets the code as a value rather than through $LASTEXITCODE.
 $raw = & $DsPs1 -Do ("all:{0}" -f $Limit) -Raw 6>&1
-if (-not $raw) { Write-Host "ERR no reply from TTS"; exit 1 }
+if (-not $raw) { Write-Host "ERR no reply from TTS"; return 1 }
 $line = ($raw -join "`n")
 # -Raw prints the envelope verbatim and it arrives PRETTY-PRINTED (multi-line). (oin every
 # line before parsing: keeping only the line that contains "customMessage" leaves the
 # fragment '  "customMessage": {' and ConvertFrom-Json fails on it.
 $env = $null
-try { $env = $line | ConvertFrom-Json } catch { Write-Host ("PARSE-FAIL: {0}" -f $line.Substring(0, [math]::Min(200, $line.Length))); exit 1 }
+try { $env = $line | ConvertFrom-Json } catch { Write-Host ("PARSE-FAIL: {0}" -f $line.Substring(0, [math]::Min(200, $line.Length))); return 1 }
 $resp = $env.customMessage
-if ($resp.ok -ne $true) { Write-Host ("FAIL {0}" -f $resp.err); exit 1 }
+if ($resp.ok -ne $true) { Write-Host ("FAIL {0}" -f $resp.err); return 1 }
 $items = $resp.items | ConvertFrom-Json
 $rows = foreach ($it in $items) {
     $rz = 0; $ry = 0

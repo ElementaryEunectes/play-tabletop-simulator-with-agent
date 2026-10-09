@@ -29,6 +29,20 @@
 #   powershell -File diff_index.ps1 -Snapshot      # freeze the current table as baseline
 #   ... (player acts) ...
 #   powershell -File diff_index.ps1                # report everything that changed
+#
+# CALLED IN-PROCESS, SO THERE IS NO `exit` ANYWHERE BELOW (2026-10-09)
+#   diff_hidden.ps1 calls this script with `&` and captures it with `6>&1`; ds.ps1 was converted to
+#   this convention earlier. So every failure path prints its "ERR ..." line and then `return 1`,
+#   and the code reaches an in-process caller as a VALUE instead of as a side effect in
+#   $LASTEXITCODE. Success returns nothing at all.
+#   Measured while doing this, because the folklore says otherwise: in PowerShell 5.1 an `exit`
+#   inside a script FILE is caught at that file's own boundary, so a `&`-caller (and even a
+#   top-level dot-sourcer) keeps running and merely inherits the code via $LASTEXITCODE. What does
+#   tear the caller down is an `exit` executed with NO script boundary - pasted code, or
+#   `iex (Get-Content -Raw x.ps1)` - which is the shape to avoid in tooling.
+#   The deliberate consequence: under `powershell -File` the process exit code is always 0, so a
+#   caller must read the printed text. tests\test_diff_index.ps1 pins the no-exit contract with a
+#   token-level check, so it cannot silently regress.
 param(
     [string]$Before  = '',
     [string]$After   = '',
@@ -50,17 +64,19 @@ if ($Before -eq '') { $Before = (Join-Path $DshCache 'baseline.csv') }
 $ErrorActionPreference = 'Stop'
 
 if ($Snapshot) {
-    & $LiveIndex -Out $After
-    if (-not (Test-Path -LiteralPath $After)) { Write-Host ("ERR no live index at {0}" -f $After); exit 1 }
+    # The callee prints its own ERR text; swallow its return code so that no stray "1" lands in
+    # OUR output stream (diff_hidden.ps1 merges that stream into what it prints).
+    $null = & $LiveIndex -Out $After
+    if (-not (Test-Path -LiteralPath $After)) { Write-Host ("ERR no live index at {0}" -f $After); return 1 }
     Copy-Item -LiteralPath $After -Destination $Before -Force
     $rows = @(Import-Csv -LiteralPath $Before)
     Write-Host ("SNAPSHOT  baseline <- LIVE {0}   ({1} objects)" -f (Split-Path $Before -Leaf), $rows.Count)
     Write-Host "现在让玩家行动，之后不带参数再跑一次本脚本即可看到差异。"
-    exit 0
+    return
 }
 
-& $LiveIndex -Out $After
-foreach ($p in @($Before, $After)) { if (-not (Test-Path -LiteralPath $p)) { Write-Host ("ERR missing {0}" -f $p); exit 1 } }
+$null = & $LiveIndex -Out $After
+foreach ($p in @($Before, $After)) { if (-not (Test-Path -LiteralPath $p)) { Write-Host ("ERR missing {0}" -f $p); return 1 } }
 $old = @{}; foreach ($r in Import-Csv -LiteralPath $Before) { $old[$r.guid] = $r }
 $new = @{}; foreach ($r in Import-Csv -LiteralPath $After)  { $new[$r.guid] = $r }
 # Two of the six classes live in columns a live snapshot leaves empty. Say so out loud instead
