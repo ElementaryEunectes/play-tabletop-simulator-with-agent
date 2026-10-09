@@ -23,8 +23,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 
 1. ✅ **D2 已完成（2026-10-09）**：`local\games\dicethrone\objects.json` 写好（8 个区块）⇒ `bootstrap.ps1` 恢复可用（`cache\session_map.md` = 92 行 / 3.9 KB；HP·CP 4 行 · 牌堆 2 · 骰子 5+5 · 英雄板 2 · 规则书 1）。
    📌 关键：**索引里同一物件常有两行**（容器副本 1523/1659）⇒ 每个区块都要 `topLevel: true`；这条已写进 `BOOTSTRAP.md` §1b 与数据文件自身的 `_note`。换英雄/换局：`bootstrap.ps1 -Inventory` 取新 hash 加一行。
-   ⏳ **"任何 mod 都成立"的真验证还没做**：**等用户找来第二款真 mod**（他正在找）⇒ 照 `BOOTSTRAP.md` §2 走一遍"教一款新 mod"（`obj_index.ps1` → `bootstrap.ps1 -Inventory` → 写 `local\games\<新游戏>\objects.json` → `bootstrap.ps1`）；前置是**该 mod 的存档要先烤进桥接**（`install_save2.ps1`，需 TTS ＋ 玩家的存档）。
-   ⛔ **不要自己造一款假游戏来充数** —— `tts\tests\test_game_data.ps1` 里的 fixture 只证明"**数据不在代码里**"这条契约（离线、每次提交都跑），**不证明真 mod 能用**。
+   ✅ **"任何 mod 都成立"真验证已完成（2026-10-09 晚）**：用户给的第二款 mod = **七圣召唤**（`GAME=qisheng`）⇒ `install_save2.ps1 -KeepLua -KeepTabs` 烤进 `TS_Save_9.json`（模组自带的 116 KB Global 脚本与 12 页笔记本**原样保留**）⇒ 玩家重载后 **`ping` 回 `v13-turntoken`**（§7.9 第 1 条过）⇒ `obj_index.ps1 -File <绝对路径>`（625 行）⇒ `bootstrap.ps1 -Inventory`（190 nicks / 41 hashes）⇒ 写 `objects.json`（7 区块）⇒ `bootstrap.ps1` 出 **115 行地图**。
+   📌 学到的两条：① **`obj_index.ps1 -File` 要绝对路径**（相对 cwd 解析，给 `TS_Save_9.json` 会报 not found）；② 这个 mod 把教学写在 **Notecard** 上（地图有专门一节 ⇒ 开局先读它，再写 `FLOW.md`）。
+   ⛔ 仍然**不要**为了验证去造假的第二款游戏（fixture 只验"数据不在代码里"这条契约）。
 2. 🔴 **回合令牌验收（`v13-turntoken`，未做）** ⇒ **§7.9**（要 TTS 在跑 ＋ 玩家重载存档）。
 3. 🔴 **游戏侧待办**（5 条规则冲突 · 卡面文本）⇒ **`local\games\dicethrone\STATE.md`**（⛔ 不进仓库，本文件不复述）。
 4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后三块**：**A** `STATE`/`FLOW` 模板（新游戏起手）· **C** `setup.ps1` 向导 · **E** demo ＋ 30 秒录屏（需 TTS）。
