@@ -58,6 +58,8 @@
 | 想暂停 / 收工 | 说"结束游戏"：它会撤哨兵、停后台 watcher，并把现状封存进该游戏的 `local\games\<游戏>\STATE.md` |
 | 想换游戏 / 换模组 | 照 `BOOTSTRAP.md` 走（三种情形 ＋ 共同核心四步） |
 | 想让它少花点 token / 快一点 | 每回合开局让它用**一条命令** `tts\play.ps1 turn`（盘面＋骰面＋招式＋笔记本尾条一次给齐） |
+| **打字卡**（连记事本都卡） | TTS 那张**重桌子在后台仍烧 GPU**（2026-10-09 实测：647 物件的桌子 ≈**73%** GPU，空桌 ≈10%）⇒ 合成器被占，连记事本插入符都顿。修法：驱动里给 `Tabletop Simulator.exe` 设「**后台应用程序最大帧速率**」= 20 fps（NVIDIA 控制面板 → 管理 3D 设置 → 程序设置；AMD 是"后台帧率 / 帧率目标控制"）—— ⚠️ **必须重启 TTS 才套用**（实测：不重启 73%→73%；重启后 73%→**11%**）。次选：**真·最小化**（不是 alt+tab，切窗口≠停止渲染）· 降分辨率/关 VSync · 换空桌 `Menu → New Game`。⛔ 别去关模组功能（它 648 个脚本里 **0 个 `function update(`**，不是脚本的锅） |
+| **打字不方便，想用嘴说** | DSH **自带实验性语音输入**：`@deepseek-ai/dsh-experimental-voice-input-bundle`（内含客户端麦克风按钮 `client-ui-voice-input` ＋ STT `speech-to-text`，含 **SenseVoice** 后端）。开法：设置 → **Plugins/插件** 里启用；或命令行 `dsh plugin --profile web add @deepseek-ai/dsh-experimental-voice-input-bundle`（⚠️ `dsh plugin` **必须带 `--profile <名字>`**，不加直接报错）；或往 `~\.dsh\profiles\web\package.json` 的 `dsh.profile.bundles` 加一行 `@deepseek-ai/dsh-experimental-voice-input-bundle` 后重启 `dsh web`。⚠️ 名字里写着 experimental（可能要额外配置/模型） |
 
 ## 6. 什么会动你的桌面 / 存档
 
