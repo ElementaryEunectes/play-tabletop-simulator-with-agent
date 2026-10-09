@@ -1,4 +1,4 @@
-# ds.ps1 - the single TTS entry point, built for minimum output tokens.
+﻿# ds.ps1 - the single TTS entry point, built for minimum output tokens.
 #
 # WHY THIS EXISTS
 #   The previous path (write payload.json -> run ask.ps1 -> dump the whole reply)

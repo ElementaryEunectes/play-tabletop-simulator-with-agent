@@ -1,4 +1,4 @@
-# test_bridge_primitives.ps1 - the bridge's own commands must work, not just parse.
+﻿# test_bridge_primitives.ps1 - the bridge's own commands must work, not just parse.
 #
 # WHY
 #   validate_lua.js proves dsh_global.lua PARSES. It cannot see wrong routing, wrong argument
