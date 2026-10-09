@@ -92,3 +92,18 @@ $DshGameCards = if ($DshGame -ne '') { Join-Path $DshCache ($DshGame + '_cards.m
 #                   GAME DATA too, but it belongs to the game's own folder: local\games\<game>\.
 $DshGameAlias   = if ($DshGame -ne '') { Join-Path $DshCache ($DshGame + '_alias.json') } else { '' }
 $DshGameObjects = if ($DshGameDir -ne '') { Join-Path $DshGameDir 'objects.json' } else { '' }
+
+# --- THE GENERIC PRIMITIVE LAYER (added 2026-10-09) --------------------------------------------
+# WHERE THE TWO LAYERS ARE SPLIT, in one place:
+#   tts\      = GENERIC PRIMITIVES: talk to TTS, read/index/diff, recognise objects, query cards,
+#               write the save. Nothing in there may know a game's rules, seats or board.
+#   local\games\<game>\control\ = THAT GAME'S CONTROL LAYER: verbs, skill tables, counters, dice
+#               trays - the part a user TRAINS per mod. Not in the repository, never shipped.
+# tts\play.ps1 stays in the repo but is only a DISPATCHER: it dot-sources the controller named
+# here. So "add a game" = add files here + point the GAME= line at it, with no edit to the repo.
+$DshGameControl = if ($DshGameDir -ne '') { Join-Path $DshGameDir 'control\play.ps1' } else { '' }
+# The transport modules the generic layer exposes to any controller (config owns the paths, so no
+# control-layer script ever hard-codes a repo path). Load ORDER matters: ttslib is the TCP transport
+# (Invoke-Tts), bridge.ps1 is the thin reply-checking wrapper on top of it.
+$DshLibTtslib   = Join-Path $WorkspaceRoot 'tts\ttslib.ps1'
+$DshLibBridge   = Join-Path $WorkspaceRoot 'tts\lib\bridge.ps1'

@@ -180,6 +180,44 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
 
 ---
 
+## §2b 教出"控制层"：`local\games\<游戏>\control\`（**2026-10-09 新增**）
+
+> **为什么不放仓库**：控制层里全是**这一款**的东西（座位名 · 计数板 · 骰盘 · 招式表） ⇒ 判据"换个 mod 还成立"
+> 不成立 ⇒ 它属于 `local\`。仓库只提供**原语**与**入口**（`BOOTSTRAP.md` §2 走完 = 原语那半已就位）。
+
+**要建什么**
+
+```
+local\games\<游戏>\
+├── objects.json           # 认物数据（§1b，bootstrap.ps1 的输入）
+├── STATE.md / FLOW.md     # 状态与规则（§3）
+└── control\               # ⭐ 控制层：这一款专属，不进仓库
+    ├── play.ps1           #   入口：自带 param()（动词/座位/开关），dot-source 下面几个
+    ├── <名词>.ps1         #   按需拆分（如 dice.ps1 / rules.ps1 / verbs.ps1）
+    └── ...                #   技能数据仍放 cache\<game>_rules.json（config.ps1 已给路径）
+```
+
+**入口契约（4 条，缺一条就接不上）**
+
+1. **路径固定**：`local\games\<游戏>\control\play.ps1`（`tts\config.ps1` 解析成 `$DshGameControl`，`GAME=` 决定是哪一款）。
+2. **路径一律取自 config，不写死仓库路径**：`$DshGameRules`（`cache\<game>_rules.json`）· `$DshLibTtslib`（`tts\ttslib.ps1`）·
+   `$DshLibBridge`（`tts\lib\bridge.ps1`）· 入口还会传 `$DshTtsDir`（`tts\` 目录）以备需要。
+   加载顺序：**先 `$DshLibTtslib`（TCP 传输）→ 再 `$DshLibBridge`（回包校验）**；`bridge.ps1` 依赖 `Invoke-Tts`，
+   也依赖你定义的 `Fail`/`Err-Code`，所以**先定义它们再 dot-source bridge**（照骰铸那份的结构抄即可）。
+3. **UTF-8 带 BOM**：⚠️ `local\` **不在** `check_ps1.ps1` 的扫描范围 ⇒ 没人替你补 BOM；没有 BOM 时 PS 5.1 按 ANSI 读，
+   **中文招式名会变乱码**（自检静默失效）。参考实现里有一条**入口自检**会直接报 `NO PART`，抄它。
+   ⚠️ 自检要用**在 dot-source 之前捕获**的路径：dot-source 会把 `$PSCommandPath` 改成被加载模块的路径。
+4. **写操作默认只读**：改动桌面的动词必须要求显式开关（`-Apply` / `-Roll`），且支持 `-WhatIf`；**真写后自己回读**，
+   不一致就报 `BAD DATA`（别把"发了命令"当成"生效了"）。
+
+**怎么设计动词（一条命令一个阶段）**：照 `PLAY.md` 与 `tts\docs\USER_GUIDE.md` 的期望形状 ——
+`turn`（**回合开局一条命令**：盘面 ＋ 我这边的关键资源 ＋ 可打招式 ＋ 笔记本尾条，**全只读**）·
+`status` · 该游戏的资源增减 · 掷骰/翻牌 · 结算 · `say`（往笔记本发一行）。
+**先只做"开局必需四件事"能跑起来的那几个动词**，别一次做全 —— 规则没读到的部分做了也是错的。
+
+**验证（离线优先）**：控制层里带一个 `-SelfTest`（**不碰 TTS**）：用写死的用例核对招式名/骰面映射与
+`cache\<game>_rules.json` 一致 ⇒ 改中文或改数据后能立刻发现漂移。跑法：`tts\play.ps1 -SelfTest`。
+
 ## §3 状态页规范（**一个游戏一份，绝不共用**）
 > 规则/边界全在 `AGENTS.md`（常驻宪章）；本节只讲**换局时怎么落状态页**。
 - **`local\games\_current.md`** = 当前在玩哪一款 → 指向该游戏的状态页（**先读它**；`local\` 不进仓库）。

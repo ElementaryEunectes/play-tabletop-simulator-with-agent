@@ -1,5 +1,8 @@
-﻿# tts\lib\play.bridge.ps1 - split out of play.ps1 (2026-10-08) so it can be READ on its own.
-# play.ps1 dot-sources this: SAME process, no extra PowerShell start-up (0.35 s each). Never spawn it.
+﻿# tts\lib\bridge.ps1 - GENERIC reply-checking wrapper over the TTS transport (was play.bridge.ps1).
+# It knows NOTHING about any game: it sends one command hashtable and turns the reply, or a
+# transport error, into either a value or a Fail with one of this project's error codes.
+# Dot-sourced by the current game's control layer (local\games\<game>\control\play.ps1) in the SAME
+# process - never spawned, and never loaded without tts\ttslib.ps1 (it provides Invoke-Tts).
 
 function Bridge($Cmd, [int]$TimeoutSec = 15, [switch]$Soft) {
     $env = @{ messageID = 2; customMessage = $Cmd } | ConvertTo-Json -Depth 8 -Compress

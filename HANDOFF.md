@@ -74,6 +74,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
   - **硬线落地**：受跟踪文件里 **0 处真游戏名**（唯一例外 = 两个 README 的授权声明）⇒ 门禁 `test_agents_hygiene.ps1` 新增扫描 ＋ **4 条自检**（看见植入名 / 分支数 / 条目数 / 除 BOM 外纯 ASCII）。上线即抓出 **14 个文件**的违规。
   - ⚠️ **这次"假绿"抓了两回**：① 淘汰名单写成 `@('a' + 'b', 'c' + 'd')` ⇒ 数组只有 1 个元素、正则**没有 `|`**、扫描器全瞎，而阳性对照因为**用同一个坏串**照样 PASS；② 后来一次合并编辑**吃掉一行** ⇒ 某个名字悄悄不再被扫（分支数检查 7/7 也照样 PASS）⇒ 补"条目数必须等于 N"。
   - ⚠️ **真事故两条**（⇒ `MAINTENANCE.md` §0/§4）：**丢 BOM → 工具壳按 ANSI 读 → 语法错 → `check_ps1` 把乱码固化**；**编辑工具把 `dsh_global.lua` 行尾归一**（2 行注释变 95 增 95 删，靠 `git diff --numstat` 抓出并重做）。
+- **2026-10-09 场 4**（**目标重定义 + 分层落地**）：
+  - ⭐ **责任边界改了**：我们**不做**"能照着打任何一款的控制层"（那东西不存在）；我们交付 **①TTS 原语的通用层** ＋ **②用户低成本"教出"某一款控制层的规程**。
+    ⇒ 判据随之变成两问：**原语覆盖够不够** · **教一款快不快**。`play.ps1` 不可通用**不再是缺陷**（`VALIDATION.md` F1 已重新定性）。
+  - **分层落到目录**：`tts\` = 通用层（＋ `tts\lib\bridge.ps1` 传输包装）；`tts\play.ps1` = **分发器**（纯 ASCII、无游戏知识）；
+    某款的控制层（`play`/`dice`/`rules`/`verbs`）**移出仓库** ⇒ `local\games\<游戏>\control\`（`local\` 被 gitignore ⇒ 公开树里真的没有了）。
+    新路径由 `config.ps1` 提供：`$DshGameControl` · `$DshLibTtslib` · `$DshLibBridge`。**教法 ⇒ `BOOTSTRAP.md` §2b**（新增）。
+  - **待办重心转移**：`VALIDATION.md` **F6** ＝ 原语缺口清单（`takeObject` 点名取牌 · `spawnObject` 造物 · `getPlayers` 座位权威 —— 这三条是"教得动"的硬前提）；**F2**（翻牌朝向只在一张桌标定过）仍需复验。
+  - 📌 两条"设计坑"记下来了：`ValueFromRemainingArguments` 会**吞掉位置动词**（改用 `$args`）；dot-source 会**改写 `$PSCommandPath`**（控制层的 BOM 自检必须在 dot-source **之前**捕获自己的路径，否则误报）。
 
 ## §10 关键数字（2026-10-09）
 

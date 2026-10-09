@@ -29,7 +29,7 @@
 | `defense -Seat moon [-Apply -Incoming N]` | 我的防御；**不加 `-Roll` 只读** |
 | `say -TextFile <utf8>` | 往笔记本发一行（中文**必须**走文件） |
 
-⚠️ **别 read `play.ps1` 本体** —— 实现已拆到 `tts\lib\play.*.ps1`（`bridge`/`dice`/`rules`/`verbs`，**要改哪块就读哪块**；本体只是 ~5 KB 分发器）。技能数据 `cache\<game>_rules.json`（= `$DshGameRules`），卡面 `tts\card.ps1 -Q '<名>'`。
+⚠️ **别 read 控制层入口本体** —— 当前游戏的控制层在 `local\games\<游戏>\control\`（`play.ps1` ＋ `dice`/`rules`/`verbs` 等模块，**要改哪块就读哪块**）；仓库里的 `tts\play.ps1` 只是**分发器**（解析 `GAME=` ⇒ 把参数原样转发）。分层与契约 ⇒ `TTS_RULES.md` §二 方框。技能数据 `cache\<game>_rules.json`（= `$DshGameRules`），卡面 `tts\card.ps1 -Q '<名>'`。
 ⚠️ `setLock` 坏了（`cannot convert userdata to Boolean`）⇒ 重掷只能逐颗 `ds.ps1 -Do act:<骰guid>:roll`。
 ⚠️ **骰子**：`roll.ps1` 必须明说 `-Roll`/`-NoRoll`（裸调用 `exit 2`）；**判定以玩家报的为准**。
 ⚠️ **结算顺序**：宣告 → 先问他改不改骰 → 防御掷骰 → 才扣血。**数字没谈定先跑 `-Apply -WhatIf`**（打印 `WILL WRITE` 但不写）；`-Apply` 真写后脚本自己回读，不一致即 `BAD DATA`。
