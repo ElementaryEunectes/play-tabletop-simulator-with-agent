@@ -1710,15 +1710,21 @@ DSH_spawn = function(m)
     if not ok or res == nil then
         return { ok = false, cmd = "spawn", mode = mode, err = "spawn returned nothing: " .. S(res) }
     end
-    placeFace(res, x, y, z, faceup)
-    -- TTS fires onLoad for a spawned object's OWN LuaScript asynchronously: a script that sets up its
-    -- display in onLoad would stay blank until the next save/load, so poke it explicitly.
-    local hasScript = false
-    pcall(function() hasScript = tostring(res.getLuaScript() or "") ~= "" end)
-    if hasScript then pcall(function() return res.call("onLoad", { "" }) end) end
+    -- DO NOT touch a freshly spawned object beyond reading its GUID and name.
+    --
+    -- Measured live (2026-10-09): `spawnObject` DID create the piece (the table went 115 -> 116
+    -- objects) but the reply never reached the caller - "no reply in 25s" - while `spawn:copy`
+    -- through clone() answered normally with the same placement code. The difference is that a
+    -- clone is fully formed the moment it is returned, and a spawned object is still being built by
+    -- TTS. The calls made here (getLuaScript, call("onLoad"), setRotation/setPosition through
+    -- placeFace) run against that half-built object, and the reply is what gets lost.
+    -- So: position comes from spawnObject's own `position` parameter, orientation is the caller's
+    -- business (cmd=rotate on the returned guid), and the lua poke is gone. The old comment claimed
+    -- the poke was needed for a spawned script's onLoad; that convenience is not worth a dead reply.
     local g, nm = nil, ""
     pcall(function() g = res.getGUID() end)
     pcall(function() nm = tostring(res.getName()) end)
+    if mode == "copy" then placeFace(res, x, y, z, faceup) end
     return { ok = true, cmd = "spawn", mode = mode, guid = g, name = nm }
 end
 
