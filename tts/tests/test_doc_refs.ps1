@@ -2,9 +2,9 @@
 #
 # WHY
 #   The docs ARE this project's interface, and nothing checked them. On 2026-10-08 a split moved the
-#   game docs into local\games\ and left PLAY.md (read every turn) pointing at
-#   tts\docs\DICETHRONE_FLOW.md, which no longer existed. All three tests stayed green; the stale
-#   pointer was found by hand. This is the missing guard.
+#   game docs into local\games\ and left PLAY.md (read every turn) pointing at a per-game file under
+#   tts\docs\ (named <GAME>_FLOW.md, long since archived), which no longer existed. All three tests
+#   stayed green; the stale pointer was found by hand. This is the missing guard.
 #
 # SCOPE
 #   * only tokens with a DIRECTORY separator starting at a repo-relative root (tts\ local\ cache\
@@ -12,7 +12,9 @@
 #     CONTRIBUTING.md LICENSE start-agent.ps1). Those break when something moves.
 #     Bare filenames like `roll.ps1` are prose, not paths - v1 flagged ~270 of those and was useless.
 #   * a backticked token is often a COMMAND (`tts\play.ps1 turn`) or carries an annotation
-#     (`tts\docs\TTS_RULES.md（§二 工具清单）`): take only the first word.
+#     (`tts\docs\TTS_RULES.md` §二): take only the first word. An annotation glued straight onto the
+#     path with a full-width bracket (`...TTS_RULES.md（§二 工具清单）`) is read as part of the path
+#     and reported as broken - keep a SPACE before it (this gate caught two such rows on 2026-10-09).
 #   * FAIL for a missing path that should ship; INFO for gitignored trees (cache\ out\ local\ logs\
 #     shots\ archive\) and for lines about archived material (those scripts live in
 #     ~\.dsh\archive\tts-legacy\, so their absence from the repo is correct).

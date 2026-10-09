@@ -79,6 +79,87 @@ if ($tracked.Count -gt 0) {
         (($leaks | Select-Object -First 4) -join ' | ')
 }
 
+# ---- 2b. the open-source boundary: no REAL game name in any tracked file ----
+# WHY: this repo may only ship what is true for ANY TTS mod (tts\docs\README.md). A real game name
+# in a tracked file is that rule's most common violation, and on 2026-10-09 an audit found 14 of 71
+# tracked files carrying one while EVERY gate still said PASS - the validator was simply blind to
+# it. Same "reports success without looking" failure this repo already paid for twice.
+#
+# HOW THE NAMES ARE STORED (read this before editing the list):
+#   * ASCII only, assembled at runtime from code points - never typed as literals. Two reasons:
+#     (a) typed whole, this file would match its own scan;
+#     (b) this file is deliberately non-ASCII-free so that a lost UTF-8 BOM cannot silently mangle
+#         literals: on 2026-10-09 an edit dropped the BOM here, Windows PowerShell decoded the CJK
+#         bytes as ANSI, and the file died with "Unexpected token" - the resulting garbage was then
+#         frozen in by check_ps1.ps1, which re-saved it WITH a BOM. The self-check below guards that.
+#   * to ADD a name: append its code points as a second array argument, then re-run. The length
+#     control below fails loudly if the list and the pattern ever disagree.
+#   * the ONLY exemption is the licence section of the two READMEs: an attribution has to let the
+#     rights holder be identified, so a blanket ban there would be wrong rather than strict. Keep
+#     this list short - anywhere else write <game> or a description instead.
+$script:gameCp = @(
+    @(0x64, 0x69, 0x63, 0x65, 0x74, 0x68, 0x72, 0x6F, 0x6E, 0x65),                  # a match-shaped board game
+    @(0x71, 0x69, 0x73, 0x68, 0x65, 0x6E, 0x67),                                      # this machine's GAME= slug
+    @(0x4E03, 0x5723),                                                                # that mod's name (one word)
+    @(0x738B, 0x6743, 0x9AB0, 0x94F8),                                                # the first game taught
+    @(0x6E38, 0x57CE, 0x62D3, 0x8352),                                                # the archived ended game
+    @(0x94F8, 0x57FA, 0x8005),                                                        # the ended game's subtitle
+    @(0x6E, 0x6F, 0x6D, 0x61, 0x64, 0x63, 0x69, 0x74, 0x79),                          # its slug in the archive
+    @(0x660E, 0x65E5, 0x65B9, 0x821F)                                                 # that game's franchise
+)
+$script:gameWord = @($script:gameCp | ForEach-Object { -join ($_ | ForEach-Object { [char]$_ }) })
+$script:gamePattern = ($script:gameWord -join '|')
+$nameExempt = @('README.md', 'README.en.md')          # licence/attribution sections only
+if ($tracked.Count -gt 0) {
+    $nameLeaks = @()
+    foreach ($rel in $tracked) {
+        # Compare the BASENAME: git ls-files returns repo-relative paths like tts/tests/x.ps1, so a
+        # bare-name exemption list would silently never match (it did not, on the first try).
+        $base = Split-Path -Leaf $rel
+        if ($nameExempt -contains $base) { continue }
+        $body = Read-Utf8 (Join-Path $Root $rel)
+        if ($null -eq $body) { continue }
+        foreach ($m in [regex]::Matches($body, $script:gamePattern, 'IgnoreCase')) { $nameLeaks += ($rel + ': ' + $m.Value) }
+    }
+    Check 'no real game names in tracked files (open-source boundary)' ($nameLeaks.Count -eq 0) `
+        ((($nameLeaks | Select-Object -Unique | Select-Object -First 4) -join ' | ') + '  <- write <game> or a description instead')
+}
+# Positive controls. Both must hold, and each catches a DIFFERENT way this check can rot:
+#   control 1 - the scanner sees a planted name. Without it, a pattern that matches nothing passes
+#               every scan; a blind leak check is worse than no leak check;
+#   control 2 - the pattern still has one branch per word. On 2026-10-09 the array was written as
+#               @('a' + 'b', 'c' + 'd'), which does NOT build two elements (the comma folds into the
+#               concatenation), so the joined pattern had no "|" at all - and control 1 did NOT
+#               catch it, because $gameWord[0] then returned that same broken string, so probe and
+#               pattern were broken identically and matched each other. Two green checks are not
+#               proof; the "alt=" counter is printed so a wide render cannot hide a collapse.
+$probe = 'this save came from ' + $script:gameWord[0]
+Check 'game-name scanner sees a planted name (positive control)' `
+    ([regex]::IsMatch($probe, $script:gamePattern, 'IgnoreCase')) `
+    'the scanner is blind - fix it before trusting the check above'
+$altCount = ($script:gamePattern -split '\|').Count
+Check ("game-name pattern has one branch per name (alt={0} of {1})" -f $altCount, $script:gameWord.Count) `
+    ($altCount -eq $script:gameWord.Count) 'the alternation collapsed - check how the array is built'
+# Structure control: the list must hold exactly the names someone decided to ban. This is what
+# caught the 2026-10-09 slip where a later edit silently ate one line of the array: the alternation
+# check still passed (7 of 7 agreed), the licence control still passed, and one real name had
+# quietly stopped being scanned. ADD A NAME HERE AND BUMP THE NUMBER - a deliberate act, not a typo.
+$expectedNames = 8
+Check ("game-name list is complete ({0} entries, expected {1})" -f $script:gameWord.Count, $expectedNames) `
+    ($script:gameWord.Count -eq $expectedNames) 'the list and $expectedNames disagree - add/bump deliberately'
+# Self-check: this file must stay ASCII apart from the UTF-8 BOM. A non-BOM byte above 0x7F here
+# means someone pasted a CJK literal back in, which is exactly the BOM-fragility that broke this
+# file once already (Windows PowerShell read the CJK bytes as ANSI and died on "Unexpected token").
+$selfPath = $MyInvocation.MyCommand.Path
+if ($selfPath) {
+    $raw = [IO.File]::ReadAllBytes($selfPath)
+    $skip = 0
+    if ($raw.Length -ge 3 -and $raw[0] -eq 0xEF -and $raw[1] -eq 0xBB -and $raw[2] -eq 0xBF) { $skip = 3 }
+    $nonAscii = @($raw[$skip..($raw.Length - 1)] | Where-Object { $_ -gt 0x7F }).Count
+    Check ("this test file is ASCII apart from the BOM (non-ASCII bytes: {0})" -f $nonAscii) ($nonAscii -eq 0) `
+        'keep the denylist in code points; a stray CJK literal here is BOM-fragile'
+}
+
 # ---- 3. the machine slot: ignored by git, and small enough to be worth injecting ----
 $ignored = $false
 try { & git -C $Root check-ignore -q 'AGENTS.local.md'; $ignored = ($LASTEXITCODE -eq 0) } catch { }

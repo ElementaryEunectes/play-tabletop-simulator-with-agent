@@ -8,6 +8,9 @@
      本机专属的放 `AGENTS.local.md`，别与平台宪章重复。开源前：① 删掉整块（推荐）或 ② 改成指向平台层的指针。查找：grep -rn "OPENSOURCE-TEMP" . -->
 
 - 含中文的 `.ps1` **必须 UTF-8 带 BOM**；改完立刻跑 `tts\check_ps1.ps1`（递归补 BOM ＋ 真解析器校验）。
+- ⚠️ **丢 BOM ＝ 会固化乱码，顺序错了会毁文件（2026-10-09 真事故）**：编辑工具常悄悄去掉 BOM ⇒ 此时**用工具壳跑这个 `.ps1`**，PS 5.1 按 ANSI 解中文 ⇒ `Unexpected token`；紧接着跑 `check_ps1.ps1`（本意是补 BOM），它把**已乱码的内容**原样写回并加上 BOM ⇒ **乱码被永久固化**。
+  ⇒ 正确顺序：**① 先跑一次该脚本确认解析/行为正常 → ② 再补 BOM（字节级）→ ③ 最后才 `check_ps1.ps1`**；读文件一律 `[IO.File]::ReadAllText`。
+  ⇒ **纯 ASCII 的文件对 BOM 免疫**（`tts\tests\test_agents_hygiene.ps1` 的淘汰名单就用"运行时按码位拼字"写成纯 ASCII，并自带一条"本文件除 BOM 外不得有非 ASCII 字节"的自检）。
 - 跑脚本一律 `powershell -NoProfile -ExecutionPolicy Bypass -File '<绝对路径>'`；**工具壳是 Windows PowerShell 5.1** ⇒ 读中文文件要 `-Encoding UTF8` / `[IO.File]::ReadAllText`（否则乱码，文件没坏）。
 - 写工作区之外 ⇒ `[sandbox: file access denied]`（**策略不是 bug**，一次提权重试）；判端口用 `netstat -ano | findstr :39999`（`Get-NetTCPConnection` 在本沙箱假报"没人在听"）。
 - **沙箱限制子进程时的姿势**：抓子进程输出**写文件再读**（`& x 2>&1` 静默丢输出、退出码仍是 0）· ⛔ 别用 `Start-Process`（隐藏控制台 → `0xC0000142`）。门禁已改**同进程调用**、不再 spawn 内层 PowerShell ⇒ 受限模式下 6 条全绿（清单 ⇒ `CONTRIBUTING.md` §3）。
@@ -42,3 +45,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 ## 4. 改代码的安全姿势（**两次真实截断事故换来的**）
 
 `$ErrorActionPreference = 'Stop'` · **先全量校验锚点再统一写盘** · 写前兜底"内容短于 N 字符就拒绝写" · 能追加就别重写 · **`local\` 没有版本控制 ⇒ 改前先备份** · 逐文件 `edit` 优于一个脚本一次改多文件。细节 ⇒ 平台层 `MAINTENANCE.md` 坑 14/15。
+- ⚠️ **不许顺手改行尾**：`.gitattributes` = `* -text` ⇒ **签出不做任何转换**，仓库里**故意混用 CRLF / LF**（有的文件本身就是混合的）。改写文件的工具若把行尾归一，就是把"一行修复"变成**整文件 diff**（2026-10-09：改 2 行注释变成 95 增 95 删）。
+  ⇒ 改完先看 `git diff --numstat <file>`：**增删数远大于你想改的行数 ⇒ 行尾或编码被动过了**，立刻 `git checkout HEAD -- <file>` 重来；要改中文只想动几行时，用**字节级字符串替换**而不是整文件重写（替换串本身不含行尾即安全）。
