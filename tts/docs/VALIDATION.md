@@ -98,7 +98,7 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 | 撤回 / 交易 | 杂项 | ⛔ **仍缺**（`cut`/`paste`/`drop` 已在 `act` 白名单里，但**未验证**；`copy`/交易无文档 API） |
 
 ⇒ 三条 🔴 硬前提（点名取牌 · 造物 · 座位权威）**已落地**，由 `tts\tests\test_bridge_primitives.ps1` 用
-**真 Lua VM ＋ 从真文件抽取的代码**守着（**27 条用例**：覆盖 v14 原语 ＋ v15 的 hand 动作，
+**真 Lua VM ＋ 从真文件抽取的代码**守着（**31 条用例**：覆盖 v14 原语 ＋ v15 的 hand 动作 ＋ `spawn` 三种入参形态，
 含"缺卡 / 幽灵容器 / 未知动作必须报错而非静默"），**外加第 2b 步**：整块桥接加载后**每条定义是否可达**
 （F8 ⇒ 见下；这条是 2026-10-09 补的，因为抽取块**跳过了**坏区）。
 **兜底**：External Editor API（39999）能 `ExecuteLua` 任意代码 ⇒ 缺的原语"做不到"比"做得别扭"少，
@@ -112,9 +112,21 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 **`unknown hand action: holding`**（旧 `hand` 认识命令、不认识这个动作）—— 两条都说明**必须重烤**。
 版本号是唯一凭据 —— 重烤后 `ping` 应回 **`v15-tags-snap-hand`**。
 
-**F7 · 桥接原语的"活体"部分仍未验**（`⛔`，2026-10-09）
-离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ `spawn`/`take`/`destroy` 各需**重烤后真跑一次**
-（尤其 `spawnObjectJSON` 的入参放宽：`{Name=..., Transform={posX=...}}` 与 `{type=..., position=N}` 两种都要试）。
+**F7 · 桥接原语的"活体"部分**（`🟡` 部分完成，2026-10-09）
+离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ 每条都得**重烤后真跑一次**。
+**已跑（载入 `TS_Save_11.json`，23:11）**：`ping` 版本对 · `players` 回 `ok count=2` ＋ 每座位一行 ·
+`take` 缺卡回 `no container with guid ...` · `destroy` 幽灵回 `no object with guid ...` —— **四条里三条过，且都不再是 nil 崩溃**。
+**仍缺**：`spawn` 的三条形态（`type` · `copy` · `json`）要各真跑一次；本次 `spawn` 的**第一次探测把 TTS 打挂了**
+（探测前 `ping` 正常，之后 API 不可达、进程仍占着 `Player.log`）⇒ **以后一条一条探**。
+⚠️ **两个新缺陷就是这次活体抓出来的**（离线门禁看不见，因为没有任何用例走 `type` 这条路、桩也从不回 nil）：
+1. **`spawn:type` 把 Lua 表塞给了 `spawnObjectJSON`**。文档（`api.tabletopsimulator.com/base`）写得很清楚：
+   `spawnObject({ type = ..., position = ... })` 收**表**，`spawnObjectJSON(jsonString)` 收 **JSON 字符串**（承载完整对象数据）。
+   表给后者 ⇒ 回 nil，而报错却写成"needs TTS v13.2+" ⇒ **把 API 用错说成了版本不够**。
+   ⇒ 现在 `type` 走 `spawnObject`，`json` 走 `spawnObjectJSON`。
+2. **`S(v)` 对 nil 返回 nil** ⇒ 所有 `"..." .. S(x)` 在**正好要报错的那种值**上当场崩。活体原话：
+   `spawn -> handler error: Global:(5704,8-122): attempt to concatenate a nil value`。
+   ⇒ **报错路径自己死了，比没有报错路径更糟**（错误信息完全丢失）。现在 `S()` **永远返回字符串**（67 处调用，没有一处依赖 nil）。
+⇒ 离线补了 `spawn by type` 与"不可用 json"两条用例（31 条）；**阴性对照已验**：把表塞回 `spawnObjectJSON` ⇒ `spawn by type` 立刻红。
 
 **F8 · `players` / `take` / `spawn` / `destroy` 在活体上不可达 —— ✅ 已定案并修复（2026-10-09）**
 **根因一句话**：v14 那段原语**被拼接进了 `setCount()` 的中间** —— 插在它最后一条语句 `out.state = ...`

@@ -26,8 +26,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
    `setCount` 的收尾被甩到 `DSH_destroy` 之后，而**从拼接点起的一切都变成了 `setCount` 的函数体**，加载时从不执行。
    少一个 `end`、尾巴多一个 ⇒ **总数平衡 ⇒ 照样编译、命令照样注册**，只是引用的名字从没被赋值。
    ⇒ 根因/证据链/为什么 7 条门禁全绿也看不见它 ⇒ **`tts\docs\VALIDATION.md` F8**；工具 ⇒ `tts\docs\MAINTENANCE.md` §1a。
-   ✅ 仓库侧已修（`tts\lua\dsh_global.lua`，5 增 2 删）＋ `verify_f8.js` 阴性对照通过。
-   ▶ **下一步**：`install_save2.ps1` 重烤存档 ⇒ 活体把 **F8 那 4 条**和 **§7.9 回合令牌**一起验（两件事都已烤进 `TS_Save_10.json`）。
+   ✅ 仓库侧已修（`tts\lua\dsh_global.lua`）＋ `verify_f8.js` 阴性对照通过 ＋ **门禁新增"整块加载"一步**。
+   📊 **活体验收（2026-10-09 23:11 载入 `TS_Save_11.json`，3/4 过）**：
+      ✅ `ping` = `v15-tags-snap-hand`（重烤生效）· ✅ `players` ⇒ `ok count=2` ＋ 每座位一行 ·
+      ✅ `take` 缺卡 ⇒ `no container with guid ...`（**不再 nil 崩溃**）· ✅ `destroy` 幽灵 ⇒ `no object with guid ...`
+      ⛔ `spawn` ⇒ `attempt to concatenate a nil value`（**又抓出两个缺陷**，均已修、见下）
+   🐞 **活体又抓出两个缺陷**（都是"命令本身通不了"，与拼接无关）：① `spawn:type` 把 **Lua 表**塞给了
+      `spawnObjectJSON`（文档：`spawnObject({type=...})` 与 `spawnObjectJSON(jsonString)` **是两个调用**）⇒ 它回 nil、却报成"需要 TTS v13.2+"；
+      ② **`S(v)` 对 nil 返回 nil** ⇒ 所有 `"..." .. S(x)` 在**要报错的那种值**上当场崩 —— 报错路径自己死了比没有报错路径更糟。
+      ⇒ 都已修 ＋ 离线补上 `spawn by type` 用例（阴性对照已验）⇒ `VALIDATION.md` F7。
+   ⚠️ **那次 `spawn` 探测把 TTS 打挂了**（探测前 ping 正常，之后 API 直接不可达、进程还占着 `Player.log`）
+      ⇒ **`spawn` 以后一条一条探**，别连着发。
+   ▶ **下一步**：重启 TTS ⇒ 载入 **`TS_Save_11.json`**（已含三处修复：拼接 · `S(nil)` · `spawnObject`）⇒ 验 `spawn` ＋ **§7.9 回合令牌**。
    📌 已顺带修好并活体验过的：`container:<guid>` ⇒ 列出容器内物件的 `guid|名称|昵称|数量|牌面文本(截60字)`。
    ⚠️ 根因是 **`getObjects()` 返回纯 Lua 表、没有方法**（字段直接读 `x.guid/x.name/x.description`）。
    ⇒ 这也是**卡库的来源**（`description` 就是整张牌面），不必再手抄。
