@@ -39,7 +39,11 @@ function onLoad()
 end
 
 local function S(v)
-    if v == nil then return nil end
+    -- ALWAYS a string, nil included. Returning nil here made every `"..." .. S(x)` throw on exactly
+    -- the values those branches exist to report: the first live `spawn` died with "attempt to
+    -- concatenate a nil value" instead of saying what went wrong, because the failure path itself
+    -- concatenated S(nil). An error path that dies is worse than no error path.
+    if v == nil then return "nil" end
     return tostring(v)
 end
 
@@ -1651,10 +1655,10 @@ end
 -- ============================ SPAWN / COPY / DESTROY ============================
 -- The missing half of "draw": draw takes cards OFF a deck, but nothing could put a new piece ON the
 -- table, so a mid-game token or a copy of a supply stack could only be placed by the human.
---   * m.json - a TTS object JSON string or table. The SMALL forms work too:
---         { Name = "Custom_Tile", Transform = { posX = 5, posY = 2, posZ = 0 } }
---         { type = "Custom_Tile", position = 3 }          -- position = a Y number
---         { type = "Custom_Model", position = {x=5,y=2,z=0} }
+--   * m.type - a Built-in / Custom Game Object name; goes through spawnObject({type=...}).
+--   * m.json - an OBJECT JSON STRING for full control (Name / Transform / CustomDeck ...); goes
+--     through spawnObjectJSON(jsonString). This is the documented difference between the two API
+--     calls, and feeding a table to spawnObjectJSON is what made the first live `spawn` fail.
 --   * m.copyguid - clone an EXISTING object instead (carries its CustomDeck URLs, Lua and state).
 --     Prefer this when the mod already has the piece on the table.
 -- Declared as `local spawn = function`, NOT `local function spawn`, so the Lua globals
@@ -1676,22 +1680,35 @@ DSH_spawn = function(m)
         return { ok = true, cmd = "spawn", mode = "copy", from = m.copyguid, guid = g }
     end
 
-    local js = m.json
-    if js == nil then
+    -- TWO DIFFERENT API CALLS, and mixing them up is what broke this the first time:
+    --   spawnObject(name)          takes { type = "<Built-in or Custom Game Object name>", position = ... }
+    --   spawnObjectJSON(jsonString) takes a JSON STRING, and is the one that carries full object data
+    --                               ({ Name = ..., Transform = { posX = ... } }).
+    -- The old code fed the { type = ... } table to spawnObjectJSON, which returned nil while the
+    -- handler reported "needs TTS v13.2+". Measured live (2026-10-09): the call answered, the reply
+    -- was this handler's own failure line, and the game went down seconds later - so it also gets
+    -- probed one command at a time from now on.
+    local json = m.json
+    local ok, res, mode
+    if json ~= nil and type(json) == "string" and json:match("^%s*{") then
+        mode = "json"
+        ok, res = pcall(function() return spawnObjectJSON(json) end)
+    else
         local t = tostring(m.type or "")
-        if t == "" then return { ok = false, cmd = "spawn", err = "need json, copyguid or type" } end
-        js = { type = t, position = { x = x, y = y, z = z } }
-    elseif type(js) == "string" then
-        local okd, dec = pcall(function() return JSON.decode(js) end)
-        if not okd or type(dec) ~= "table" then return { ok = false, cmd = "spawn", err = "json did not decode" } end
-        js = dec
-    elseif type(js) ~= "table" then
-        return { ok = false, cmd = "spawn", err = "json must be a JSON string or a table" }
+        if t == "" then
+            local dec = json
+            if type(dec) == "string" then pcall(function() dec = JSON.decode(json) end) end
+            if type(dec) ~= "table" then
+                return { ok = false, cmd = "spawn", err = "need json (a JSON string), copyguid or type" }
+            end
+            t = tostring(dec.Name or dec.type or "")
+            if t == "" then return { ok = false, cmd = "spawn", err = "json has neither Name nor type" } end
+        end
+        mode = "type"
+        ok, res = pcall(function() return spawnObject({ type = t, position = { x = x, y = y, z = z } }) end)
     end
-
-    local ok, res = pcall(function() return spawnObjectJSON(js) end)
     if not ok or res == nil then
-        return { ok = false, cmd = "spawn", mode = "json", err = "spawnObjectJSON failed (needs TTS v13.2+): " .. S(res) }
+        return { ok = false, cmd = "spawn", mode = mode, err = "spawn returned nothing: " .. S(res) }
     end
     placeFace(res, x, y, z, faceup)
     -- TTS fires onLoad for a spawned object's OWN LuaScript asynchronously: a script that sets up its
@@ -1702,7 +1719,7 @@ DSH_spawn = function(m)
     local g, nm = nil, ""
     pcall(function() g = res.getGUID() end)
     pcall(function() nm = tostring(res.getName()) end)
-    return { ok = true, cmd = "spawn", mode = "json", guid = g, name = nm }
+    return { ok = true, cmd = "spawn", mode = mode, guid = g, name = nm }
 end
 
 -- Remove an object from the table. pcall-wrapped because destroying something already gone, or
