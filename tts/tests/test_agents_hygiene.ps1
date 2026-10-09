@@ -79,6 +79,18 @@ if ($tracked.Count -gt 0) {
         (($leaks | Select-Object -First 4) -join ' | ')
 }
 
+# ---- 2a. nothing private may be TRACKED, whatever .gitignore says ----
+# WHY: on 2026-10-09 the control layer was moved to local\games\<game>\control\ and `git add -A`
+# committed all four files anyway. local/ IS in .gitignore, but that does not help a file git has
+# already seen: an ignored path that is tracked stays tracked, so the "private, never shipped"
+# promise was broken by the very commit that was supposed to enforce it. Check the INDEX, not the
+# ignore rules.
+if ($tracked.Count -gt 0) {
+    $private = @($tracked | Where-Object { ($_ -replace '\\', '/') -like 'local/*' })
+    Check 'nothing under local\ is tracked (private stays private)' ($private.Count -eq 0) `
+        (($private | Select-Object -First 4) -join ' | ') + '  <- git rm --cached, and keep the files'
+}
+
 # ---- 2b. the open-source boundary: no REAL game name in any tracked file ----
 # WHY: this repo may only ship what is true for ANY TTS mod (tts\docs\README.md). A real game name
 # in a tracked file is that rule's most common violation, and on 2026-10-09 an audit found 14 of 71
