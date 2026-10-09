@@ -51,6 +51,10 @@ const guid = newGuid(taken);
 
 const token = JSON.parse(JSON.stringify(template));
 token.GUID = guid;
+// BOTH fields carry the marker. TTS stores the token's visible label in Name (a live index shows
+// "DSH-TURN 0" as the object's NAME, not its nickname), so a token with Name="Custom_Tile" is
+// invisible to findTurnToken - which is exactly why it kept making new tokens (2026-10-09).
+token.Name = 'DSH-TURN 0';
 token.Nickname = 'DSH-TURN 0';
 token.Description = 'DSH turn token - click it to record a turn (nickname becomes DSH-TURN <n>)';
 token.LuaScript = tokenLua;

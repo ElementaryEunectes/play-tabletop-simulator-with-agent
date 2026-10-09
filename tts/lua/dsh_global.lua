@@ -1909,7 +1909,14 @@ local function findTurnToken()
         local k, nm = "", ""
         pcall(function() k = tostring(o.getNickname()) end)
         pcall(function() nm = tostring(o.getName()) end)
-        if k:sub(1, #TURN_TOKEN_NAME) == TURN_TOKEN_NAME or nm == TURN_TOKEN_NAME then return o end
+        -- PREFIX match on both, not equality on the name. WHY (measured 2026-10-09): turnToken calls
+        -- o.setName("DSH-TURN"), and TTS stores the token's display name as "DSH-TURN <n>" - so
+        -- `nm == "DSH-TURN"` matched NOTHING, getNickname() came back empty, every turn_token created
+        -- ANOTHER tile, and turn_state kept answering "no turn token yet" while a token sat in the
+        -- middle of the table (index: ff73d9 name="DSH-TURN 0").
+        if k:sub(1, #TURN_TOKEN_NAME) == TURN_TOKEN_NAME or nm:sub(1, #TURN_TOKEN_NAME) == TURN_TOKEN_NAME then
+            return o
+        end
     end
     return nil
 end
