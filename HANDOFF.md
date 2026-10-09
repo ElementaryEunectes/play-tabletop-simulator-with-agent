@@ -21,17 +21,32 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 
 ## §4 待办（按优先级）
 
+0. 🔴 **【最高】活体原语 F8：4 条命令在 TTS 里不可达，原因未查明**（2026-10-09）
+   - 症状：`players` / `take` / `spawn` / `destroy` 一律回 `handler error: Global:(行,列): attempt to call a nil value`，
+     且**列区间正好等于注册处调用**（如 `DSH_players(m)`）的宽度 ⇒ 注册表里的名字在调用时是 nil。
+   - **台账 F8 里列了全部已排除项**（定义不在表之后 · 无顶层 return · 非 200 局部量上限 · 三种声明形式都试过 ·
+     桥接未重复）＋**矛盾证据**（chunk 内测：`hand=function` 而那四个 nil；检查点显示"跑到了表之后却没跑表之前"）。
+   - ✅ 工具已就位：`tts\tools\gen_bridge_alone_test.js`（从**运行中脚本**或本地文件生成桩环境）＋
+     `tts\tools\bisect_run.js`（在指定行注入 `error()`，报告是否到达）＋ `tts\tools\run_lua.js`（fengari）。
+   - ▶ **下一步唯一正确动作**：用 `bisect_run.js` 把运行脚本**二分到最小复现片段**（纯离线、可反复）—— 拿到片段通常一眼定案。
+     运行脚本可从 `tts_api.ps1 -Action getscripts` 落到 `cache\tts_scripts_raw.json`，取 `scriptStates[Global].script`
+     写成 `local\scratch\running_global.lua`（`gen_bridge_alone_test.js` 的默认输入）。
+   - ⛔ **在这条通过之前，那 4 条命令一律按"活体不可用"对待**：26 条离线桩用例全绿也**看不见**它。
+   - 📌 已顺带修好并活体验过的：`container:<guid>` ⇒ 列出容器内物件的 `guid|名称|昵称|数量|牌面文本(截60字)`。
+     ⚠️ 根因是 **`getObjects()` 返回纯 Lua 表、没有方法**（字段直接读 `x.guid/x.name/x.description`）。
+     ⇒ 这也是**卡库的来源**（`description` 就是整张牌面），不必再手抄。
+
 1. ✅ **D2 已完成（2026-10-09）**：**对局型 mod** 的 `local\games\<游戏>\objects.json` 写好（8 个区块）⇒ `bootstrap.ps1` 恢复可用（`cache\session_map.md` = 92 行 / 3.9 KB；HP·CP 4 行 · 牌堆 2 · 骰子 5+5 · 英雄板 2 · 规则书 1）。
    📌 关键：**索引里同一物件常有两行**（容器副本 1523/1659）⇒ 每个区块都要 `topLevel: true`；这条已写进 `BOOTSTRAP.md` §1b 与数据文件自身的 `_note`。换英雄/换局：`bootstrap.ps1 -Inventory` 取新 hash 加一行。
    ⚠️ **"任何 mod 都成立"：第二款 mod 实测 = 半过（2026-10-09 晚，详情见 `tts\docs\VALIDATION.md`）**：**非对局型** mod（自带 116 KB Global 脚本 ＋ 12 页笔记本）⇒ `install_save2.ps1 -KeepLua -KeepTabs` 烤进存档、模组自带脚本**原样保留** ⇒ 玩家重载后 **`ping` 回 `v13-turntoken`** ⇒ `obj_index.ps1 -File <绝对路径>`（625 行）⇒ `bootstrap.ps1 -Inventory`（190 nicks / 41 hashes）⇒ 写 `objects.json`（7 区块）⇒ **115 行地图**。
    🟢 这一路**全过**（传话 · 存档侧索引 · 认物 · 地图）。🔴 但 **`play.ps1` 在这款上 FAIL**（`NO PART`：它要 `cache\<game>_rules.json` 且 `status` 也走 `$Rules.dice/seats`）⇒ **这条缺陷已写进 `TTS_RULES.md` §二 方框**；"通用"目前**只是这一路证据，不是全链证据**。
    📌 学到的两条：① **`obj_index.ps1 -File` 要绝对路径**（相对 cwd 解析，给裸文件名会报 not found）；② 这类 mod 把教学写在 **Notecard** 上（地图有专门一节 ⇒ 开局先读它，再写 `FLOW.md`）。
    ⛔ 仍然**不要**为了验证去造假的第二款游戏（fixture 只验"数据不在代码里"这条契约）。
-2. 🔴 **回合令牌验收（`v13-turntoken`，未做）** ⇒ **§7.9**（要 TTS 在跑 ＋ 玩家重载存档）。
+2. 🔴 **回合令牌验收（`v15-tags-snap-hand`，仍未做）** ⇒ **§7.9**（要 TTS 在跑 ＋ 玩家重载存档）。与 **F8** 一起验最省事：都已重烤进 `TS_Save_10.json`。
 3. 🔴 **游戏侧待办**（5 条规则冲突 · 卡面文本）⇒ **当前游戏的 `local\games\<游戏>\STATE.md`**（⛔ 不进仓库，本文件不复述）。
 4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后三块**：**A** `STATE`/`FLOW` 模板（新游戏起手）· **C** `setup.ps1` 向导 · **E** demo ＋ 30 秒录屏（需 TTS）。
    判据：陌生人只有**公开仓库 ＋ Windows ＋ TTS ＋ 一个 workshop mod**，能否在**一小时内**打完一回合？
-5. 🟡 **开源收尾**：`LICENSE`(MIT) ✅ · `README.en.md` ✅ · 路径/隐私 ✅（树里 0 处 `C:\Users\<名字>`）· 离线门禁 **6 条** ✅ ⇒ 剩下"首次上手的时间/成本期望"写进 README 顶部。
+5. 🟡 **开源收尾**：`LICENSE`(MIT) ✅ · `README.en.md` ✅ · 路径/隐私 ✅（树里 0 处 `C:\Users\<名字>`）· 离线门禁 **7 条** ✅ ⇒ 剩下"首次上手的时间/成本期望"写进 README 顶部。
 6. ⚪ **平台层不随仓库走**（十几条坑只在 harness home）⇒ 开源用户只有 `tts\docs\MAINTENANCE.md` §0；**"等玩家点结束回合"依赖 DSH 的 sentinel**，换 agent 平台会退化成轮询。
 7. ⚪ **火绒**（环境事实，不是待办）⇒ §9。
 
@@ -41,12 +56,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 - 平台 ×17 条坑 ＋ 上下文注入与隔离 ⇒ **`platform\MAINTENANCE.md`**（旧编号 §6.8/§6.9 = 那里"校验器阳性对照"两条）。
 - **TTS 桌子本身的开销**（2026-10-09 实测）：重桌子在**后台**仍烧 GPU（647 物件 ≈**73%** vs 空桌 ≈10%）⇒ 拖慢**整机输入**（连记事本都卡，而 CPU 只 10–20%）。修法 = 驱动「**后台应用程序最大帧速率**」20 fps，⚠️ **要重启 TTS 才套用**（不重启 73→73；重启后 73→**11%**）。**用嘴代替手**：DSH **自带**实验性语音输入 `@deepseek-ai/dsh-experimental-voice-input-bundle`（客户端麦克风按钮 ＋ SenseVoice STT）。两条都写在 **`tts\docs\USER_GUIDE.md` §5 常见问题**（面向人，本文件不复述步骤）。
 
-## §7.9 回合令牌验收（`v13-turntoken`，**尚未生效**）
+## §7.9 回合令牌验收（`v15-tags-snap-hand`，**已烤进存档、待验**）
 
 桥接 Lua 已加 `turn_token`/`turn_state`（自制可点令牌：点一下把回合号写进**昵称** ⇒ `diff_index.ps1` 现在也差 `nick`）。
 `dsh_global.lua` 是**烤进存档**的 ⇒ 需 `install_save2.ps1` 重装 ＋ **请玩家重载**，然后逐条验：
 
-1. `{cmd="ping"}` 的 `v` = **`v13-turntoken`**（否则存档没重装成功）。
+1. `{cmd="ping"}` 的 `v` = **`v15-tags-snap-hand`**（否则存档没重装成功）。
 2. `{cmd="turn_token"}` ⇒ `ok=true` · `created=true` · 记下 `guid`；**再跑一次**应 `created=false`（幂等）。
 3. 玩家**点一下** ⇒ `{cmd="turn_state"}` 的 `turn` **0→1**、`nick` = `DSH-TURN 1`。（`call…fn="dshBump"` 只验我自己的簿记；mod 的回合机另说。）
 4. `diff_index.ps1 -Snapshot` → 点一次 → 再跑 ⇒ 出现 **`NICK (昵称变化)`** 段且 SUMMARY 含 `nick=1`。

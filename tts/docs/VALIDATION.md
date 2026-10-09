@@ -38,9 +38,9 @@
 
 | # | 断言 | 证据（可重跑） | 状态 |
 |---|---|---|---|
-| L1 | 桥接能被烤进**任意**存档且**不弄坏 mod 自带的 Global 脚本** | `install_save2.ps1 -KeepLua -KeepTabs`；之后 `ping` 回 **`v13-turntoken`**（版本号 = 唯一凭据） | ✅ 已实测（②） |
+| L1 | 桥接能被烤进**任意**存档且**不弄坏 mod 自带的 Global 脚本** | `install_save2.ps1 -KeepLua -KeepTabs`；之后 `ping` 回 **`v15-tags-snap-hand`**（历次版本号都算通过：`v13-turntoken` → `v14-primitives` → `v15-tags-snap-hand`）（版本号 = 唯一凭据） | ✅ 已实测（②） |
 | L2 | mod 自带的 116 KB Global 脚本 ＋ 12 页笔记本**原样保留** | 存档里笔记本页数与模组脚本 `function` 名逐条比对（②） | ✅ 已实测（②） |
-| L3 | 纯 PowerShell 传话层不需要知道任何游戏 | `ds.ps1 -Do ping` ⇒ `ok v=v13-turntoken objs=115 loads=1` | ✅ 已实测（①②） |
+| L3 | 纯 PowerShell 传话层不需要知道任何游戏 | `ds.ps1 -Do ping` ⇒ `ok v=v15-tags-snap-hand objs=115 loads=1` | ✅ 已实测（①②） |
 | L4 | 存档侧全量索引不依赖游戏 | `obj_index.ps1 -File <存档绝对路径>` ⇒ 625 行 CSV（②）· 242 KB（①） | ✅ 已实测（①②） |
 | L5 | 认物完全由**数据**驱动（`local\games\<游戏>\objects.json`） | `bootstrap.ps1 -Inventory` ⇒ 190 nicks / 41 hashes；换一款换一份 `objects.json` 即可 | ✅ 已实测（①②） |
 | L6 | 地图输出随数据变（不是代码里写死的表） | `bootstrap.ps1` ⇒ ② **115 行**（7 区块）· ① **92 行**（8 区块） | ✅ 已实测（①②） |
