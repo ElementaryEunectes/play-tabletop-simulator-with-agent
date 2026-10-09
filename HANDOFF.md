@@ -1,6 +1,7 @@
 # HANDOFF.md —— 交接简报（2026-10-07 深夜收官）
 
 > **谁读**：接手这个项目的下一个 agent（或几天后的我）。
+> 🆕 **2026-10-09 会话纪要见 §9 —— 最新状态与待办以 §9 为准。**
 > **怎么读**：本文件 = "现在到哪了 + 先干什么"；长期规矩在 `AGENTS.md`（本项目）与 `~/.dsh\AGENTS.md`（平台）；
 > 每局开工：`local\games\_current.md` → 该游戏 `STATE.md`（状态 · 待办）＋ `tts\docs\PLAY.md`（通用动作）——**先做 §1 的启动动作**。
 > ⚠️ **先做 §1 的启动动作，否则所有脚本会读写一个不存在的旧目录。**
@@ -107,3 +108,75 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1
 - 想只注入一份 ⇒ 用 `start-agent.ps1` 起（`DSH_HOME` 钉到仓库根，两个槽同路径去重）。⛔ harness **没有"忽略全局那份"的开关**。
 - 注入顺序 / 两种去重 / 字节预算 / **各类工作区会注入什么** / rulesync 试点结论 ⇒ 全在 harness home 的 `platform\MAINTENANCE.md`；
   回归测试 ⇒ `tts\tests\test_agents_hygiene.ps1`；"模板即源"的复制关系 ⇒ harness home 的 `platform\HARNESS_HOME_AGENTS.template.md`（**已迁出仓库**）。
+---
+
+## §9 2026-10-09 会话纪要（**接手先读这一段**；本节状态优先于上文）
+
+### 9.1 今天落地了什么
+
+- **按项目屏蔽全局纪律的开关找到了**（发布时用）：`dsh tts-agent web`。机制 = profile 的 `cordis.patch.yml` 把指令插件（id `agent-instructions`）的 `dshHome` 指向**空目录** ⇒ 只有该 profile 零注入；会话/凭据不用搬、不用 junction。目录已建好：`~\.dsh\profiles\tts-agent\`。
+- **但本项目暂时不屏蔽**：平台宪章已**恢复注入**（`~\.dsh\AGENTS.md` 3,752 B），默认 profile = `web`。
+- **平台层已迁出仓库** ⇒ `<harness home>\platform\`：宪章模板 · `MAINTENANCE.md`（坑 ×17）· `dsh_profile.ps1`（**已废**）· 快照 `local\archive\platform_2026-10-09\`。
+- **新增 `tts\docs\INJECTION.md`**：安装者视角讲三槽 / 三条硬规则 / 成本 / 安装时怎么放 / **§4 变体：保留全局纪律 ＋ 按项目屏蔽**。
+- **去重**：`AGENTS.local.md` 只留本机事实（2,210 → 1,826 B）；项目 `AGENTS.md` 与宪章去重（3,621 → **3,518 B**，命令留一行、解释收一处）＋ 修正三行**已过期**的描述（"全局槽是空的"等）。
+- **门禁总入口 `tts\tests\run_all.ps1`**（新）：裸调用 · 子进程**自己写结果文件**（**无 cmd、无管道**）· 启动前**置空 `$LASTEXITCODE`**（防陈旧值冒充成功）· 三个测试改为文件重定向抓子进程。
+- **`diff_index.ps1`**：`nick` 纳入差分（回合信号）；明确"**实机只报 4/6 类**"（`reparented`/`state` 需 `parent/gm/ss`，而 live 索引把它们置空）＋ 无值时打印警告。
+- **回合令牌（桥接 `v13-turntoken`）**：`{cmd="turn_token"}` 自举 · `{cmd="turn_state"}` 读回；点一下 ⇒ 回合号写进**昵称** ＋ 存 `script_state` ＋ 翻转。
+- **`PRIOR_ART.md` §8**：生态如何解"AGENTS.md 污染"（五类做法 ＋ 可搬/不可搬，含 Cursor/OpenCode/rulesync/harness-scope）。
+- **清理**：删掉 `local\scratch` 下 **15,094** 个死依赖文件（工作区 18,489 → **3,395**）。
+
+**今天的提交（最新在下）**
+
+```textcd1a234 test(gates): the gate runner stops using cmd, stops trusting a stale exit code, and writes where a confined child can actually write
+b6889e5 docs(charter): the injected charter described a world where no global slot existed - three lines were stale
+6d206de docs(charter): dedupe the project AGENTS.md against the global charter - imperatives stay, explanations move to one place
+0d20fcd docs: keep the global charter injected for now, dedupe the local overlay, and write down the release-time switch
+a64f336 docs: how to run the gates when the agent sandbox confines child processes
+3635d40 test(gates): make the offline gates survive a confinement that silently drops piped stdout
+05b55fa research(prior-art): section 8 - how other agent projects scope and de-contaminate their instruction files
+d2971a8 test(gates): one entry point that cannot report a green for a test that never ran
+6cf2ac6 feat(turn): a clickable Lua turn token, and nickname becomes a diffed signal
+dea6abe fix(diff): live mode reports 4 of 6 change classes - say it out loud, and pin it with a contract test
+afffcbc docs(bootstrap): step 0 points at INJECTION.md, and stops describing the retired injection layout
+b214339 docs: a user-facing explanation of the instruction-injection mechanism, for installers
+1092635 docs: per-request injection 6799 -> 4873 bytes, without losing a single rule
+815a190 feat(launch): method A - no global instruction slot at all; the launcher stops building the junction profile by default
+59f52ee docs: mark the platform essentials OPENSOURCE-TEMP and move them from the machine overlay into the tracked maintenance card
+840a838 refactor: move the platform layer out of the toolkit (to the harness home); the repo keeps the TTS toolkit and its gates
+168dac1 charter: slim the cross-project AGENTS.md (4476 -> 3742 B); move never-read-while-working bytes to the template header
+ae78e06 charter: add a code-consistency section to the cross-project AGENTS.md (template + installed copy)
+11e35b2 feat(profile): give each project its own harness home, so the user-global AGENTS.md injects nothing
+3347c7b feat(launcher): start.cmd - double-clickable, and the docs now say so first
+c5d622f docs: correct three statements that config.ps1 made obsolete, and the launcher's own header
+71ad408 docs: make TTS_RULES section 4 the single source of truth for the End Turn verdict```
+
+### 9.2 本机环境的三条限制（**都付过代价**；细节见平台层坑 16 / 17）
+
+1. **火绒 HIPS** —— 规则「隐藏执行PowerShell」会拦"沙箱以隐藏方式起 powershell" ⇒ 症状：整条命令**无输出、退出码 -1**。修法：信任区加 `node.exe` · `%APPDATA%\npm\node_modules\@deepseek-ai\dsh\` · `powershell/pwsh/cmd/git` · `~\.dsh\` · `%TEMP%\dsh-*` · 工作区；或把该规则改成"询问/允许"。
+2. **`0xC0000142`（DLL 初始化失败）** —— `Start-Process`（含 `-WindowStyle Hidden`）与**经 `cmd` 启动**都会死（后端成文限制，README L127）⇒ **都别用**；本项目脚本已改成裸调用。
+3. **管道会静默丢输出** —— `& x 2>&1` 在受限模式下是"子进程跑了、退出码 0、文本为空"；**内层 spawn `powershell.exe`** 会被拦 ⇒ `tts\tests\test_diff_index.ps1` **只能在完全权限下跑**，其余四个受限模式可用。
+
+⇒ **工位建议**：干活的会话切「**完全权限**」（五个门禁都能跑）；受限模式下只用"**裸调用 ＋ 读文件/看控制台**"。
+
+### 9.3 待办（**下一步从这里挑**）
+
+- **D ⭐（建议先做）** —— 清掉"本款数据进代码"：`tts\card.ps1` 第 63-76 行的**别名表**抽成数据（`cache\<game>_alias.json`；缺文件则退化为纯文本匹配 ＋ 一行提示）；`tts\bootstrap.ps1` 的认物改成读 `local\games\<游戏>\objects.json`。**验证**：造一个假 `GAME=fake` ＋ 最小数据，跑通"查牌 / 认物"。
+- **A** —— `STATE` / `FLOW` 模板（新游戏起手；`BOOTSTRAP.md` §6 有清单但无模板）。
+- **C** —— `setup.ps1` 向导（检测 ＋ 写 `local\games\_current.md` ＋ 生成模板 ＋ 打印下一步）。
+- **E** —— demo / 录屏（需要 TTS）。
+- **回合令牌验收** —— `install_save2.ps1` 重装 ＋ **玩家重载存档** ⇒ 按 **§7.9 的 6 条清单**逐条验（第 1 条：`{cmd="ping"}` 应回 `v13-turntoken`）。
+- **火绒放行** —— 否则工具调用会**间歇**被整条掐掉。
+
+### 9.4 开源可用性体检（结论）
+
+- ✅ **能**：环境体检（`tts\doctor.ps1`）· 启动（`start.cmd`）· 桥接烤进存档（`install_save2.ps1`）· 通用工具链（`bootstrap.ps1` / `live_index.ps1` 对游戏名的命中数 = **0**）· 缺 `_current.md` 时**报错清晰**。
+- ❌ **还不能**：**换一款 mod 直接开打** ⇒ 卡在 **A**（没模板）与 **D**（`card.ps1` 写死本款牌名，铁律违规的现成反例）。
+- ⚠️ **平台层十几条坑不随仓库走**（开源用户只有 `tts\docs\MAINTENANCE.md` §0）⇒ 新机器搭建成功率受影响。
+- ⚠️ **"等玩家点结束回合"依赖 DSH 的 sentinel** ⇒ 换 agent 平台会退化成轮询。
+
+### 9.5 关键数字
+
+- **每请求注入 ≈ 9.1 KB**：平台宪章 3,752 ＋ 项目 `AGENTS.md` 3,518 ＋ 本机 overlay 1,826；发布时切 `dsh tts-agent web` ⇒ ≈ **5.4 KB**。
+- 工作区文件 **3,395**；跟踪 `.md` 14 份；`tts\` 下 39 个 `.ps1`。
+- 平台层：宪章模板 6.9 KB · `MAINTENANCE.md` ≈ 24 KB（坑 ×17）· 快照 `local\archive\platform_2026-10-09\`。
+- 门禁：`powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1`（要证据时加 `-OutFile <路径>`）。
