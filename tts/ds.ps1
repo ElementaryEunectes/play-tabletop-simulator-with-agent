@@ -124,8 +124,43 @@ switch -Regex ($Do) {
     # that is how "what did the player just do?" gets answered. See live_index.ps1.
     '^all:(\d+)$'   { $cm = @{ cmd = 'all';   limit = $Matches[1] } }
     '^index:(\d+)$' { $cm = @{ cmd = 'index'; limit = $Matches[1] } }
-    # hand:<Color>:<get|take>   (see the `hand` handler in dsh_global.lua)
+    # hand:<Color>:<get|take|holding|give|draw>[:<guid>[:<n>]]
+    #   get     list the hand zone       take    hand a table object to that colour
+    #   holding what that colour holds    give    hand ONE specific guid to that colour
+    #   draw    move n cards from a container into that colour's hand (deck.deal, else the fallback)
     '^hand:(\w+):(\w+)$' { $cm = @{ cmd = 'hand'; player = $Matches[1]; action = $Matches[2] } }
+    '^hand:(\w+):(\w+):([^:]+)$' { $cm = @{ cmd = 'hand'; player = $Matches[1]; action = $Matches[2]; guid = $Matches[3] } }
+    '^hand:(\w+):(\w+):([^:]+):(\d+)$' { $cm = @{ cmd = 'hand'; player = $Matches[1]; action = $Matches[2]; guid = $Matches[3]; n = $Matches[4] } }
+    # container:<guid>  -- what is actually inside a Bag/Deck right now (complements index/draw/take)
+    '^container:([^:]+)$' { $cm = @{ cmd = 'container'; guid = $Matches[1] } }
+    # ---- v14-primitives (2026-10-09): the operations a trained control layer kept missing ----
+    # players                                  -> who is at the table, whose turn, hand COUNT
+    '^players$' { $cm = @{ cmd = 'players' } }
+    # player:<Color>:<turn|blind>[:<true|false>]  -> TTS's own turn marker / blindfold
+    '^player:(\w+):(\w+)(?::(\w+))?$' {
+        $cm = @{ cmd = 'player'; player = $Matches[1]; action = $Matches[2] }
+        if ($Matches[3]) { $cm.on = $Matches[3] }
+    }
+    # take:<deck guid>:<CardID>:<x>:<y>:<z>[:<1|0 faceup>]  -- pull ONE NAMED card out of a deck.
+    # CardID empty is allowed (`::`) and means the top card, i.e. the same thing draw: does.
+    '^take:([^:]+):([^:]*):([^:]+):([^:]+):([^:]+)(?::([01]))?$' {
+        $cm = @{ cmd = 'take'; deckguid = $Matches[1]; cardid = $Matches[2]
+                 x = $Matches[3]; y = $Matches[4]; z = $Matches[5] }
+        if ($Matches[6]) { $cm.faceup = $Matches[6] }
+    }
+    # destroy:<guid>                           -> remove an object from the table
+    '^destroy:([^:]+)$' { $cm = @{ cmd = 'destroy'; guid = $Matches[1] } }
+    # spawn is the one command whose payload is JSON (colons and quotes inside), so only the SHORT
+    # forms get a command-line syntax. Everything else goes through -Json with a full envelope:
+    #   ds.ps1 -Json '{"messageID":2,"customMessage":{"cmd":"spawn","json":"{\"Name\":\"Custom_Tile\"}","x":5,"y":2,"z":0}}'
+    #   spawn:type:<TTS type>:<x>:<y>:<z>       -> e.g. spawn:type:Custom_Tile:5:2:0
+    '^spawn:type:([^:]+):([^:]+):([^:]+):([^:]+)$' {
+        $cm = @{ cmd = 'spawn'; type = $Matches[1]; x = $Matches[2]; y = $Matches[3]; z = $Matches[4] }
+    }
+    #   spawn:copy:<guid>:<x>:<y>:<z>           -> clone an existing object (keeps its art/Lua/state)
+    '^spawn:copy:([^:]+):([^:]+):([^:]+):([^:]+)$' {
+        $cm = @{ cmd = 'spawn'; copyguid = $Matches[1]; x = $Matches[2]; y = $Matches[3]; z = $Matches[4] }
+    }
     # deal:<deckGuid>:<n>:<Color>  -- TTS's own "draw the top n cards" primitive.
     # The generic act: form can only carry `value`, not `player`, and deal() needs the
     # player colour, so it gets its own pattern.
@@ -224,6 +259,42 @@ switch ($cmOut) {
         }
     }
     'count'    { Write-Host ("ok total={0} distinct={1}" -f $resp.total, $resp.distinct) }
+    # ---- v14-primitives -------------------------------------------------------------------------
+    # players: `items` arrives as a JSON string (the bridge flattens nested tables before sending,
+    # because sendExternalMessage cannot serialise a nested table - see the SILENT-REPLY note in
+    # dsh_global.lua). Parse it back and print one line per seat.
+    'players'  {
+        Write-Host ("ok players count={0}" -f $resp.count)
+        $items = @()
+        if ($resp.items) { try { $items = @($resp.items | ConvertFrom-Json) } catch { $items = @() } }
+        foreach ($p in $items) {
+            Write-Host ("  {0,-6} hand={1,-4} turn={2,-6} host={3,-6} seated={4,-6} {5}" -f `
+                $p.color, $p.hand, $p.turn, $p.host, $p.seated, $p.steam_name)
+        }
+    }
+    'take'     {
+        Write-Host ("ok take card={0} guid={1} face={2} rotZ={3} remaining={4} name={5}" -f `
+            $resp.cardid, $resp.guid, $resp.face, $resp.rotZ, $resp.remaining, $resp.name)
+    }
+    'spawn'    {
+        Write-Host ("ok spawn mode={0} guid={1} name={2}" -f $resp.mode, $resp.guid, $resp.name)
+    }
+    'destroy'  { Write-Host ("ok destroy guid={0}" -f $resp.guid) }
+    'player'   { Write-Host ("ok player color={0} action={1}" -f $resp.color, $resp.action) }
+    # hand: `items` arrives as a JSON string (nested tables are flattened by the bridge)
+    'hand'     {
+        Write-Host ("ok hand player={0} action={1} count={2} hand={3}" -f $resp.player, $resp.action, $resp.count, $resp.hand)
+        $items = @()
+        if ($resp.items) { try { $items = @($resp.items | ConvertFrom-Json) } catch { $items = @() } }
+        foreach ($it in $items) { Write-Host ("  {0,-9} {1}" -f $it.guid, $it.name) }
+    }
+    # container: what is inside a Bag/Deck right now, with tags (hashes, not names)
+    'container' {
+        Write-Host ("ok container guid={0} count={1} quantity={2}" -f $resp.guid, $resp.count, $resp.quantity)
+        $items = @()
+        if ($resp.items) { try { $items = @($resp.items | ConvertFrom-Json) } catch { $items = @() } }
+        foreach ($it in $items) { Write-Host ("  {0,-9} {1,-24} qty={2} tags={3}" -f $it.guid, $it.name, $it.qty, $it.tags) }
+    }
     'draw'     {
         Write-Host ("ok draw deck={0} took={1} remaining={2} guids={3}" -f $resp.deck, $resp.n, $resp.remaining, ($resp.guids -join ','))
     }

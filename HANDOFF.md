@@ -82,7 +82,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
     新路径由 `config.ps1` 提供：`$DshGameControl` · `$DshLibTtslib` · `$DshLibBridge`。**教法 ⇒ `BOOTSTRAP.md` §2b**（新增）。
   - **待办重心转移**：`VALIDATION.md` **F6** ＝ 原语缺口清单（`takeObject` 点名取牌 · `spawnObject` 造物 · `getPlayers` 座位权威 —— 这三条是"教得动"的硬前提）；**F2**（翻牌朝向只在一张桌标定过）仍需复验。
   - 📌 两条"设计坑"记下来了：`ValueFromRemainingArguments` 会**吞掉位置动词**（改用 `$args`）；dot-source 会**改写 `$PSCommandPath`**（控制层的 BOM 自检必须在 dot-source **之前**捕获自己的路径，否则误报）。
+- **2026-10-09 场 5**（**补 F6 原语缺口**）：
+  - **桥接升到 `v14-primitives`**：新增 `players`（座位权威：谁/什么颜色/手牌数/**轮到谁**）· `take`（取**指定** CardID 那张，非顶张）· `spawn`（`json` ／ `copyguid` 复制 ／ 纯 `type`）· `destroy` · `player`（TTS 自带回合标记 / 盲挡）。
+    入口也接上了：`ds.ps1 -Do 'players' | 'take:<堆>:<CardID>:<x>:<y>:<z>' | 'destroy:<g>' | 'spawn:copy:<g>:<x>:<y>:<z>' | 'spawn:type:<类型>:<x>:<y>:<z>' | 'player:<Color>:<turn|blind>'`（spawn 的完整 JSON 走 `-Json`）。
+  - ⚠️ **要生效必须先重烤存档**：桥接烤在存档里 ⇒ 现在跑着的 TTS 是 v13，新命令回 **`no handler for cmd=players`**（实测）。
+  - **第 7 条门禁 `bridge primitives (Lua)`**：本机没有 lua 二进制 ⇒ 装 **fengari**（JS 里的 Lua VM），把**从真文件抽取**的代码块放进桩 TTS 环境真跑 —— **16 条用例**，含"缺卡/幽灵容器必须报错而不是静默"。⚠️ 已装依赖在 `local\scratch\luatest`（不进仓库）⇒ 新机器要按 `MAINTENANCE.md` §1 装一次；**缺它 = NOT RUN，不是 PASS**。
+  - ⛔ **仍缺**：`cut`/`paste`/`drop`（已进 `act` 白名单但**未验**）· `copy`/交易（**无文档 API**）；**活体验证（F7）**要在重烤后把 v14/v15 各跑一次。
+- **2026-10-09 场 6**（**把 F6 剩下的补齐**）：
+  - 桥接升到 **`v15-tags-snap-hand`**：`container`（列出 Bag/Deck 内容＋数量＋tags）· `hand` 的新动作 `holding`/`give`/`draw`（**摸牌进手**：`Deck.deal`，非牌堆回落 `dealToColorWithOffset`）· `act` 新增 `setTags`/`addTag`/`removeTag`/`hasTag`/`hasAnyTag`/`hasMatchingTag`（**数组参数**，`value=标签1+标签2` 或 `list`）· `setSnapPoints`（`value=x,y,z;x,y,z`）· 成员变量 `use_snap_points`/`locked`/`memo`/`tooltip` ＋ **`act` 现在可用 `player="Teal"` 把 Player 当作用对象**（`getHandCount`/`getHandTransform`/`getHoldingObjects`）。
+  - 📌 **查了官方 API 才写的**（`api.tabletopsimulator.com`）：⚠️ **`Player.takeObject` 根本不存在** —— Player 只能 `getHandObjects(hand_index)`/`getHandTransform`/`getHoldingObjects`，所以"摸牌进手"的正路是**物件侧**的 `deal`/`dealToColorWithOffset`（我上一轮的设想是错的）。TTS = v14.2.2。
+  - 测试从 **16 条扩到 25 条**（新增 9 条 hand 动作；`act` 的深层分支**离线抽不出来** ⇒ 只能源码级断言，真行为留给活体）。
+  - ⚠️ 三个**新坑**（都当场抓到）：① 拼接脚本自己的 Lua 文本里有**反引号** ⇒ 把 JS 模板字符串提前闭合（改成数组 join）；② 单行锚点**不许假设行尾**（同一函数里两种行尾都有）；③ `hand` 的 if 链在 `take` 分支后就 `end` 了 ⇒ 新 `elseif` 插在**链内**才对（插到 `end` 之后 Lua 直接报语法错，已验证）。
 
 ## §10 关键数字（2026-10-09）
 
-工作区文件 **3,395** · `tts\` 下 **40** 个 `.ps1` · 门禁 **6** 条（入口 `tts\tests\run_all.ps1`，要证据加 `-OutFile`）· 注入 **9.5 KB/请求**（发布 5.7 KB）。
+工作区文件 **3,395** · `tts\` 下 **37** 个 `.ps1` · 门禁 **7** 条（入口 `tts\tests\run_all.ps1`，要证据加 `-OutFile`）· 注入 **9.5 KB/请求**（发布 5.7 KB）。

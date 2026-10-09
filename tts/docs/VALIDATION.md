@@ -80,24 +80,40 @@
 **F5 · 桥接的 `exec`/`callx` 边界未验**（`⛔`，`BOOTSTRAP.md` §5 已列）
 已知对"带脚本的物件"有效；无脚本物件 / 反复调用 / 并发 ⇒ **未验**。
 
-**F6 · 原语覆盖缺口（按 §0b，这才是"通用层"的真待办）**（`⚠️ 约七成`，2026-10-09 静态清点）
-`dsh_global.lua` 现在暴露 ~32 条命令 ＋ `act` 白名单 ~34 个动词。**够跑通"读—认—摆—结算"的往返**，
-但下面这些 TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到）：
+**F6 · 原语覆盖缺口（按 §0b，这才是"通用层"的真待办）**（`⚠️ 约七成 → 首轮缺口已补`，2026-10-09）
 
-| 缺的原语 | 对应的人话 | 严重度 |
+`dsh_global.lua` 曾暴露 ~32 条命令 ＋ `act` 白名单 ~34 个动词，够跑通"读—认—摆—结算"的往返，但下面这些
+TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到）：
+
+| 原语 | 对应的人话 | 状态（2026-10-09） |
 |---|---|---|
-| `takeObject`（从容器/牌堆取**指定**那张） | 「把**我点名**的那张牌拿到桌上」——现在只能取**顶张** | 🔴 卡认牌/亮牌流程 |
-| `spawnObject` / `putObject` | 「生成一个指示物 / 放回去」——中途加 token 现在只能靠玩家 | 🔴 |
-| `destroyObject` | 「删掉 / 清理」 | 🟡 |
-| `getPlayers` / 座位权威 | 「谁是谁、坐哪、什么颜色」（`install_save2` 之外没有权威来源） | 🔴 第二款 mod 的座位归属至今未确认 |
-| `setHand` 系 / `dealToHand` | 摸牌进手、整理手牌（现在 `hand` 是**转发 mod 自己的函数**） | 🟡 |
-| Zone / `getObjects` 容器遍历 | 「把这个袋子倒出来」 | 🟡 现在靠存档侧近似 |
-| `setSnapPoints` / 吸附点 | 精确摆到 mod 定义的格位 | 🟡 |
-| `setTags` 写 / 撤回 / 交易 | 杂项 | 🟢 |
+| `takeObject`（取**指定**那张，非顶张） | 「把**我点名**的那张牌拿到桌上」 | ✅ **已补** `cmd=take` ＋ `ds.ps1 -Do 'take:<deck>:<CardID>:<x>:<y>:<z>'` |
+| `spawnObject` / `clone` | 「生成一个指示物 / 复制一份供给堆」 | ✅ **已补** `cmd=spawn`：`json` ／ `copyguid`（保留 mod 自己的图与 Lua）／ 纯 `type` |
+| `destroyObject` | 「删掉 / 清理」 | ✅ **已补** `cmd=destroy` |
+| `getPlayers` / 座位权威 | 「谁是谁、坐哪、什么颜色、**轮到谁**」 | ✅ **已补** `cmd=players`（＋ `cmd=player` 的 `turn`/`blind`） |
+| 摸牌进手 / 整理手牌 | 「把牌给某人 / 摸 n 张进手」 | ✅ **已补**（v15）：`hand:<Color>:give:<guid>`（给某一张）· `hand:<Color>:draw:<容器guid>:<n>`（`Deck.deal`，非牌堆回落 `dealToColorWithOffset`）· `hand:<Color>:holding`（他此刻手上拿着的） |
+| Zone / 容器遍历 | 「把这个袋子倒出来」 | ✅ **已补**（v15）：`cmd=container`（列出 Bag/Deck 内的物件 ＋ 数量 ＋ tags） |
+| `setSnapPoints` / 吸附点 | 精确摆到 mod 定义的格位 | ✅ **已补**（v15）：`act:<g>:setSnapPoints`（`value=x,y,z;x,y,z`）＋ `act:<g>:use_snap_points`（成员变量） |
+| `setTags` / `addTag` / `removeTag` / `hasTag` … | 「给物件打标签 / 按标签找」 | ✅ **已补**（v15）：`act:<g>:setTags:标签1+标签2`（⚠️ **TTS 的 tag 是哈希**，`getTags` 回哈希、`setTags` 要喂哈希 —— 从已带该标签的物件上抄） |
+| 撤回 / 交易 | 杂项 | ⛔ **仍缺**（`cut`/`paste`/`drop` 已在 `act` 白名单里，但**未验证**；`copy`/交易无文档 API） |
 
-⇒ 🔴 三条（`takeObject` · `spawnObject` · `getPlayers`）是"教得动一款"的硬前提。
+⇒ 三条 🔴 硬前提（点名取牌 · 造物 · 座位权威）**已落地**，由 `tts\tests\test_bridge_primitives.ps1` 用
+**真 Lua VM ＋ 从真文件抽取的代码**守着（**25 条用例**：16 条覆盖 v14 原语 ＋ 9 条覆盖 v15 的 hand 动作，
+含"缺卡 / 幽灵容器 / 未知动作必须报错而非静默"）。
 **兜底**：External Editor API（39999）能 `ExecuteLua` 任意代码 ⇒ 缺的原语"做不到"比"做得别扭"少，
 但**它无回执、要状态前后对比验证**，不能当常规路径（`BOOTSTRAP.md` §2 B 第 3 条）。
+
+**v15 补的是接口，不是"活体验过的功能"**：`setTags`/`setSnapPoints` 走的是 `act` 的深层分支
+（⚠️ **无法离线单独抽取**，测试只能做源码级断言 ＋ 桩环境的 hand 动作），所以它们的**真实行为依赖下一轮活体验证**。
+
+⚠️ **这些要生效必须先重烤存档**：桥接是**烤进存档**的，跑着的 TTS 里是旧版本。
+实测（2026-10-09，旧桥在跑）：`container` 回 **`no handler for cmd=container`**；`hand:Teal:holding` 回
+**`unknown hand action: holding`**（旧 `hand` 认识命令、不认识这个动作）—— 两条都说明**必须重烤**。
+版本号是唯一凭据 —— 重烤后 `ping` 应回 **`v15-tags-snap-hand`**。
+
+**F7 · 桥接原语的"活体"部分仍未验**（`⛔`，2026-10-09）
+离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ `spawn`/`take`/`destroy` 各需**重烤后真跑一次**
+（尤其 `spawnObjectJSON` 的入参放宽：`{Name=..., Transform={posX=...}}` 与 `{type=..., position=N}` 两种都要试）。
 
 ## 4. 怎么续验（下一款 mod 来了照做）
 

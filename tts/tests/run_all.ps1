@@ -1,4 +1,4 @@
-﻿# run_all.ps1 - run every offline gate and refuse to be fooled by an empty exit code.
+# run_all.ps1 - run every offline gate and refuse to be fooled by an empty exit code.
 #
 # WHY THIS EXISTS (2026-10-09): while the workspace-write confinement was failing to launch child
 # processes, `& powershell -File tts\tests\test_x.ps1` returned NOTHING and left $LASTEXITCODE empty
@@ -35,6 +35,7 @@ $gates = @(
     @{ name = 'diff chain';               script = 'tts\tests\test_diff_index.ps1';    marker = 'all cases passed' },
     @{ name = 'game data (files)';        script = 'tts\tests\test_game_data.ps1';    marker = 'all cases passed' },
     @{ name = 'instruction hygiene';      script = 'tts\tests\test_agents_hygiene.ps1'; marker = 'all checks passed' },
+    @{ name = 'bridge primitives (Lua)';  script = 'tts\tests\test_bridge_primitives.ps1'; marker = 'bridge primitives OK' },
     @{ name = 'doc references';           script = 'tts\tests\test_doc_refs.ps1';      marker = 'all shipped path references resolve' }
 )
 

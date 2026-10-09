@@ -25,9 +25,12 @@
 ## 1. 改完必须过的门禁
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # ⭐ 唯一入口：6 条；"退出码 0 ＋ 输出含成功标志"才算过，空输出 = NOT RUN
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # ⭐ 唯一入口：7 条；"退出码 0 ＋ 输出含成功标志"才算过，空输出 = NOT RUN
 ```
 ⭐ **门禁绿了才提交**；改测试判定逻辑前**先造一个"坏"的阳性对照**确认它真会红（本仓库已两次出现"假绿"）。逐条清单/限制 ⇒ `CONTRIBUTING.md` §3。
+- ⚠️ **`bridge primitives (Lua)` 这条门禁要先有 `fengari`**（JS 里的 Lua 虚拟机；本机没有 lua 二进制，TTS 也不自带可调用的）：
+  `npm i fengari --cache local\scratch\luatest\.npm-cache --prefix local\scratch\luatest`（**缓存必须落在工作区内**，默认 npm 缓存目录在沙箱外会被拒）。缺它时门禁报 `fengari not found` 并以退出码 2 失败 —— **是 NOT RUN，不是 PASS**。
+  它跑的是 `gen_bridge_primitives_test.js` → `tts\tests\gen_bridge_primitives.lua` → `run_lua.js`；**生成物必须与源文件一致**，门禁会重生成一次并对齐（不一致即红）。
 
 ## 2. 三个指令槽（**上限写在门禁里，不在这里复述**）
 

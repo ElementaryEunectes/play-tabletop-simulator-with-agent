@@ -1,4 +1,4 @@
-# play.ps1 - GENERIC ENTRY POINT: dispatch to the current game's control layer.
+﻿# play.ps1 - GENERIC ENTRY POINT: dispatch to the current game's control layer.
 #
 # WHY THIS FILE EXISTS (2026-10-09, the layer split)
 #   The repository ships GENERIC PRIMITIVES only: everything in tts\ must be true for ANY TTS mod.

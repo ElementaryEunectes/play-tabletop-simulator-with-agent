@@ -39,7 +39,8 @@
 |---|---|
 | **`play.ps1`** | **通用入口 / 分发器**（几行）：读 `GAME=` ⇒ 找到该游戏的**控制层** `local\games\<game>\control\play.ps1` ⇒ **原样转发参数**。⭐**控制层**（不进仓库、由用户教出来）才是那个"一条命令一个阶段"的控制台：`turn`（回合开局：盘面＋骰面＋招式＋笔记本尾条，全只读）/ `status` / `income` / `roll` / `attack` / `defense` / `say`。写动词要显式开关（`-Apply` / `-Roll`）且支持 `-WhatIf`。**契约见下方方框** |
 | **`roll.ps1`** | 掷/读骰面：`-Tray moon\|scar` —— **必须明说意图**：`-Roll` 才掷、`-NoRoll` 只读；**裸调用 `exit 2`（不接触 TTS）** |
-| **`ds.ps1`** | **跟 TTS 说话的高层入口**：`-Do 'ping / tabread / getState:<g> / setCount:<g>:<n> / act:<g>:<verb> / move:… / draw:… / all:<n> / read:<g>'` |
+| **`ds.ps1`** | **跟 TTS 说话的高层入口**：`-Do 'ping / tabread / getState:<g> / setCount:<g>:<n> / act:<g>:<verb> / move:… / draw:… / all:<n> / read:<g>'`。<br>⭐ **v14 新增（2026-10-09，补 F6 缺口）**：`players`（谁在桌上/轮到谁）· `take:<牌堆guid>:<CardID>:<x>:<y>:<z>[:<1\|0>]`（取**指定**那张，CardID 留空＝顶张）· `destroy:<guid>` · `spawn:copy:<guid>:<x>:<y>:<z>` / `spawn:type:<TTS类型>:<x>:<y>:<z>` · `player:<Color>:<turn\|blind>`。**spawn 的完整 JSON 走 `-Json`**（含冒号引号，命令行装不下）。
+⭐ **v15 新增**：`container:<guid>`（列出 Bag/Deck 里的物件＋数量＋tags）· `hand:<Color>:holding|<give>:<guid>|<draw>:<容器guid>:<n>`（**摸牌进手/给牌**：`Deck.deal`，非牌堆回落 `dealToColorWithOffset`）· 标签与吸附点走 `act`：`act:<g>:setTags:标签1+标签2` · `act:<g>:addTag/removeTag/hasTag:…` · `act:<g>:setSnapPoints:x,y,z;x,y,z` · `act:<g>:use_snap_points:<true\|false>`。⚠️ **TTS 的 tag 是哈希**：`getTags` 回哈希、`setTags` 也要喂哈希（从带该标签的物件上抄）。|
 | `dsbatch.ps1` | 一条进程跑多条 `ds.ps1` 命令（`-Commands 'a;;b'`）；⚠️ 两层子进程会被沙箱掐网络，优先 `ds.ps1` 逐条 |
 | `ttsx.ps1` · `ttslib.ps1` | 原始通道（只回 `customMessage`）＋ **唯一的 TCP 传输层**（`ttslib` **dot-source，别 spawn**） |
 | `say.ps1` | 往笔记本对话频道发一条（**中文走 `-MessageFile`**）；**单进程就地 TCP**（2026-10-08 去掉两次子进程 `ds.ps1`，每条消息省 ~0.9s） |

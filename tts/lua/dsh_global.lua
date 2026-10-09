@@ -161,6 +161,13 @@ end
 local function read(guid)
     local o = getObjectFromGUID(guid)
     if not o then return { ok = false, err = "no object with guid " .. S(guid) } end
+    -- Optional: act on a PLAYER instead of an object. Some verbs live on the Player instance
+    -- (getHandCount / getHandTransform / getHoldingObjects / turn / blindfolded) and a seat has no
+    -- guid, so `player = "Teal"` resolves the target instead of an object.
+    if tostring(m.player or "") ~= "" then
+        o = Player[tostring(m.player)]
+        if o == nil then return { ok = false, cmd = "act", err = "no player colour " .. S(m.player) } end
+    end
     local r = { ok = true, guid = guid }
     pcall(function() r.name = o.getName() end)
     pcall(function() r.gm = o.getGMNotes() end)
@@ -402,6 +409,21 @@ local function act(m)
         -- 2026-10-07: 骰子。装到"带骰盘的对局型模组"上必须能掷骰。
         -- roll() 无参数、无返回值，走的就是 flip 那条路径。
         roll = true,
+        -- 2026-10-09 (F6): snap points, tags and the container walk. Hashes for tags, not row names:
+        -- TTS matches tags by hash, so getTags returns hashes and setTags must be GIVEN hashes
+        -- (read them off an object that already carries the tag, or create one in-game).
+        getSnapPoints = true,   setSnapPoints = true,
+        addTag = true,          removeTag = true,      setTags = true,
+        hasTag = true,          hasAnyTag = true,      hasMatchingTag = true,
+        -- containers and hands: the object-side way to move a card INTO a hand (the Player object
+        -- has no takeObject - it only lists hands: getHandObjects/getHandTransform/getHoldingObjects)
+        getObjects = true,      putObject = true,      moveToHandStash = true,
+        dealToColorWithOffset = true,
+        -- the Player actions TTS documents (player manager side)
+        getHandCount = true,    getHandTransform = true,   getHoldingObjects = true,
+        cut = true,             paste = true,          drop = true,
+        -- member variables reached through the isMember branch
+        use_snap_points = true, locked = true, memo = true, tooltip = true,
     }
     if not verbs[verb] then
         return { ok = false, err = "verb not allowed: " .. verb, cmd = "act" }
@@ -415,6 +437,12 @@ local function act(m)
     -- the branch handling it exists further down. Only script_state is reachable
     -- this way; a container object has no such member and reports nil.
     local memberVerbs = { getScriptState = true, setScriptState = true }
+    -- These are MEMBER VARIABLES, not methods: the method lookup below cannot find them, so they
+    -- must be recognised up front (same reason script_state is listed here).
+    memberVerbs.use_snap_points = true
+    memberVerbs.memo = true
+    memberVerbs.tooltip = true
+    memberVerbs.locked = true
     local isMember = memberVerbs[verb] == true
 
     -- Metatable introspection does NOT work on these objects: walking mt.__index
@@ -488,6 +516,50 @@ local function act(m)
     elseif verb == "setColorTint" then
         call = function() return fn(o, { r = tonumber(m.r) or 1, g = tonumber(m.g) or 1, b = tonumber(m.b) or 1 }) end
     elseif verb == "deal" then
+    elseif verb == "setTags" or verb == "addTag" or verb == "removeTag" or verb == "hasTag"
+        or verb == "hasAnyTag" or verb == "hasMatchingTag" then
+        -- list of strings; "a+b+c" is accepted as shorthand because the ds.ps1 command line is
+        -- colon-delimited and JSON quotes/colons do not survive it
+        local list = {}
+        if type(m.list) == "table" then
+            for _, v in ipairs(m.list) do list[#list + 1] = tostring(v) end
+        else
+            local raw = tostring(m.value or "")
+            if raw ~= "" then for part in string.gmatch(raw, "[^+]+") do list[#list + 1] = part end end
+        end
+        if #list == 0 then error(verb .. " needs value=tag1+tag2 or list={...}") end
+        call = function() return fn(o, list) end
+    elseif verb == "setSnapPoints" then
+        -- list of points; each may be {x,y,z} or a scalar y (TTS accepts both shapes)
+        local pts = {}
+        if type(m.list) == "table" then
+            for _, v in ipairs(m.list) do
+                if type(v) == "table" then pts[#pts + 1] = { tonumber(v.x) or 0, tonumber(v.y) or 0, tonumber(v.z) or 0 }
+                else pts[#pts + 1] = tonumber(v) or 0 end
+            end
+        else
+            local raw = tostring(m.value or "")
+            for part in string.gmatch(raw, "[^;]+") do
+                local x, y, z = string.match(part, "^%s*(-?[%d%.]+)%s*,%s*(-?[%d%.]+)%s*,%s*(-?[%d%.]+)%s*$")
+                if x then pts[#pts + 1] = { tonumber(x), tonumber(y), tonumber(z) }
+                else pts[#pts + 1] = tonumber(part) or 0 end
+            end
+        end
+        if #pts == 0 then error("setSnapPoints needs value=x,y,z;x,y,z or list={...}") end
+        call = function() return fn(o, pts) end
+    elseif verb == "getObjects" then
+        call = function() return fn(o) end
+    elseif verb == "use_snap_points" or verb == "locked" or verb == "memo" or verb == "tooltip" then
+        -- MEMBER VARIABLES (o.use_snap_points = true), never methods: they are recognised in the
+        -- isMember branch above, which reports the assigned value straight back.
+        call = function()
+            o[verb] = m.value
+            return o[verb]
+        end
+    elseif verb == "getHandCount" or verb == "getHandTransform" or verb == "getHoldingObjects" then
+        -- Player-side verbs: `o` is a Player here (see the m.player resolution in act), and these
+        -- take an optional hand index. getHoldingObjects ignores it.
+        call = function() return fn(o, tonumber(m.value) or 1) end
         call = function() return fn(o, tonumber(m.value) or 1, tostring(m.player or "")) end
     elseif verb == "setInvisibleTo" then
         call = function() return fn(o, tostring(m.player or "")) end
@@ -572,6 +644,52 @@ local function hand(m)
         if not o then return { ok = false, err = "no object" } end
         local ok = pcall(function() pl.takeObject({ guid = o.getGUID(), smooth = false }) end)
         return { ok = ok, player = player, guid = m.guid }
+    elseif action == "holding" then
+        -- what this player is holding RIGHT NOW (distinct from their hand zone)
+        local h = {}
+        local okh = pcall(function() h = pl.getHoldingObjects() or {} end)
+        if not okh then return { ok = false, err = "getHoldingObjects failed" } end
+        local ho = {}
+        for i, o in ipairs(h) do
+            local e = {}
+            pcall(function() e.guid = o.getGUID() end)
+            pcall(function() e.name = o.getName() end)
+            ho[#ho + 1] = e
+        end
+        return { ok = true, player = player, count = #ho, items = ho, cmd = "hand" }
+    elseif action == "give" then
+        -- hand a specific object to a colour: the object-side way, because the Player object has
+        -- no takeObject. smooth=false on purpose - a smooth move would need Wait before the caller
+        -- could read the hand back.
+        local o = getObjectFromGUID(tostring(m.guid or ""))
+        if not o then return { ok = false, err = "no object with guid " .. S(m.guid) } end
+        local okg, eg = pcall(function() pl.takeObject({ guid = o.getGUID(), smooth = false }) end)
+        if not okg then return { ok = false, err = "hand give failed: " .. S(eg) } end
+        local afterg = {}
+        pcall(function() afterg = pl.getHandObjects() or {} end)
+        return { ok = true, player = player, guid = m.guid, hand = #afterg, cmd = "hand" }
+    elseif action == "draw" then
+        -- move cards from a container INTO a hand:
+        --   Deck.deal(n, colour)                            -> the normal "draw n cards"
+        --   object.dealToColorWithOffset(offset, flip, colour) -> works on any single object
+        local o = getObjectFromGUID(tostring(m.guid or ""))
+        if not o then return { ok = false, err = "no object with guid " .. S(m.guid) } end
+        local n = tonumber(m.n) or 1
+        local dealt, e1 = pcall(function() return o.deal(n, player) end)
+        if dealt then
+            local a1 = {}
+            pcall(function() a1 = pl.getHandObjects() or {} end)
+            return { ok = true, player = player, guid = m.guid, n = n, hand = #a1, cmd = "hand" }
+        end
+        local off = m.offset
+        if type(off) ~= "table" then off = { 0, 0, 0 } end
+        local ok2, e2 = pcall(function() return o.dealToColorWithOffset(off, true, player) end)
+        if not ok2 then
+            return { ok = false, err = "deal failed: " .. S(e1) .. " ; dealToColorWithOffset failed: " .. S(e2), cmd = "hand" }
+        end
+        local a2 = {}
+        pcall(function() a2 = pl.getHandObjects() or {} end)
+        return { ok = true, player = player, guid = m.guid, n = 1, via = "dealToColorWithOffset", hand = #a2, cmd = "hand" }
     end
     return { ok = false, err = "unknown hand action: " .. action }
 end
@@ -921,7 +1039,7 @@ end
 -- and NOT the `index` field that list reports. Using those was the source of a long
 -- bug in which every write landed on the wrong tab (and once renamed it "Black").
 -- So the position is resolved at call time instead of being hard-coded.
-DSH_VERSION = 'v13-turntoken'
+DSH_VERSION = 'v15-tags-snap-hand'
 DSH_TAB_TITLE = DSH_TAB_TITLE or "DSH"
 
 -- Returns the 0-based position of the dialogue tab, plus the tab itself.
@@ -1427,6 +1545,157 @@ local function setCount(guid, value)
     out.customSet = ok2 and ("ok " .. tostring(e2)) or ("ERR " .. S(e2))
     local ok3, e3 = pcall(function() o.script_state = JSON.encode({ saved_count = math.floor(n) }) end)
     out.state = ok3 and o.script_state or ("ERR " .. S(e3))
+-- ============================ SHARED MOVE HELPERS ============================
+-- Used by BOTH draw (a deck's top card) and take (one NAMED card out of a container), so the two
+-- cannot drift apart on the one thing that decides face up vs face down.
+--
+-- rotZ is what makes a card lie face UP or face DOWN:
+--     rotZ ~   0 -> face UP    (measured: a board face and a player-flipped card sat at ~0.08)
+--     rotZ ~ 180 -> face DOWN  (measured: every card still held in a hand sits at ~180)
+-- NOTE: that calibration came from ONE table. On a new mod, measure a card of known orientation
+-- before trusting it (tts\docs\VALIDATION.md F2).
+--
+-- setRotation/setPosition take POSITIONAL tables on purpose: the named-table form ({x=..,y=..,z=..})
+-- is what made the generic act() path fail with "cannot convert a userdata to a clr type Vector3".
+local placeFace = function(o, x, y, z, faceup)
+    local rz = 180
+    if faceup then rz = 0 end
+    pcall(function() o.setRotation({ 0, 180, rz }) end)
+    pcall(function() o.setPosition({ x, y, z }) end)
+    return rz
+end
+
+-- Pull ONE card out of a Deck/Bag and lay it at (x, y, z).
+--   m.deckguid  the container to take from
+--   m.cardid    optional CardID (TTS assigns one to every Card); empty = the top card.
+--               Pass it as a STRING: a numeric CardID can be mangled by JSON/proxy conversion.
+-- WHY: a card inside a Deck is not a separate object - getObjectFromGUID cannot find it and
+-- `move:` cannot reach it. Deck/hand takeObject is the only way out, and the top card is not always
+-- the one wanted (reveal a named card / undo a misdeal).
+local takeOne = function(m)
+    local deck = getObjectFromGUID(tostring(m.deckguid or ""))
+    if not deck then return { ok = false, err = "no container with guid " .. S(m.deckguid) } end
+    local before = nil
+    pcall(function() before = deck.getQuantity() end)
+    local cardId = tostring(m.cardid or "")
+    local params = { smooth = false }
+    if cardId ~= "" then params.guid = cardId end
+    local ok, taken = pcall(function() return deck.takeObject(params) end)
+    if not ok then
+        return { ok = false, err = "takeObject failed: " .. S(taken), cmd = "take", cardid = cardId, remaining = before }
+    end
+    if taken == nil then
+        return { ok = false, err = "nothing taken (empty, or no card with that CardID)",
+                 cmd = "take", cardid = cardId, remaining = before }
+    end
+    local x, y, z = tonumber(m.x) or 0, tonumber(m.y) or 2.2, tonumber(m.z) or 0
+    local faceup = tostring(m.faceup or "1") == "1"
+    local rz = placeFace(taken, x, y, z, faceup)
+    local after = nil
+    pcall(function() after = deck.getQuantity() end)
+    local g, nm = nil, ""
+    pcall(function() g = taken.getGUID() end)
+    pcall(function() nm = tostring(taken.getName()) end)
+    return { ok = true, cmd = "take", container = m.deckguid, cardid = cardId, guid = g, name = nm,
+             face = faceup and "up" or "down", rotZ = rz, remaining = after }
+end
+
+-- ============================ PLAYERS (authoritative seats) ============================
+-- The bridge's one source of truth for "who is at this table, under which colour, how many cards,
+-- and is it their turn". Needed because seats guessed from coordinates went wrong: nine HandTriggers
+-- on one table could not be attributed to anyone, and the colour choice is a FUNCTIONAL
+-- prerequisite in at least one mod (its Notecard: both sides must pick their colour or the dice
+-- machine and hand display do not work).
+-- NOTE: getPlayers().hand is a COUNT, not the cards. Use cmd=hand for the cards themselves, and
+-- that only works for MY OWN colour (hidden-information rules in tts\docs\TTS_RULES.md).
+local players = function(m)
+    local ok, list = pcall(function() return getPlayers() end)
+    if not ok then return { ok = false, cmd = "players", err = "getPlayers failed: " .. S(list) } end
+    local out = {}
+    for _, p in ipairs(list or {}) do
+        local e = {}
+        e.color = tostring(p.color or "")
+        pcall(function() e.steam_name = tostring(p.steam_name or "") end)
+        pcall(function() e.steam_id = tostring(p.steam_id or "") end)
+        pcall(function() e.host = tostring(p.host) end)
+        pcall(function() e.admin = tostring(p.admin) end)
+        pcall(function() e.seated = tostring(p.seated) end)
+        pcall(function() e.hand = tostring(p.hand) end)
+        pcall(function() e.turn = tostring(p.turn) end)
+        out[#out + 1] = e
+    end
+    return { ok = true, cmd = "players", count = #out, items = out }
+end
+
+-- ============================ SPAWN / COPY / DESTROY ============================
+-- The missing half of "draw": draw takes cards OFF a deck, but nothing could put a new piece ON the
+-- table, so a mid-game token or a copy of a supply stack could only be placed by the human.
+--   * m.json - a TTS object JSON string or table. The SMALL forms work too:
+--         { Name = "Custom_Tile", Transform = { posX = 5, posY = 2, posZ = 0 } }
+--         { type = "Custom_Tile", position = 3 }          -- position = a Y number
+--         { type = "Custom_Model", position = {x=5,y=2,z=0} }
+--   * m.copyguid - clone an EXISTING object instead (carries its CustomDeck URLs, Lua and state).
+--     Prefer this when the mod already has the piece on the table.
+-- Declared as `local spawn = function`, NOT `local function spawn`, so the Lua globals
+-- spawnObject / spawnObjectJSON this body calls are never shadowed.
+local spawn = function(m)
+    local x = tonumber(m.x) or 0
+    local y = tonumber(m.y); if y == nil then y = 2 end
+    local z = tonumber(m.z) or 0
+    local faceup = tostring(m.faceup or "1") == "1"
+
+    if tostring(m.copyguid or "") ~= "" then
+        local src = getObjectFromGUID(tostring(m.copyguid))
+        if not src then return { ok = false, cmd = "spawn", err = "no object to copy: " .. S(m.copyguid) } end
+        local okc, c = pcall(function() return src.clone({ position = { x, y, z }, smooth = false }) end)
+        if not okc or c == nil then return { ok = false, cmd = "spawn", mode = "copy", err = "clone failed: " .. S(c) } end
+        placeFace(c, x, y, z, faceup)
+        local g = nil
+        pcall(function() g = c.getGUID() end)
+        return { ok = true, cmd = "spawn", mode = "copy", from = m.copyguid, guid = g }
+    end
+
+    local js = m.json
+    if js == nil then
+        local t = tostring(m.type or "")
+        if t == "" then return { ok = false, cmd = "spawn", err = "need json, copyguid or type" } end
+        js = { type = t, position = { x = x, y = y, z = z } }
+    elseif type(js) == "string" then
+        local okd, dec = pcall(function() return JSON.decode(js) end)
+        if not okd or type(dec) ~= "table" then return { ok = false, cmd = "spawn", err = "json did not decode" } end
+        js = dec
+    elseif type(js) ~= "table" then
+        return { ok = false, cmd = "spawn", err = "json must be a JSON string or a table" }
+    end
+
+    local ok, res = pcall(function() return spawnObjectJSON(js) end)
+    if not ok or res == nil then
+        return { ok = false, cmd = "spawn", mode = "json", err = "spawnObjectJSON failed (needs TTS v13.2+): " .. S(res) }
+    end
+    placeFace(res, x, y, z, faceup)
+    -- TTS fires onLoad for a spawned object's OWN LuaScript asynchronously: a script that sets up its
+    -- display in onLoad would stay blank until the next save/load, so poke it explicitly.
+    local hasScript = false
+    pcall(function() hasScript = tostring(res.getLuaScript() or "") ~= "" end)
+    if hasScript then pcall(function() return res.call("onLoad", { "" }) end) end
+    local g, nm = nil, ""
+    pcall(function() g = res.getGUID() end)
+    pcall(function() nm = tostring(res.getName()) end)
+    return { ok = true, cmd = "spawn", mode = "json", guid = g, name = nm }
+end
+
+-- Remove an object from the table. pcall-wrapped because destroying something already gone, or
+-- something TTS refuses to destroy mid-animation, must come back as a failure the caller can see -
+-- never as a silent dead handler.
+local destroy = function(m)
+    local guid = tostring(m.guid or "")
+    if guid == "" then return { ok = false, cmd = "destroy", err = "no guid" } end
+    local o = getObjectFromGUID(guid)
+    if not o then return { ok = false, cmd = "destroy", err = "no object with guid " .. S(guid) } end
+    local ok, e = pcall(function() return o.destruct() end)
+    if not ok then return { ok = false, cmd = "destroy", guid = guid, err = "destruct failed: " .. S(e) } end
+    return { ok = true, cmd = "destroy", guid = guid }
+end
     return out
 end
 
@@ -1471,10 +1740,9 @@ local function draw(m)
             return { ok = false, err = "deck empty after " .. tostring(#guids) .. " card(s)",
                      taken = #guids, guids = guids }
         end
-        -- Rotate and re-place AFTER the take: takeObject's own `flip` flag is not
-        -- dependable, and rotZ is the entire difference between face up and face down.
-        pcall(function() taken.setRotation({ 0, 180, rz }) end)
-        pcall(function() taken.setPosition({ px, y, z }) end)
+        -- Rotate and re-place AFTER the take, and only through the shared helper: rotZ is the whole
+        -- difference between face up and face down, so draw and take must never compute it twice.
+        placeFace(taken, px, y, z, faceup)
         local g = nil
         pcall(function() g = taken.getGUID() end)
         guids[#guids + 1] = g
@@ -1638,6 +1906,56 @@ local handlers = {
     run = function(m) return run(m, m.code) end,
     turn_token = function(m) return turnToken(m) end,
     turn_state = function(m) return turnState(m) end,
+    -- container listing: what is actually inside a Bag/Deck right now (getObjects()).
+    -- Complements index/all, which only see the table, and draw/take, which pull one card.
+    container = function(m)
+        local o = getObjectFromGUID(tostring(m.guid or ""))
+        if not o then return { ok = false, cmd = "container", err = "no object with guid " .. S(m.guid) } end
+        local list = nil
+        local ok = pcall(function() list = o.getObjects() end)
+        if not ok or type(list) ~= "table" then return { ok = false, cmd = "container", err = "getObjects failed" } end
+        local out = {}
+        for i, x in ipairs(list) do
+            local e = {}
+            pcall(function() e.guid = x.getGUID() end)
+            pcall(function() e.name = x.getName() end)
+            pcall(function() e.nick = x.getNickname() end)
+            pcall(function() e.qty = x.getQuantity() end)
+            local tags = {}
+            pcall(function() tags = x.getTags() or {} end)
+            e.tags = table.concat(tags, ",")
+            out[#out + 1] = e
+        end
+        local q = nil
+        pcall(function() q = o.getQuantity() end)
+        return { ok = true, cmd = "container", guid = m.guid, count = #out, quantity = q, items = out }
+    end,
+    -- Added 2026-10-09 (tts\docs\VALIDATION.md F6 - the primitives a trained control layer kept
+    -- missing): players = who is at the table / whose turn; take = pull ONE NAMED card out of a
+    -- deck (draw could only take the top); spawn = put a new piece on the table (json, a copy of an
+    -- existing object, or a plain TTS type); destroy = remove one; player = act on a player
+    -- (TTS's own turn marker, blindfold, or a passthrough to hand).
+    players = function(m) return players(m) end,
+    take = function(m) return takeOne(m) end,
+    spawn = function(m) return spawn(m) end,
+    destroy = function(m) return destroy(m) end,
+    player = function(m)
+        local action = tostring(m.action or "")
+        if action == "" or action == "get" or action == "take" then return hand(m) end
+        local color = tostring(m.player or "")
+        if color == "" then return { ok = false, cmd = "player", err = "no player colour" } end
+        local pl = Player[color]
+        if pl == nil then return { ok = false, cmd = "player", err = "no player colour " .. color } end
+        if action == "turn" then
+            local ok, e = pcall(function() pl.turn = true end)
+            return { ok = ok, cmd = "player", action = action, color = color, err = ok and nil or S(e) }
+        elseif action == "blind" then
+            local on = tostring(m.on or "true") == "true"
+            local ok, e = pcall(function() pl.blindfolded = on end)
+            return { ok = ok, cmd = "player", action = action, color = color, on = on, err = ok and nil or S(e) }
+        end
+        return { ok = false, cmd = "player", err = "unknown player action: " .. action }
+    end,
 }
 
 -- ============================ THE SILENT-REPLY BUG ============================
