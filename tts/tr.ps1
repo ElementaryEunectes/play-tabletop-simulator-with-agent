@@ -44,8 +44,16 @@ if ($null -eq $z -or $z -eq 0) { Write-Host 'ERR calibration has no position for
 #   to THEIR OWN hand (i.e. onto the side it already sits on) and the table looks frozen, while the colour
 #   quietly changes. Writing both keeps them in step, so their press advances the piece to the other side.
 #
-# The colour is read from the calibration (stateMine / statePlayer) rather than recomputed, so this stays
-# a lookup. An old calibration file without those fields still works: only the position is written.
+# WHAT IS WRITTEN, AND WHAT CANNOT BE (measured 2026-10-11, second correction):
+#   * setPosition / setRotation  -> effective. This is how the side is handed over.
+#   * o.script_state = ...       -> updates the SAVED value only. It does NOT change the running
+#                                   `currentColor` inside the object's script environment, and the mod's
+#                                   button reads that variable. So writing it does not move the mod's
+#                                   idea of whose turn it is, and next press would advance from the OLD
+#                                   colour (landing on the hand it is already at = looks frozen).
+#   Therefore the honest hand-over is: move the piece, and make sure the player's NEXT press is the one
+#   that advances their colour. We still write script_state so the save agrees with the piece, but the
+#   tool no longer claims it changes the running turn - see the note it prints.
 $col = if ($To -eq 'mine') { [string]$doc.stateMine } else { [string]$doc.statePlayer }
 $point = $null
 foreach ($p in $doc.points) { if ([math]::Abs([double]$p.z - $z) -le [double]$doc.tolerance) { $point = $p } }
@@ -54,7 +62,8 @@ $y = if ($point) { [double]$point.y } else { 1.96 }
 if ($y -le 0) { $y = 1.96 }
 $rotY = 180
 
-Write-Host ("move tracker {0} -> x={1} y={2} z={3} rotY={4} colour={5}" -f $doc.tracker, $x, $y, $z, $rotY, $col)
+Write-Host ("move tracker {0} -> x={1} y={2} z={3} rotY={4} saved-colour={5}" -f $doc.tracker, $x, $y, $z, $rotY, $col)
+Write-Host 'NOTE: only the POSITION decides whose turn it is for us (turn_side.ps1). script_state is the saved value only.'
 if ($DryRun -eq 1) { Write-Host '(dry run)'; exit 0 }
 
 # The write itself. MEASURED 2026-10-11: writing script_state from here DOES stick (an early read-back
