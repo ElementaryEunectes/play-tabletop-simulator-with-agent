@@ -131,9 +131,10 @@ tts\
   判定"轮到谁"由**每款 mod 一次校准**得出 ⇒ `tts\tools\turn_calib.ps1`（`-Discover` / `-Answer` / `-Show`）＋ 运行时 `tts\tools\turn_side.ps1`（哨兵用它）。
   ⛔ **不要自己造令牌**：运行时 `spawnObject` 造自定义件会弹 TTS 的模态「自定义板块」窗并挂住线程，烤进存档的自定义件会被 TTS 丢弃（四条硬事实 ⇒ `VALIDATION.md` F11）。
   回合**流水**（第几回合）记在 `local\games\<游戏>\STATE.md`，**不另设计数器**（一处定义 ⇒ 平台宪章第 4 条）。
-- ✅ **自动叫醒**：`front_watch.ps1` 后台把"前台状态 ＋ `TURN=Pn`"写进 `cache\front.txt` → file 哨兵 pattern `TURN=P<我的席位>`
-  ⇒ 玩家一点完就自动叫醒我。⚠️ sentinel 的 `command` 探测跑在只读沙箱（`Add-Type` 必崩）⇒ **只能 file 探测 ＋ 外部写文件**。
-- ⚠️ TTS 不在前台时 `front.txt` 只剩 `OTHER/TTSFRONT`（读不出 TURN）⇒ **轮次要靠 STATE ＋ 盘面计数交叉判断**，别只看它。
+- ✅ **自动叫醒（2026-10-11 已换链）**：常驻作业 `tts\tools\turn_poller.ps1`（**每 2.5 s** 读棋子位置，**变化才写** `cache\turn_side.txt`）＋ **file 哨兵**（`pattern=^mine`，inotify 推送 <1 s）⇒ **检测 ~0.5-3.3 s**（实测一次 468 ms）。
+  ⛔ **旧的 `front_watch.ps1` → `cache\front.txt` → `TURN=P<席位>` 那条链已停用**（它依赖"TTS 在前台"，TTS 切后台就读不到）⇒ 别再按它写新东西。
+  ⚠️ **`command` 哨兵**能用，但平台实际 **~20 s** 才探一次（请求 15 s 无效，5 s 会被饿死 ⇒ `BOOTSTRAP.md` §C 有实测）⇒ 需要"快"就用 file ＋ 轮询器。
+  ⚠️ 轮询器是**后台作业、不跨会话** ⇒ 新会话要重跑它并重挂 file 哨兵（命令 ⇒ `PLAY.md` 回合交接节）。
 
 ## 五、⚠️ TTS 特有的坑（都付过代价）
 

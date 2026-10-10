@@ -33,7 +33,9 @@ if ($LuaFile -eq '') { $LuaFile = (Join-Path $DshTts 'lua\dsh_global.lua') }
 $ErrorActionPreference = 'Stop'
 $log = New-Object System.Collections.ArrayList
 function L { param([string]$m) [void]$log.Add([string]$m) }
-function Flush { $log | Set-Content -LiteralPath (Join-Path $DshTts 'docs\install2_log.txt') -Encoding UTF8 }
+# The run log belongs with the other generated artifacts (cache\), not inside the docs tree: docs\ held a
+# stray log that git never tracked, which is the kind of thing a checkout should not contain.
+function Flush { $log | Set-Content -LiteralPath (Join-Path $DshCache 'install2_log.txt') -Encoding UTF8 }
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 $TITLE_REAL = [System.Text.Encoding]::UTF8.GetString([byte[]]@(0x44,0x53,0x48,0x20,0xE5,0xAF,0xB9,0xE8,0xAF,0x9D,0xE9,0xA2,0x91,0xE9,0x81,0x93))
 function TitleJunk([int]$n) { return ("[x] spare page " + $n) }

@@ -23,15 +23,39 @@ $calibFile = Join-Path $DshCache ($Game + '_turn.json')
 if (-not (Test-Path -LiteralPath $calibFile)) { Write-Output 'uncalibrated'; return }
 $doc = [System.IO.File]::ReadAllText($calibFile, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
 
-$raw = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'tts\ds.ps1') -Do 'index:250' -Raw 2>&1 | Out-String
-if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 0xFEFF) { $raw = $raw.Substring(1) }
-$z = $null
+$raw = $null
+# In-process transport first: one PowerShell process instead of two.
+#
+# Measured 2026-10-11: spawning a child `powershell ... ds.ps1` made this script 1028 ms, and the turn
+# poller runs it every 2.5 s - a 40% duty cycle for a single position read. The generic transport in
+# tts\ttslib.ps1 + tts\lib\bridge.ps1 talks to TTS in this same process (that is how play.ps1's generic
+# status works), which removes the second process start. Fall back to the child call if the libs are
+# unavailable, so this script never becomes less reliable than it was.
+$usedFast = $false
 try {
-    $items = ($raw | ConvertFrom-Json).customMessage.items
-    if ($items -is [string]) { $items = $items | ConvertFrom-Json }
-    $hit = $items | Where-Object { $_.guid -eq $doc.tracker } | Select-Object -First 1
-    if ($hit) { $z = [double]$hit.z }
-} catch { Write-Output 'unknown'; return }
+    . (Join-Path $Root 'tts\ttslib.ps1')
+    . (Join-Path $Root 'tts\lib\bridge.ps1')
+    # bridge.ps1 calls Fail/Err-Code only on a HARD error (no -Soft); define them so a future edit that
+    # drops -Soft still fails loudly instead of hitting a missing function.
+    if (-not (Get-Command Fail -ErrorAction SilentlyContinue)) { function Fail($c, $m) { throw ("$c $m") } }
+    if (-not (Get-Command Err-Code -ErrorAction SilentlyContinue)) { function Err-Code($e) { return 'BAD DATA' } }
+    # turn_tracker gives the tracker's position directly (bridge v15+). Its own `side` label is NOT used:
+    # the calibration file is the single decider for "whose turn" (see the header).
+    $tt = Bridge @{ cmd = 'turn_tracker' } -Soft
+    if ($null -ne $tt -and [string]$tt.ok -eq 'True') { $z = [double]$tt.z; $usedFast = $true }
+} catch { $z = $null }
+
+if (-not $usedFast) {
+    $raw = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'tts\ds.ps1') -Do 'index:250' -Raw 2>&1 | Out-String
+    if ($raw.Length -gt 0 -and [int][char]$raw[0] -eq 0xFEFF) { $raw = $raw.Substring(1) }
+    $z = $null
+    try {
+        $items = ($raw | ConvertFrom-Json).customMessage.items
+        if ($items -is [string]) { $items = $items | ConvertFrom-Json }
+        $hit = $items | Where-Object { $_.guid -eq $doc.tracker } | Select-Object -First 1
+        if ($hit) { $z = [double]$hit.z }
+    } catch { Write-Output 'unknown'; return }
+}
 if ($null -eq $z) { Write-Output 'unknown'; return }          # tracker not on the table
 
 if ($null -eq $doc.zMine -or [string]$doc.zMine -eq '') { Write-Output 'uncalibrated'; return }
