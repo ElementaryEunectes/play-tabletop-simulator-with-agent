@@ -17,8 +17,12 @@ is **not** shipped; which game is being played right now is local information, s
 ## How to start (double-click `start.cmd`)
 
 Double-click **`start.cmd`** in the repository root — do **not** double-click the `.ps1` (Windows
-opens those in Notepad). The launcher moves the session into this folder, pins `$DSH_HOME` and then
-starts DSH; if `dsh` is missing it stops and tells you how to install it.
+opens those in Notepad). The launcher moves the session into this folder and then starts DSH; by
+default it leaves `$DSH_HOME` **untouched** and sets no environment variable, so the harness home
+`AGENTS.md` (if present) **is still injected** — the launcher prints whether it was. To empty that
+slot for THIS project only, fill in `$ProjectDshProfile` in `start-agent.ps1` (or pass
+`-DshProfile <name>`; mechanism ⇒ `tts\docs\INJECTION.md`, section 4 plan A'). If `dsh` is missing it
+stops and tells you how to install it.
 
 **First time, in this order**: Windows → **Node.js** → `npm i -g @deepseek-ai/dsh` → **Tabletop
 Simulator** (Steam, paid) + subscribe to the target mod → **bake the bridge into a save**
@@ -83,7 +87,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfil
 ```
 
 `doctor.ps1` also works out **how many bytes get injected on every request**: this repository's
-`AGENTS.md` (about 2.9 KB) plus **the `AGENTS.md` in *your* harness home**. That second file is
+`AGENTS.md` (about 1.9 KB) plus **the `AGENTS.md` in *your* harness home**. That second file is
 **not part of this repository** — it is the harness's *user-global* instruction file
 (`$DSH_HOME\AGENTS.md`). If `DSH_HOME` points at this repository, the two deduplicate into one
 (which is what `start-agent.ps1` arranges).
@@ -129,9 +133,9 @@ the dot-source, and `tts\tests\test_param_backfill.ps1` enforces exactly that.
 ## Status
 
 - ✅ **Every `.ps1` under `tts\` parses clean** (`check_ps1.ps1`, recursive), BOM present · **no personal paths** (tts\config.ps1 is the only resolver) · `LICENSE` = **MIT**.
-- ✅ **6 offline gates, no TTS needed**: one entry point, `tts\tests\run_all.ps1` (list ⇒ `CONTRIBUTING.md` §3) · guardrails on `roll.ps1`, `play.ps1 -Apply`, `install_save2.ps1 -DryRun`.
+- ✅ **7 offline gates, no TTS needed**: one entry point, `tts\tests\run_all.ps1` (list ⇒ `CONTRIBUTING.md` §3) · guardrails on `roll.ps1`, `play.ps1 -Apply`, `install_save2.ps1 -DryRun`.
 - ⏸ A match is **suspended**; its status and resume steps are **not in the repository** (see `local\games\_current.md`).
-- ⚡ **Per-turn cost** (measured 2026-10-08): open a turn with the single command `tts\play.ps1 turn` — about **1.5s** (was ~2.9s for `status` + `roll` + `tabread`); `say.ps1` costs **0.79s** per message. **Starting one PowerShell process costs a flat ~0.35s, so merging commands is what saves time** — TTS round trips are not the bottleneck.
+- ⚡ **Per-turn cost** (measured 2026-10-08): open a turn with the single command `tts\play.ps1 turn` — about **1.5s** (was ~2.9s for `status` + `roll` + `tabread`); `say.ps1` costs **0.79s** per message. **Starting one PowerShell process costs a flat ~0.27s (271 ms — the authoritative baseline lives in `tts\docs\MAINTENANCE.md` section 1b), so merging commands is what saves time** — TTS round trips are not the bottleneck.
 
 ## Related work (prior art)
 

@@ -104,6 +104,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
   ⇒ 改完先看 `git diff --numstat <file>`：**增删数远大于你想改的行数 ⇒ 行尾或编码被动过了**，立刻 `git checkout HEAD -- <file>` 重来；要改中文只想动几行时，用**字节级字符串替换**而不是整文件重写（替换串本身不含行尾即安全）。
   📌 2026-10-10 **又犯一次**（`edit` 工具写 `dsh_global.lua` 时统一了行尾）⇒ **`edit`/`write` 工具也会动行尾**，不只批量替换；
   提交前用 `git diff --numstat` 复核一遍，事后用 `tts\tools\git_blob_eol.js` 确认**提交进去的那份**行尾没变（`git show` 的结果经 PS 重定向不可信）。
+- ⛔ **`edit`/`write` 工具还会吃掉 UTF-8 BOM**（2026-10-11 实测两次）：只改几行注释，`tts\tests\test_doc_refs.ps1` 与 `tts\tr.ps1` 的 BOM 就没了（`git diff --numstat` **看不出来** —— 它不在文本 diff 里）⇒ **改完任何 `.ps1` 一律跑 `check_ps1.ps1`**，它会报 `BOM-FIXED` 并补回；"含中文必须带 BOM"这条规矩在编辑工具面前**不会自动成立**。
+  自查法：`[IO.File]::ReadAllBytes($f)[0..2] -join ','` == `239,187,191`（或与 `git show HEAD:<file>` 对拍）。
 
 ## 5. 工具清单（`tts\*.ps1`，按频率 · **找脚本 / 判断"这脚本能不能动"时读我 —— 唯一真源**）
 
@@ -120,6 +122,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `ttslib.ps1` · `ttsx.ps1` | **唯一的 TCP 传输层**（`ttslib` **dot-source，别 spawn**）· 原始通道（只回 `customMessage`） |
 | `dsbatch.ps1` | 一条进程跑多条 `ds.ps1` 命令（`-Commands 'a;;b'`）⚠️ 两层子进程会被沙箱掐网络 ⇒ 优先逐条 |
 | `say.ps1` | 往笔记本对话频道发一条（**中文走 `-MessageFile`**）；单进程就地 TCP |
+| **`channel_watch.ps1`** | **把笔记本对话频道变成哨兵能盯的文件**：轮询 `tabread` → `cache\chan.txt`（`<TAG> <chars> <时间> \| <尾部>`），配 **file 哨兵**（`pattern=^NEW \d`）⇒ 玩家写字就叫醒我。⚠️ 它**不 spawn `ds.ps1`**（两层子进程会被沙箱掐网络）⇒ dot-source `ttslib.ps1` 就地 TCP；换局要**重启**它并**重挂哨兵**（⇒ `BOOTSTRAP.md` §1 唤醒机制） |
 | `live_index.ps1` · `diff_index.ps1` · **`diff_hidden.ps1`** | 整桌实时快照（CSV）· 差分（`-Snapshot` 冻结基线）· **带隐藏区遮蔽的 diff（对外显示一律用它）** |
 | `card.ps1` | 查卡库 `cache\<game>_cards.md`（`-Q '<名字>'`）＋ 别名表；**无 `-Q` 只回用法 + `exit 2`** |
 | `check_ps1.ps1` | **改完 `.ps1` 必跑**：补 BOM ＋ 真解析器校验（递归） |

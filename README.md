@@ -12,7 +12,7 @@
 ## 怎么启动（**普通人：双击 `start.cmd`**）
 
 在资源管理器里双击本仓库根目录的 **`start.cmd`** 就行 —— ⛔ **别直接双击 `.ps1`**（那会用记事本打开）。
-它只做一件必要的事：**把工作目录切到本仓库**（否则项目链不注入本仓库的 `AGENTS.md`）。**不用动 `$DSH_HOME`** —— 本项目的做法是**机器上不放** `$DSH_HOME\AGENTS.md` ⇒ 全局槽零注入、不改任何环境变量；没装 `dsh` 时它会停下并告诉你怎么装。
+它只做一件必要的事：**把工作目录切到本仓库**（否则项目链不注入本仓库的 `AGENTS.md`）；**默认不动 `$DSH_HOME`、不设任何环境变量** ⇒ harness home 那份 `AGENTS.md`（若存在）**照旧会被注入**（启动时会打印它到底注入没注入）。想把**本项目的**全局槽清零 ⇒ 填 `start-agent.ps1` 里的 `$ProjectDshProfile`（或传 `-DshProfile <名字>`；机制 ⇒ `tts\docs\INJECTION.md` §4 方案 A′）。没装 `dsh` 时它会停下并告诉你怎么装。
 
 📖 **指令文件（`AGENTS.md` 等）怎么被注入、每个请求要花多少字节、安装时该怎么放** ⇒ `tts\docs\INJECTION.md`（装机器前读一次；`tts\doctor.ps1` 可复核）。
 
@@ -71,7 +71,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_diff_index.ps
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfill.ps1
 ```
 
-`doctor.ps1` 会顺便算出**每请求注入多少字节**：本仓库的 `AGENTS.md`（约 2.9 KB）＋ **你这台机器 harness home 里的 `AGENTS.md`**。
+`doctor.ps1` 会顺便算出**每请求注入多少字节**：本仓库的 `AGENTS.md`（**≈1.9 KB**）＋ **你这台机器 harness home 里的 `AGENTS.md`**。
 第二份**不在本仓库里** —— 它是 harness 的**用户全局**文件（`$DSH_HOME\AGENTS.md`）。若 `DSH_HOME` 就指向本仓库，两份会**去重成一份**（`start-agent.ps1` 就是这个用法）。
 
 ⚠️ 本仓库用 `.gitattributes`（`* -text`）**锁住行尾与编码**：clone 出来的字节与提交的完全一致。**别改成 `text=auto`** —— 那会一次性重写所有文件的 blob，还可能碰坏 `.ps1` 必须保留的 UTF-8 BOM。
@@ -105,11 +105,11 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
 
 ## 已知状态
 
-- ✅ **`tts\` 下 40 个 `.ps1` 全部通过真解析器**（`check_ps1.ps1`，递归）：0 解析错误、BOM 齐。
+- ✅ **`tts\` 下 45 个 `.ps1` 全部通过真解析器**（`check_ps1.ps1`，递归；口径 = 含 `tests\` / `tools\` / `lib\`）：0 解析错误、BOM 齐。
 - ✅ **离线门禁 7 条**（不需要 TTS）：唯一入口 `tts\tests\run_all.ps1`（清单 ⇒ `CONTRIBUTING.md` §3）。
 - ✅ **无个人路径**：树里已无 `C:\Users\<名字>` 之类硬编码（`tts\config.ps1` 是唯一解析层）· `LICENSE` = **MIT**。
 - ⏸ 对局处于**挂起**态：**现状与续局步骤不在仓库里**（`local\games\_current.md` 指到具体文件）。
-- ⚡ **每回合成本**（2026-10-08 实测）：回合开局一条 `tts\play.ps1 turn` ≈ **1.5s**（替代 `status`+`roll`+`tabread` 的 ~2.9s）；`say.ps1` 每条 **0.79s**。**每个 PowerShell 进程固定 ~0.35s ⇒ 合并命令就是省时间**，TTS 往返不是瓶颈。
+- ⚡ **每回合成本**（2026-10-08 实测）：回合开局一条 `tts\play.ps1 turn` ≈ **1.5s**（替代 `status`+`roll`+`tabread` 的 ~2.9s）；`say.ps1` 每条 **0.79s**。**每个 PowerShell 进程固定 ~0.27 s（271 ms；权威基线 ⇒ `tts\docs\MAINTENANCE.md` §1b）⇒ 合并命令就是省时间**，TTS 往返不是瓶颈。
 
 ## 相关项目（prior art —— 我们站在谁旁边）
 

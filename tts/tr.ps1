@@ -1,10 +1,14 @@
-﻿# tr.ps1 - move the table's Turn Tracker BY POSITION, because the tracker's own turn machine is broken.
+﻿# tr.ps1 - move the table's Turn Tracker BY POSITION, because that is the only signal we can write.
 #
-# WHY THIS EXISTS (measured 2026-10-11, see VALIDATION F12)
-#   The community "Turn Tracker" token we use advances by calling Player[color].getPlayerHand() - a
-#   method this TTS build no longer has. So its End Turn button does nothing for the PLAYER as well
-#   (the player confirmed it does not move), and no external path can fix it without editing the mod's
-#   script, which was explicitly ruled out.
+# WHY THIS EXISTS (measured 2026-10-11, see VALIDATION F12/F13)
+#   The tracker's own End Turn button is FINE for the player (F13): a press advances its colour and moves
+#   the piece to the successor colour's hand. What does not exist is an EXTERNAL way to press it:
+#   Object.call/callx takes TTS down (two runs, never fixed), and the official messageID 3 runs in an
+#   empty environment that cannot read the object's private state (F12). So the agent hands the turn
+#   over by writing the resting position, and the player's next press carries on from there.
+#   (An earlier revision of this comment claimed the button was dead because Player[color].getPlayerHand()
+#    no longer exists. MEASURED FALSE - the method exists. The real 2026-10-11 root cause was the empty
+#    Name field, fixed by filling in the seat colours plus one player press.)
 #
 #   What still works is writing a Transform: the piece moves, the colour of the piece does not follow
 #   but the turn itself is recorded in the game's STATE.md (this game's single source of truth).

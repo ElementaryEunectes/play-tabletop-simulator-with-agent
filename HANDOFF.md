@@ -7,7 +7,7 @@
 >
 > 🔴 **接手先做这一件事**：**让玩家重载当前存档槽**（槽位 / `SaveName` / 物件数 ⇒ **`local\games\<当前游戏>\STATE.md`**，本文件不复述游戏名与槽位）。
 > 本轮彻查后桥接变了（删掉令牌/记账/埋点，只留 `turn_tracker`）⇒ **不重载则桥上还是旧版**。
-> 回合交接**不受影响**（它走 `cache\<游戏>_turn.json` ＋ 哨兵，不依赖桥接新命令）。
+> 回合交接**不受影响**（它走 `cache\<游戏>_turn.json` ＋ file 哨兵；快路径用桥接的 `turn_tracker`（v15 就有，**不是**本轮新命令），取不到才回落到 `ds.ps1 -Do 'index:250'` ⇒ 只会变慢，不会断）。
 
 ## §1 启动（必做，30 秒）
 
@@ -55,7 +55,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 
 1. ✅ **D2 已完成（2026-10-09）**：**对局型 mod** 的 `local\games\<游戏>\objects.json` 写好（8 个区块）⇒ `bootstrap.ps1` 恢复可用（`cache\session_map.md` = 92 行 / 3.9 KB；HP·CP 4 行 · 牌堆 2 · 骰子 5+5 · 英雄板 2 · 规则书 1）。
    📌 关键：**索引里同一物件常有两行**（容器副本 1523/1659）⇒ 每个区块都要 `topLevel: true`；这条已写进 `BOOTSTRAP.md` §1b 与数据文件自身的 `_note`。换英雄/换局：`bootstrap.ps1 -Inventory` 取新 hash 加一行。
-   ⚠️ **"任何 mod 都成立"：第二款 mod 实测 = 半过（2026-10-09 晚，详情见 `tts\docs\VALIDATION.md`）**：**非对局型** mod（自带 116 KB Global 脚本 ＋ 12 页笔记本）⇒ `install_save2.ps1 -KeepLua -KeepTabs` 烤进存档、模组自带脚本**原样保留** ⇒ 玩家重载后 **`ping` 回 `v13-turntoken`** ⇒ `obj_index.ps1 -File <绝对路径>`（625 行）⇒ `bootstrap.ps1 -Inventory`（190 nicks / 41 hashes）⇒ 写 `objects.json`（7 区块）⇒ **115 行地图**。
+   ⚠️ **"任何 mod 都成立"：第二款 mod 实测 = 半过（2026-10-09 晚，详情见 `tts\docs\VALIDATION.md`）**：**非对局型** mod（自带 116 KB Global 脚本 ＋ 12 页笔记本）⇒ `install_save2.ps1 -KeepLua -KeepTabs` 烤进存档、模组自带脚本**原样保留** ⇒ 玩家重载后 **`ping` 回 `v13-turntoken`（**当时**的版本号；现在应回 `v15-tags-snap-hand`）** ⇒ `obj_index.ps1 -File <绝对路径>`（625 行）⇒ `bootstrap.ps1 -Inventory`（190 nicks / 41 hashes）⇒ 写 `objects.json`（7 区块）⇒ **115 行地图**。
    🟢 这一路**全过**（传话 · 存档侧索引 · 认物 · 地图）。🔴 但 **`play.ps1` 在这款上 FAIL**（`NO PART`：它要 `cache\<game>_rules.json` 且 `status` 也走 `$Rules.dice/seats`）⇒ **这条缺陷已写进 `MAINTENANCE.md` §5 的「两层是怎么分开的」**；"通用"目前**只是这一路证据，不是全链证据**。
    📌 学到的两条：① **`obj_index.ps1 -File` 要绝对路径**（相对 cwd 解析，给裸文件名会报 not found）；② 这类 mod 把教学写在 **Notecard** 上（地图有专门一节 ⇒ 开局先读它，再写 `FLOW.md`）。
    ⛔ 仍然**不要**为了验证去造假的第二款游戏（fixture 只验"数据不在代码里"这条契约）。
@@ -117,7 +117,7 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 瘦身原则：**只留"触发条件 ＋ 结论"，例子与机制说明全部转指针**（`MAINTENANCE.md` §0 · `INJECTION.md` §4 · `USER_GUIDE.md`）；**凡"门禁已经守着"的判定，注入里不再复述**。
 ⚠️ 三条硬约束：**`instruction hygiene` 会抓**"承载性指针被删"（`start-agent.ps1`/`PLAY.md`/`local\games`/`tts\config.ps1`/`check_ps1.ps1` **必须留在项目层**）＋ 项目层 ≤3840 B ＋ 本机层 ≤4096 B。
 ⚠️ 平台层**处处都注入** ⇒ 往那里加条目前先问"它能不能落在项目文档里"（项目层只在有 `.git` 的工作区注入）。**加完必须重新量三份合计**。
-发布时**不用手打**：`start-agent.ps1` 的一行 `$ProjectDshProfile`（或 `-DshProfile tts-agent`；⚠️ **不是** `dsh tts-agent web`）⇒ **≈5.7 KB**。机制/目录结构/装法 ⇒ **`tts\docs\INJECTION.md` §4 方案 A′**。
+发布时**要先填那一行**（`start-agent.ps1` 里现在还是 `''` ⇒ 默认照旧注入全局那份）：`$ProjectDshProfile`（或 `-DshProfile tts-agent`；⚠️ **不是** `dsh tts-agent web`）⇒ 全局槽清零后 ＝ 项目 ＋ overlay（**2026-10-11 实测两项相加 = 2,830 B**；当前含全局 = **5,047 B**）。机制/目录结构/装法 ⇒ **`tts\docs\INJECTION.md` §4 方案 A′**。
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
@@ -128,7 +128,7 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
   - 体积：`TTS_RULES.md` 31,727 → **20,291 B** · `MAINTENANCE.md` 13,853 → **24,480 B**（总量持平）。⚠️ 分家的理由不是省 token，是**读场合**：TTS_RULES 每个新局开工读一次，MAINTENANCE 只在动手改脚本/改 Lua 前读 —— 代码塞在前面等于每次开工都替它付钱。
   - 门禁 **7/7 绿**（`run_all.ps1`）；`test_doc_refs.ps1` 那条路径引用也在门禁里过了一遍。
 - **2026-10-10 夜 → 10-11 凌晨**（`0158c43` … `f86bd65`，约 20 个提交）：**回合交接定稿 ＋ 一次全面体检**。
-  - **回合交接（最终形态）**：玩家按/拖桌上那枚社区 **Turn Tracker** ⇒ 我读**棋子位置**判"轮到谁"（**每款 mod 一次校准** `tools\turn_calib.ps1` → `cache\<game>_turn.json`）⇒ 我 **`tts\tr.ps1 -To player`** 交还（~0.9 s）。
+  - **回合交接（最终形态）**：玩家**按**桌上那枚社区 **Turn Tracker**（`Locked`，**拖不动**）⇒ 我读**棋子位置**判"轮到谁"（**每款 mod 一次校准** `tools\turn_calib.ps1` → `cache\<game>_turn.json`）⇒ 我 **`tts\tr.ps1 -To player`** 交还（~0.9 s）。
     **叫醒** = 常驻作业 `tools\turn_poller.ps1`（2.5 s，变化才写 `cache\turn_side.txt`）＋ **file 哨兵**（`^mine`，<1 s）⇒ 检测 **~0.5-3.3 s**；**平台投递另加 ~23 s（不在我们手里）**。
     ⚠️ **每个新会话要重建这两个活件**（轮询器是后台作业、哨兵 `max_fires` 必须显式给）⇒ `PLAY.md` 回合交接节。
   - **四条死路（都实测，别再试）**：① `callx`/`Object.call` 驱动别的 mod ⇒ **TTS 失联两次，从未修复**；② `messageID 3`（官方 External Editor API）**安全但跑在空环境**（读不到物件私有变量、返回值不回）；③ 外部写 `o.script_state` **只生效一瞬、被它的 `onSave` 覆盖**；④ 改它的 `Name` 只影响**轮转范围**。⇒ 结论：**位置是唯一判据**；玩家可能要**按两次**才换边（玩家已接受）。全表 ⇒ `VALIDATION.md` **F12/F13**。
@@ -185,6 +185,6 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
     （`verify_f8.js`：**每条行首定义的函数**加载后是否真的存在，判定看子进程写的 `VERDICT=` 状态文件）。
     **阴性对照已验**：装回"平衡但错位"的坏版本 ⇒ 门禁**立刻转红**（以前它是全绿的）。
 
-## §10 关键数字（2026-10-09）
+## §10 关键数字（2026-10-11 复测）
 
-工作区文件 **3,395** · `tts\` 下 **37** 个 `.ps1` · 门禁 **7** 条（入口 `tts\tests\run_all.ps1`，要证据加 `-OutFile`）· 注入 **9.5 KB/请求**（发布 5.7 KB）。
+`tts\` 下 **45** 个 `.ps1` · 门禁 **7** 条（入口 `tts\tests\run_all.ps1`，要证据加 `-OutFile`）· 注入 **5,047 B/请求**（`tts\doctor.ps1` 实测：项目 1,982 ＋ 全局 2,217 ＋ overlay 848；发布配置 ≈2,830 B）。

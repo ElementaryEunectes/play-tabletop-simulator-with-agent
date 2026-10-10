@@ -11,7 +11,7 @@
 #      cannot drift from a copy) and wraps it in a stub TTS API;
 #   2. run_lua.js runs that Lua under fengari, a Lua VM in JavaScript - there is no lua binary on
 #      this machine and TTS ships none we can call;
-#   3. the generated test asserts 16 cases, including the failures: a missing CardID, a ghost
+#   3. the generated test asserts 30 cases, including the failures: a missing CardID, a ghost
 #      container, an unknown action must all come back REPORTED, never as a silent dead handler.
 #
 # WHAT IT CANNOT PROVE

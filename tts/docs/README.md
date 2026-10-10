@@ -22,7 +22,7 @@
 | 按需（规则 · **不进仓库**） | `local\games\<游戏>\FLOW.md` | 该游戏的规则/技能/骰面 —— **顶部有"我要干什么 ⇒ 读哪节"路由表**；＋ **附录 A：官方规则书**（在哪 · 怎么拿 · 每页是什么） | 学到新规则时 |
 | 按需（技术） | —— 已并入 **`TTS_RULES.md`**（§四 能力边界 · §五 找物件/认牌 · §六 截图）· 改 Lua ⇒ **`MAINTENANCE.md` §6** · 新 mod 施工顺序 ⇒ **`BOOTSTRAP.md` §2c** | 低 |
 | **装机器时一次** | **`INJECTION.md`** | **指令文件怎么被注入**：三个槽 · 三条硬规则（去重/预算）· 成本实测 · **安装时该怎么放** · ⛔ 两个别做（链接农场 / 机器事实进跟踪文件） | 低 |
-| 按需（维护） | **`MAINTENANCE.md`** | **本仓库**要点（门禁 · 两个指令槽 · 路径纪律 · **§5 工具清单** · §6 改 Lua · §7 写入前检查＋PowerShell 陷阱）；坑 ×16 与注入机制已迁出 ⇒ harness home 的 `platform\MAINTENANCE.md` | 学到新坑时 |
+| 按需（维护） | **`MAINTENANCE.md`** | **本仓库**要点（门禁 · 两个指令槽 · 路径纪律 · **§5 工具清单** · §6 改 Lua · §7 写入前检查＋PowerShell 陷阱）；坑 ×17 与注入机制已迁出 ⇒ harness home 的 `platform\MAINTENANCE.md` | 学到新坑时 |
 | 按需（给人） | `USER_GUIDE.md` | **人怎么用**：开局 · 你只做两件事 · AI 何时请你帮忙 · 在哪说话 · 常见问题 | 低 |
 | 按需（先例） | `PRIOR_ART.md` | 二手调研与先例（**冻结，别重搜**；含可搬/不可搬结论） | 冻结 |
 | 按需（**验证**） | **`VALIDATION.md`** | **"对任何 TTS mod 都成立"这句验到哪了**：逐层断言 · 实测证据 · 已知缺陷（F1…）· 下一款 mod 怎么续验。**要写"通用"二字之前先读我** | 每验一款 mod |
@@ -34,7 +34,8 @@
 - `tts\*.ps1` = **现役工具**；**清单与用途见 `MAINTENANCE.md` §5**；死的 / 一次性的 / 实验性的一律进 `~\.dsh\archive\tts-legacy\`。
 - `tts\tests\` = **离线自测（不需要 TTS、不需要存档）**：`test_diff_index.ps1`（桩冒充 `live_index.ps1` ＋ 合成 fixture）·
   `test_game_data.ps1`（假游戏 fixture ⇒ 别名表 / `objects.json` 必须来自**文件**，拿掉文件工具就该不知道答案）·
-  `test_param_backfill.ps1`（每个 `''` 默认值必须被回填或判空）· `test_agents_hygiene.ps1`（三槽体积 / 承载性指针 / 隐私 / 漂移）。**改完脚本先跑它们。**
+  `test_param_backfill.ps1`（每个 `''` 默认值必须被回填或判空）· `test_agents_hygiene.ps1`（三槽体积 / 承载性指针 / 隐私 / 漂移）·
+  `test_doc_refs.ps1`（受跟踪 `.md` 里指向的路径必须存在）· `test_bridge_primitives.ps1`（fengari 里真跑桥接原语）。**改完脚本先跑它们。**
 - `tts\lib\` = **通用层的实现模块**（当前只有 `bridge.ps1`：一条命令的发送与回包校验）· 由当前游戏的控制层 dot-source（同进程，无额外进程启动）。**某一款游戏的** `play`/`dice`/`rules`/`verbs` 模块**不在这里** ⇒ `local\games\<游戏>\control\`（不进仓库）。
 - `tts\lua\` = TTS 模组的**全局 Lua**（`dsh_global.lua` = 桥接本体；`install_save2.ps1` 依赖它，**别动**）。`tts\validate_lua.js` = 改 Lua 前的校验器。
 - `tts\tools\` = **跨语言小工具**：`fetch_pdf.js`（用 **Node 的 TLS 栈**下载 —— 沙箱里 `curl`/`Invoke-WebRequest` 会报 TLS 凭证错）·
