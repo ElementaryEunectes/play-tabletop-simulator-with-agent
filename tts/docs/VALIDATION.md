@@ -127,6 +127,8 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 **结论**：**跨 mod 的外部驱动做不到**（它的状态私有、且无对外触发口）。**交还回合由玩家按** —— 只要玩家自己按得动（待玩家实测确认），这是**唯一受支持**的路径。
 **两个可复用的坑**：① **脚本必须"直连 TCP 从文件发"** —— 经 `-Lua` 参数传会被吃掉**引号**（`print("A")` 到达时变成 `print(A)` ⇒ 打印 nil）；② **多行脚本经命令行会被改坏**（`unexpected symbol near '='`）。
 **排查时机**：`Player.log` 的**最后写入时间**比进程列表可靠（本机 `Get-Process`/`Get-CimInstance` **看不到** TTS，尽管它在跑；`netstat` 看 `CLOSE_WAIT`/`LISTENING` 才准）。
+⛔ **`callx` 从未被修复，也别再试**（2026-10-11 查证＋澄清）：它的实现至今仍是 `o.call(fn, args)`，`git log -S 'callx'` 显示它只在"基线"与"加入它那次"提交里出现过，**之后再无改动**；今晚所有改 `dsh_global.lua` 的提交都是**删除实验**，没有一条修它。
+📌 当时我在对话里说过"`messageID 3` 这条路修好了" —— 那指的是**新写的 `tts\tools\exec_script.ps1`（走官方 External Editor API 的 messageID 3）**，**不是** `callx`。两者**互不相干**：`exec_script.ps1` 可用（只读诊断），`callx` 碰了就挂。
 
 **F13 · 桌上那枚社区 Turn Tracker 的"按钮没反应" —— ✅ 根因是它的 `Name` 字段为空（2026-10-11）**
 **现象**：玩家按它的 `End Turn` 没反应（棋子不动）、也拖不动（`LOCKED=true`）；控制台**没有新红字**。
