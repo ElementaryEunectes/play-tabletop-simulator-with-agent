@@ -40,8 +40,10 @@ try {
     if (-not (Get-Command Fail -ErrorAction SilentlyContinue)) { function Fail($c, $m) { throw ("$c $m") } }
     if (-not (Get-Command Err-Code -ErrorAction SilentlyContinue)) { function Err-Code($e) { return 'BAD DATA' } }
     # turn_tracker gives the tracker's position directly (bridge v15+). Its own `side` label is NOT used:
-    # the calibration file is the single decider for "whose turn" (see the header).
-    $tt = Bridge @{ cmd = 'turn_tracker' } -Soft
+    # the calibration file is the single decider for "whose turn" (see the header). The guid is passed
+    # FROM that file so the piece we read is the piece tr.ps1 moves (the bridge constant is a fallback
+    # only) - measured 2026-10-11.
+    $tt = Bridge @{ cmd = 'turn_tracker'; guid = [string]$doc.tracker } -Soft
     if ($null -ne $tt -and [string]$tt.ok -eq 'True') { $z = [double]$tt.z; $usedFast = $true }
 } catch { $z = $null }
 

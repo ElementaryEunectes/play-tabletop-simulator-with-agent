@@ -68,8 +68,17 @@ function Show-GenericStatus {
         }
     }
 
-    # whose turn, when this game has been calibrated (cache\<game>_turn.json + a tracker on the table)
-    $tt = Bridge @{ cmd = 'turn_tracker' } -Soft
+    # whose turn, when this game has been calibrated (cache\<game>_turn.json + a tracker on the table).
+    # The guid comes FROM that file, so the piece reported here is the piece the calibration names and
+    # tr.ps1 moves; the bridge's built-in constant is only a fallback (2026-10-11).
+    $ttArg = @{ cmd = 'turn_tracker' }
+    if ($DshCache -ne '' -and $DshGame -ne '') {
+        $calib = Join-Path $DshCache ($DshGame + '_turn.json')
+        if (Test-Path -LiteralPath $calib) {
+            try { $ttArg.guid = [string](([System.IO.File]::ReadAllText($calib, [System.Text.Encoding]::UTF8) | ConvertFrom-Json).tracker) } catch { }
+        }
+    }
+    $tt = Bridge $ttArg -Soft
     if ($null -ne $tt -and (Text-Of $tt 'side') -ne '-') {
         Write-Host ("turn=" + (Text-Of $tt 'side') + "  (position z=" + (Text-Of $tt 'z') + ", guid " + (Text-Of $tt 'guid') + ")")
     } else {

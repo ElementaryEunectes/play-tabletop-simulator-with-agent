@@ -1043,7 +1043,7 @@ end
 -- and NOT the `index` field that list reports. Using those was the source of a long
 -- bug in which every write landed on the wrong tab (and once renamed it "Black").
 -- So the position is resolved at call time instead of being hard-coded.
-DSH_VERSION = 'v15-tags-snap-hand'
+DSH_VERSION = 'v16-tracker-guid'
 DSH_TAB_TITLE = DSH_TAB_TITLE or "DSH"
 
 -- Returns the 0-based position of the dialogue tab, plus the tab itself.
@@ -1813,23 +1813,29 @@ end
 -- position - which is also exactly what a sentinel can watch from outside without holding a session.
 TURN_TRACKER_GUID = TURN_TRACKER_GUID or "0e731f"
 
-local function turnTrackerState()
+local function turnTrackerState(g)
+    -- The CALLER may name the piece: turn_side.ps1 and play.ps1 pass cache\<game>_turn.json's `tracker`,
+    -- which is the calibration file's single source of truth. The constant below is only the fallback
+    -- for a bare call - two independent sources for "which piece" is how a read ends up watching a
+    -- different object than the write moves (measured 2026-10-11).
+    local guid = tostring(g or "")
+    if guid == "" then guid = TURN_TRACKER_GUID end
     local o = nil
-    pcall(function() o = getObjectFromGUID(TURN_TRACKER_GUID) end)
+    pcall(function() o = getObjectFromGUID(guid) end)
     if o == nil then
-        return { ok = false, cmd = "turn_tracker", err = "no object with guid " .. tostring(TURN_TRACKER_GUID),
-                 guid = TURN_TRACKER_GUID }
+        return { ok = false, cmd = "turn_tracker", err = "no object with guid " .. tostring(guid),
+                 guid = guid }
     end
     local pos = nil
     pcall(function() pos = o.getPosition() end)
     if type(pos) ~= "table" then
-        return { ok = false, cmd = "turn_tracker", err = "no position", guid = TURN_TRACKER_GUID }
+        return { ok = false, cmd = "turn_tracker", err = "no position", guid = guid }
     end
     local z = tonumber(pos.z) or 0
     -- the token rests on one hand zone or the other; the sign of z is the whole answer
     local side = "unknown"
     if z > 1 then side = "mine" elseif z < -1 then side = "player" end
-    return { ok = true, cmd = "turn_tracker", guid = TURN_TRACKER_GUID, side = side,
+    return { ok = true, cmd = "turn_tracker", guid = guid, side = side,
              x = string.format("%.2f", tonumber(pos.x) or 0),
              z = string.format("%.2f", z), at = os.date("%H:%M:%S") }
 end
@@ -1896,7 +1902,7 @@ local handlers = {
     getval = function(m) return getval(m.guid) end,
     index = function(m) return index(m.limit) end,
     run = function(m) return run(m, m.code) end,
-    turn_tracker = function(m) return turnTrackerState() end,
+    turn_tracker = function(m) return turnTrackerState(m.guid) end,
     -- container listing: what is actually inside a Bag/Deck right now (getObjects()).
     -- Complements index/all, which only see the table, and draw/take, which pull one card.
     container = function(m)
