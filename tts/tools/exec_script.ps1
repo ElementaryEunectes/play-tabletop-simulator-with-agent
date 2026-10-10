@@ -39,20 +39,22 @@ $utf8 = New-Object System.Text.UTF8Encoding($false)
 
 # reply listener first, so TTS can always reach us.
 #
-# RETRY THE BIND. Measured 2026-10-11: two of these in quick succession can collide - the previous
-# listener's socket is still in TIME_WAIT and the bind throws, which looked like "the hand-over silently
-# did nothing" because the script had already exited before sending. Three attempts with a short pause
-# removes the flakiness.
+# RETRY THE BIND, PATIENTLY. Port 39998 has ONE slot (the editor reply channel), and everything that talks
+# to TTS needs it: this command, ds.ps1, and - measured 2026-10-11 - the turn poller, which probes every
+# 2.5 s and therefore holds the slot for a slice of every interval. Three short attempts were not enough and
+# a hand-over failed with "listener busy"; six attempts over ~10 s always wins against a <1 s holder.
+# (Root fix would be a shared daemon owning 39998 - the hub approach noted in PRIOR_ART.md - not tonight.)
 $listener = $null
-for ($attempt = 1; $attempt -le 3; $attempt++) {
+$bindAttempts = 6
+for ($attempt = 1; $attempt -le $bindAttempts; $attempt++) {
     try {
         $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $EditorPort)
         $listener.Start()
         break
     } catch {
-        if ($attempt -eq 3) { Write-Host "ERR cannot listen on $EditorPort after 3 attempts: $($_.Exception.Message)"; exit 3 }
-        Write-Host "  listener busy on $EditorPort, retry $attempt/3 ..."
-        Start-Sleep -Milliseconds 1500
+        if ($attempt -eq $bindAttempts) { Write-Host "ERR cannot listen on $EditorPort after $bindAttempts attempts: $($_.Exception.Message)"; exit 3 }
+        Write-Host "  listener busy on $EditorPort, retry $attempt/$bindAttempts ..."
+        Start-Sleep -Milliseconds 1800
         $listener = $null
     }
 }
