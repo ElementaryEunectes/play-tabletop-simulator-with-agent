@@ -17,8 +17,29 @@
 📖 **指令文件（`AGENTS.md` 等）怎么被注入、每个请求要花多少字节、安装时该怎么放** ⇒ `tts\docs\INJECTION.md`（装机器前读一次；`tts\doctor.ps1` 可复核）。
 
 **第一次用，按这个顺序**：Windows → **Node.js** → `npm i -g @deepseek-ai/dsh` → **Tabletop Simulator**（Steam，付费）＋ 订阅目标模组 →
+**建这一局的骨架**（`tts\setup.ps1 -InitGame <slug>`，从 `tts\templates\` 生成 `local\games\<slug>\`）→
 **把桥接烤进存档**（`tts\docs\BOOTSTRAP.md`）→ 双击 `start.cmd` → 在 TTS 里载入那个存档。
+📋 **不确定从哪下手就先跑 `tts\setup.ps1`**（默认**只读**）：它打印"到第一回合"的 8 步并转给 `tts\doctor.ps1` 体检。
 ⚠️ 本仓库**不含任何游戏规则/卡面文本**（那是某一款游戏的内容，放 `local\games\`，不进仓库）。
+
+### 首次上手要花多久、花什么（**先知道这个再决定**）
+
+**钱**：Tabletop Simulator（Steam，付费，常打折）· 目标模组（创意工坊，多为免费）· **没有别的服务** —— 桥接、哨兵、脚本全在**本机**跑，除 DSH 自己的模型调用外不产生费用。
+
+| 步骤 | 预计 | 备注 |
+|---|---|---|
+| 装 Node.js ＋ `npm i -g @deepseek-ai/dsh` | ~5 min | 一次性 |
+| 装 TTS ＋ 订阅目标模组 | ~15 min | 主要是下载时间 |
+| **把桥接烤进存档**（`BOOTSTRAP.md` §2）＋ 让玩家重载 | ~10 min | 一遍就会；之后换局也走这条 |
+| **首次"教一款 mod"**：认物（`objects.json` ＋ 地图）· 卡库（可选）· **回合校准** | **~30–60 min** | ⭐ **这是大头**，也是"通用工具链"真正要做的活 |
+| 之后每局开工 | **~5 min** | 重烤 ＋ 重载 ＋ 重挂哨兵（见 `PLAY.md`） |
+| **合计到"打完第一回合"** | **≈1–1.5 h** | 判据就是它：陌生人 1 小时能否打完一回合 |
+
+⚠️ **诚实的三条前置**（别买完才发现）：
+1. **需要 DSH**（这个 agent harness）—— 它提供哨兵与工具调用；没有它，这套脚本只是一堆脚本，回合交接会退化成手动轮询。
+2. **游戏专属动词需要一个"控制层"**（`local\games\<游戏>\control\play.ps1`，按 `BOOTSTRAP.md` §2 写）。**没有它时 `play.ps1 status` 仍可用**（桥接版本 · 物件数 · 在位玩家 · 轮到谁），但 `play.ps1 <游戏动词>` 会明确报 `NO PART` 并指向那节。
+3. **换 mod 要重做"回合校准"**（座位坐标每款都不同）：`tts\tools\turn_calib.ps1 -Discover` ＋ `-Answer`，约 5 分钟。
+
 
 ## 怎么读（**别整份读，按角色取**）
 

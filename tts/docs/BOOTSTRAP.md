@@ -133,6 +133,10 @@ ds.ps1 -Do count       # 名称直方图
 
 ## §2 只有"换新模组"才需要的三步
 
+> 🧭 **不知道从哪开始就先跑 `tts\setup.ps1`**（默认**只读**：打印"到第一回合"的 8 步 ＋ 转给 `tts\doctor.ps1` 体检）。
+> **建这一局的骨架**用 `tts\setup.ps1 -InitGame <slug>` —— 它从 `tts\templates\`（`STATE` / `FLOW` / `MYHAND`）生成
+> `local\games\<slug>\`，并把 `_current.md` 的 `GAME=` 指过去（**先备份**）；加 `-DryRun 1` 只预览。⛔ 别手抄模板 —— 漏一个文件后面会踩空。
+
 **A. 把桥接烤进存档**（我；写 TTS 存档目录在工作区之外 ⇒ **会弹一次批准/提权**）
 ```powershell
 & powershell -NoProfile -ExecutionPolicy Bypass -File '<本仓库>\tts\install_save2.ps1' `

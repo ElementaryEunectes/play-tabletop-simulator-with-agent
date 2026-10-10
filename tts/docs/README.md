@@ -38,7 +38,12 @@
 - `tts\lib\` = **通用层的实现模块**（当前只有 `bridge.ps1`：一条命令的发送与回包校验）· 由当前游戏的控制层 dot-source（同进程，无额外进程启动）。**某一款游戏的** `play`/`dice`/`rules`/`verbs` 模块**不在这里** ⇒ `local\games\<游戏>\control\`（不进仓库）。
 - `tts\lua\` = TTS 模组的**全局 Lua**（`dsh_global.lua` = 桥接本体；`install_save2.ps1` 依赖它，**别动**）。`tts\validate_lua.js` = 改 Lua 前的校验器。
 - `tts\tools\` = **跨语言小工具**：`fetch_pdf.js`（用 **Node 的 TLS 栈**下载 —— 沙箱里 `curl`/`Invoke-WebRequest` 会报 TLS 凭证错）·
-  `pdf_images.js`（从**图片型** PDF 抽整页图）—— 规则书那条链用的就是这两个（见 `local\games\<游戏>\FLOW.md` 附录 A）。
+  `pdf_images.js`（从**图片型** PDF 抽整页图）—— 规则书那条链用的就是这两个（见 `local\games\<游戏>\FLOW.md` 附录 A）·
+  回合交接那套：`exec_script.ps1`（官方 External Editor API 的 `messageID 3`，**直连 TCP** 发 Lua）· `turn_calib.ps1` / `turn_side.ps1`（每款 mod 一次的校准与判定）·
+  `turn_poller.ps1`（2.5 s 轮询写 `cache\turn_side.txt`，配 file 哨兵做快速叫醒）· `tracker_read.lua`（回合标记体检）·
+  `git_blob_eol.js` / `git_blob_cmp.js`（**量提交里的行尾** —— PowerShell 重定向会改行尾，不能用来量）。
+- `tts\templates\` = **新游戏起手的三个模板**（`STATE` / `FLOW` / `MYHAND`）⇒ 由 `tts\setup.ps1 -InitGame <slug>` 填成
+  `local\games\<slug>\`（`<游戏>` 占位符会被替换成 slug）。
 - `tts\docs\` = 上面那张表里的文档。
 - `cache\` = **产物**（可重建）：`front.txt` / `chan.txt`（哨兵心跳）· `<游戏>_cards.md`（游戏数据）·
   `live_index.csv` / `baseline.csv` / `obj_index.csv`（快照）· `hidden_zones.csv`（隐藏区规则）· 规则书 PDF 与整页图。

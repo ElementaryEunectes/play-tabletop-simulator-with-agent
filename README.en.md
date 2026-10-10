@@ -26,6 +26,29 @@ Simulator** (Steam, paid) + subscribe to the target mod → **bake the bridge in
 ⚠️ No game rules or card text ship with this repository (that is one game's content, kept under
 `local\games\`).
 
+### What a first run costs (know this before you start)
+
+**Money**: Tabletop Simulator (Steam, paid) + the target mod (Workshop, usually free) + **nothing else** —
+the bridge, the sentinel and every script run **locally**; no service fees beyond DSH's own model calls.
+
+| Step | Estimate | Note |
+|---|---|---|
+| Node.js + `npm i -g @deepseek-ai/dsh` | ~5 min | once |
+| TTS + subscribe to the target mod | ~15 min | mostly download time |
+| **Bake the bridge into a save** (`BOOTSTRAP.md` section 2) + have the player reload | ~10 min | same path for every new match |
+| **Teaching one mod the first time**: object index + map · card library (optional) · **turn calibration** | **~30–60 min** | ⭐ the real work of a "generic toolkit" |
+| Every later session | **~5 min** | re-bake, reload, re-arm the watcher (`PLAY.md`) |
+| **Total to a first completed round** | **≈1–1.5 h** | that is the bar: can a stranger finish a round within an hour |
+
+⚠️ **Three honest prerequisites**:
+1. **DSH is required** (this agent harness) — it provides the sentinel and the tool calls; without it
+   these scripts are just scripts and the turn hand-over degrades to manual polling.
+2. **Game-specific verbs need a "control layer"** (`local\games\<game>\control\play.ps1`, see
+   `BOOTSTRAP.md` section 2). Without one, `play.ps1 status` still works (bridge version, object count,
+   seated players, whose turn), but `play.ps1 <game verb>` replies `NO PART` and points at that section.
+3. **Changing mods means redoing the turn calibration** (seating coordinates differ per mod):
+   `tts\tools\turn_calib.ps1 -Discover` + `-Answer`, about 5 minutes.
+
 ## How to read this repo (never read it all — read by role)
 
 | What you want | Read |

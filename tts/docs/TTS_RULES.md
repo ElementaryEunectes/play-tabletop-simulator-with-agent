@@ -51,6 +51,7 @@
 | `channel_watch.ps1` | 后台：写 `cache\chan.txt`（笔记本尾部变化 → `NEW`）→ 配 file 哨兵 |
 | `check_ps1.ps1` | **改完 `.ps1` 必跑**：补 BOM ＋ 真解析器校验 |
 | **`doctor.ps1`** | **新机器 / 新 clone 第一步**（**只读**体检）：PowerShell · 路径解析 · TTS 目录 · 39999 端口 · node · **每请求注入字节数** ⇒ `VERDICT: ready` 或带修复建议的问题清单 |
+| **`setup.ps1`** | **首次上手向导**（默认**只读**）：打印"到第一回合"的 8 步 ＋ 转给 `doctor.ps1`。`-InitGame <slug>` **建新游戏骨架**（从 `tts\templates\` 生成 `local\games\<slug>\` 的 `STATE/FLOW/MYHAND.md`，并把 `GAME=` 指过去，**先备份** `_current.md`）· 加 `-DryRun 1` 只预览 |
 
 > ### ⭐ 两层是怎么分开的（2026-10-09 落到目录上）
 > **`tts\` = 通用层**（对任何 mod 都成立）：传话 `ttslib`/`ds`/`ttsx`/`say` · 看 `obj_index`/`live_index`/`diff_*` ·
