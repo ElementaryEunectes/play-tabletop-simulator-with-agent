@@ -48,10 +48,20 @@ $rotY = 180
 Write-Host ("move tracker {0} -> x={1} y={2} z={3} rotY={4}" -f $doc.tracker, $x, $y, $z, $rotY)
 if ($DryRun -eq 1) { Write-Host '(dry run)'; exit 0 }
 
+# Position AND the tracker's saved colour, both together. MEASURED 2026-10-11: writing script_state from
+# here DOES stick (the first read-back looked stale only because it was taken too early), and keeping the
+# two in step is what makes the hand-off consistent - the piece says whose turn it is and so does the
+# mod's own bookkeeping. If stateMine/statePlayer are absent (an old calibration file) only the position
+# is written, which still drives our own turn_side.ps1 judgement.
+$col = if ($To -eq 'mine') { [string]$doc.stateMine } else { [string]$doc.statePlayer }
 $lua = 'local o=getObjectFromGUID("' + $doc.tracker + '") if o==nil then print("tr: NO OBJECT") return end ' +
        'o.setPosition({x=' + $x + ',y=' + $y + ',z=' + $z + '}) ' +
-       'o.setRotation({x=0,y=' + $rotY + ',z=0}) ' +
-       'print("tr: moved to z=" .. tostring(o.getPosition().z))'
+       'o.setRotation({x=0,y=' + $rotY + ',z=0}) '
+if ($col -ne '') {
+    $lua += 'o.script_state=JSON.encode({"' + $col + '"}) '
+    Write-Host ("also set script_state to [""{0}""]" -f $col)
+}
+$lua += 'print("tr: z=" .. tostring(o.getPosition().z) .. " state=" .. tostring(o.script_state))'
 $tmp = Join-Path $DshCache 'tr_move.lua'
 [System.IO.File]::WriteAllText($tmp, $lua, (New-Object System.Text.UTF8Encoding($false)))
 

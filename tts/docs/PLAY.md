@@ -36,11 +36,12 @@
 
 ### 哨兵 / 叫醒（细节见 `TTS_RULES.md`；**不跨会话继承**）
 
-- **回合交接（本仓库现行做法，2026-10-11 起）**：
-  - **玩家侧**：按桌上那枚 **Turn Tracker** 的按钮（⛔ 那按钮**本身已失效**：它用 `Player[color].getPlayerHand()`，本机无此方法 —— 玩家可用**拖动棋子**代替，效果一样）；
-  - **我这侧**：`tts\tools\turn_side.ps1` 判"轮到谁"（读坐标 ＋ `cache\<game>_turn.json`）；**交还**用 `tts\tr.ps1 -To player`（**按位置搬棋子**，不碰对方脚本）。
-  - **叫醒**：哨兵 `command` 每 **15 s** 探一次（`pattern=TURN-CHANGED`）⇒ **别轮询**；间隔为什么是这个数 ⇒ `BOOTSTRAP.md` §C。
-  - ⛔ **别再用 `callx`/`Object.call` 驱动别的 mod**（会把 TTS 弄失联）；跨 mod 的雷区全表 ⇒ `VALIDATION.md` F12。
+- **回合交接（本仓库现行做法，2026-10-11 定稿）**：
+  - **玩家侧**：按那枚 **Turn Tracker** 的按钮 ⇒ 它的**颜色簿记会推进**（我们自己读它来确认），但**棋子不会移动**（它算位置那步在本机版本失效 —— 成因 ⇒ `VALIDATION.md` **F13**，别再查）。
+  - **我这侧（交回）**：`tts\tr.ps1 -To player` —— **位置 ＋ `script_state` 双写**（实测一致：回执 `tr: z=-15 state=["Brown"]`）；坐标与两侧颜色取自 `cache\<game>_turn.json`（**唯一真源**）。
+  - **判定**：`tts\tools\turn_side.ps1`（读棋子 `z` 的符号）⇒ 哨兵 `command` 每 **15 s**（实际约 20 s）探一次，`pattern=TURN-CHANGED`；**别轮询**。间隔为何是这个数 ⇒ `BOOTSTRAP.md` §C。
+  - ⛔ **别再用 `callx`/`Object.call` 驱动别的 mod**（会把 TTS 弄失联，两次实测）；⛔ **别在 `messageID 3` 里改别人物件的函数**（会污染它的行为，清理办法见 F13）。
+  - ⚠️ 那枚棋子的 **`Name` 字段必须写着颜色顺序**（本机 `Brown Teal`）—— 这是它**文档要求**的配置；清空会让它按 10 色表轮转、跑到**空座位**。
 - ⛔ **"我点不了那个按钮"的判定与理由只有一处**：`TTS_RULES.md` §四 —— **别处不要再复述**；哪天它能被按下去，只改那一处。
 - 新会话**必须重挂**哨兵（编号每会话不同，先 `sentinel_list`）。
 - 收工：`sentinel_cancel` ＋ kill 后台作业。
