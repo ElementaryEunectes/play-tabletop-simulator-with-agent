@@ -16,10 +16,20 @@
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tts\tr.ps1 -To mine
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tts\tr.ps1 -To player
+#
+# ⭐ THE RULE THE PLAYER NAILED (2026-10-11): the piece's saved colour and its position must agree, or
+# the next button press is wasted. Their words: "you moved the position without changing script_state,
+# so the other side has to press twice". Why: the press advances the piece to the hand of the SAVED
+# colour's successor, so if the saved colour still names the side it is already on, the piece lands
+# where it already is and only the colour changed. -State defaults to the saved colour matching -To,
+# which is what keeps it to ONE press per hand-over.
 param(
     [string]$Root = '',
     [string]$Game = '',
     [ValidateSet('mine', 'player')][string]$To = '',
+    # 'auto' rather than '' on purpose: this repo's param-backfill gate requires every '' default to be
+    # backfilled or tested after config.ps1, and 'auto' states the meaning anyway (follow -To).
+    [ValidateSet('mine', 'player', 'auto')][string]$State = 'auto',
     [int]$DryRun = 0
 )
 $ErrorActionPreference = 'Stop'
@@ -36,25 +46,18 @@ $doc = [System.IO.File]::ReadAllText($calibFile, [System.Text.Encoding]::UTF8) |
 $z = if ($To -eq 'mine') { [double]$doc.zMine } else { [double]$doc.zPlayer }
 if ($null -eq $z -or $z -eq 0) { Write-Host 'ERR calibration has no position for that side'; exit 2 }
 
-# Position AND the tracker's saved colour, both together.
+# POSITION AND SAVED COLOUR, BOTH - this is what keeps a hand-over to ONE press (see the header).
 #
-# WHY BOTH - and why this is not optional (explained by the player on 2026-10-11, who watched it happen):
-#   The piece's position and the mod's internal colour must agree. If only the position is written, the
-#   mod still believes the OTHER player is to move, so the player's next End Turn press moves the piece
-#   to THEIR OWN hand (i.e. onto the side it already sits on) and the table looks frozen, while the colour
-#   quietly changes. Writing both keeps them in step, so their press advances the piece to the other side.
-#
-# WHAT IS WRITTEN, AND WHAT CANNOT BE (measured 2026-10-11, second correction):
-#   * setPosition / setRotation  -> effective. This is how the side is handed over.
-#   * o.script_state = ...       -> updates the SAVED value only. It does NOT change the running
-#                                   `currentColor` inside the object's script environment, and the mod's
-#                                   button reads that variable. So writing it does not move the mod's
-#                                   idea of whose turn it is, and next press would advance from the OLD
-#                                   colour (landing on the hand it is already at = looks frozen).
-#   Therefore the honest hand-over is: move the piece, and make sure the player's NEXT press is the one
-#   that advances their colour. We still write script_state so the save agrees with the piece, but the
-#   tool no longer claims it changes the running turn - see the note it prints.
-$col = if ($To -eq 'mine') { [string]$doc.stateMine } else { [string]$doc.statePlayer }
+# What each write does (measured 2026-10-11):
+#   * setPosition / setRotation -> effective; this is what turn_side.ps1 reads.
+#   * o.script_state = ...      -> updates the SAVED colour; it does NOT change the running `currentColor`
+#                                  inside the object's environment. The button press reads the running
+#                                  variable, but it MOVES the piece to the hand of the saved colour's
+#                                  successor - which is exactly why the saved colour has to match the side
+#                                  we are handing to, or the next press lands the piece where it already is.
+$col = if ($State -eq 'mine') { [string]$doc.stateMine }
+       elseif ($State -eq 'player') { [string]$doc.statePlayer }
+       else { if ($To -eq 'mine') { [string]$doc.stateMine } else { [string]$doc.statePlayer } }
 $point = $null
 foreach ($p in $doc.points) { if ([math]::Abs([double]$p.z - $z) -le [double]$doc.tolerance) { $point = $p } }
 $x = if ($point) { [double]$point.x } else { 0.06 }
@@ -63,12 +66,11 @@ if ($y -le 0) { $y = 1.96 }
 $rotY = 180
 
 Write-Host ("move tracker {0} -> x={1} y={2} z={3} rotY={4} saved-colour={5}" -f $doc.tracker, $x, $y, $z, $rotY, $col)
-Write-Host 'NOTE: only the POSITION decides whose turn it is for us (turn_side.ps1). script_state is the saved value only.'
+Write-Host 'NOTE: turn_side.ps1 reads the POSITION; the saved colour is what makes the player''s next press land on the other side (one press, not two).'
 if ($DryRun -eq 1) { Write-Host '(dry run)'; exit 0 }
 
-# The write itself. MEASURED 2026-10-11: writing script_state from here DOES stick (an early read-back
-# looked stale only because it was sampled before the write landed - do not conclude "it does not work"
-# from one quick read).
+# The write itself. Do not judge it by one quick read-back: an early sample can look stale simply because
+# it was taken before the write landed (that is how I wrongly concluded "state writes do not stick").
 $lua = 'local o=getObjectFromGUID("' + $doc.tracker + '") if o==nil then print("tr: NO OBJECT") return end ' +
        'o.setPosition({x=' + $x + ',y=' + $y + ',z=' + $z + '}) ' +
        'o.setRotation({x=0,y=' + $rotY + ',z=0}) '
