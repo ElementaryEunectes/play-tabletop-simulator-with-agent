@@ -62,6 +62,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
   2026-10-10 实例：`edit` 工具把一份 **LF** 的 `dsh_global.lua` 写成了 **CRLF** ⇒ git 把整个文件算成改写（**2023 行**，
   而真实改动是 15 增 402 删）。`git diff --numstat` 一出现"增删数 ≈ 文件总行数"就是这个病，**改回 LF 再 amend**（见 §4）。
 
+## 1b. 速度：先量再改（**基线 = 一个 PowerShell 进程 271 ms**）
+
+> **什么时候读我**：觉得某个脚本慢 / 要给每回合加命令时。**每多一个进程就是 +271 ms**，比 TTS 往返（~140 ms）更贵。
+
+| 脚本 | 实测 | 备注 |
+|---|---|---|
+| 空 `powershell` 进程 | **271 ms** | 一切开销的地板 |
+| `card.ps1 -Q` | 460 ms | 纯文件查 |
+| `ds.ps1 -Do ping` | 530 ms | ＋一次桥接往返 |
+| `tools\turn_side.ps1` | **620 ms**（改前 1028） | 曾是**子进程**调桥接 ⇒ 改**同进程** |
+| `tr.ps1 -To player` | **~900 ms**（改前 12,921） | 见下面第 2 条陷阱 |
+| `play.ps1 status` | 697 ms | 同进程，但发 3 条命令（ping/players/turn_tracker） |
+
+**两个已修的陷阱（都值得记）**：
+1. ⛔ **别为了调桥接再 spawn 一个 `powershell`**：`tools\turn_side.ps1` 原本这样写 ⇒ **1028 ms**，而它在**轮询器里每 2.5 s 跑一次**（占空比 40%）。
+   正解 = **dot-source `tts\ttslib.ps1` ＋ `tts\lib\bridge.ps1` 就地发**（`play.ps1 status` 与 `tests\live_smoke.ps1` 就是这么写的）⇒ 620 ms，占空比降到 25%。
+   （先 dot-source 再定义 `Fail`/`Err-Code` 两个桩，`Bridge` 的硬错误路径才不会撞空函数。）
+2. ⛔ **别"坐满回执窗口"**：`tools\exec_script.ps1` 原来等满 `ListenSec`（12 s）才收工 ⇒ **`tr.ps1` 要 12.9 s**。改成**收到第一条回执就退出** ⇒ 0.9 s。
+   ⇒ 写"发一条、等回复"的工具时，**默认应当早退**，只在需要多条消息（如 print ＋ sendExternalMessage）时才多等一小会儿。
+3. 📌 一次要发**多条**命令时用 `dsbatch.ps1`（一条进程跑 N 条）。
+
 ## 2. 三个指令槽（**上限写在门禁里，不在这里复述**）
 
 | 槽 | 文件 | 现状 |

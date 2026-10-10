@@ -68,8 +68,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 3b. 🔴 **每个新会话要重建"活件"（最容易漏）**：② **轮询器**（后台作业 `tts\tools\turn_poller.ps1 -IntervalSec 2.5`，
    不跨会话）③ **file 哨兵**（`cache\turn_side.txt`，`pattern=^mine`，**必须显式 `max_fires`**，默认 1 次就没了）。
    ⇒ 步骤与理由 ⇒ `tts\docs\PLAY.md` 回合交接节。
-4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后三块**：**A** `STATE`/`FLOW` 模板（新游戏起手）· **C** `setup.ps1` 向导 · **E** demo ＋ 30 秒录屏（需 TTS）。
+4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后一块**：**E** demo ＋ 30 秒录屏（需 TTS）。
+   ✅ **A** `STATE`/`FLOW`/`MYHAND` 模板 ＋ **C** `tts\setup.ps1` 向导 **已完成（2026-10-11）**。
    判据：陌生人只有**公开仓库 ＋ Windows ＋ TTS ＋ 一个 workshop mod**，能否在**一小时内**打完一回合？
+   ⇒ 时间/成本期望已写进 `README.md` / `README.en.md`（~1–1.5 h，其中教一款 mod 占一半）。
+   🔴 **仍未做**：**冷启动验证**（把仓库 clone 到新目录 ＋ 独立 `$DSH_HOME`，照 README 走一遍）—— 这是把"应该能用"变成"验过能用"的唯一办法。
 5. 🟡 **开源收尾**：`LICENSE`(MIT) ✅ · `README.en.md` ✅ · 路径/隐私 ✅（树里 0 处 `C:\Users\<名字>`）· 离线门禁 **7 条** ✅ ⇒ 剩下"首次上手的时间/成本期望"写进 README 顶部。
 6. ⚪ **平台层不随仓库走**（十几条坑只在 harness home）⇒ 开源用户只有 `tts\docs\MAINTENANCE.md` §0；**"等玩家点结束回合"依赖 DSH 的 sentinel**，换 agent 平台会退化成轮询。
 7. ⚪ **火绒**（环境事实，不是待办）⇒ §9。
@@ -118,6 +121,16 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
+- **2026-10-10 夜 → 10-11 凌晨**（`0158c43` … `f86bd65`，约 20 个提交）：**回合交接定稿 ＋ 一次全面体检**。
+  - **回合交接（最终形态）**：玩家按/拖桌上那枚社区 **Turn Tracker** ⇒ 我读**棋子位置**判"轮到谁"（**每款 mod 一次校准** `tools\turn_calib.ps1` → `cache\<game>_turn.json`）⇒ 我 **`tts\tr.ps1 -To player`** 交还（~0.9 s）。
+    **叫醒** = 常驻作业 `tools\turn_poller.ps1`（2.5 s，变化才写 `cache\turn_side.txt`）＋ **file 哨兵**（`^mine`，<1 s）⇒ 检测 **~0.5-3.3 s**；**平台投递另加 ~23 s（不在我们手里）**。
+    ⚠️ **每个新会话要重建这两个活件**（轮询器是后台作业、哨兵 `max_fires` 必须显式给）⇒ `PLAY.md` 回合交接节。
+  - **四条死路（都实测，别再试）**：① `callx`/`Object.call` 驱动别的 mod ⇒ **TTS 失联两次，从未修复**；② `messageID 3`（官方 External Editor API）**安全但跑在空环境**（读不到物件私有变量、返回值不回）；③ 外部写 `o.script_state` **只生效一瞬、被它的 `onSave` 覆盖**；④ 改它的 `Name` 只影响**轮转范围**。⇒ 结论：**位置是唯一判据**；玩家可能要**按两次**才换边（玩家已接受）。全表 ⇒ `VALIDATION.md` **F12/F13**。
+  - **上下文瘦身**：每请求注入 **11.4 KB → 5,047 B**（平台宪章 3,950→2,217 B，三份合计硬指标 **<5 KB**）⇒ 平台宪章新增三条纪律（有现成答案就别蛮干 · "社区"含生态/插件市场 · 先质疑载体 ＋ 事实来源优先级）。
+  - **开源就绪**：`play.ps1` 在**没有控制层**时也能给通用 `status`（桥接版本/物件数/在位玩家/轮到谁）· `setup.ps1` ＋ `tts\templates\` 建新游戏骨架 · README 写清首次上手成本 · **`local\` 321 MB → 3 MB**（删废弃插件评估副本与 npm 缓存）· 仓库顶层两个垃圾文件已删。
+  - **速度**（实测基线：**一个 PowerShell 进程 = 271 ms**）：`turn_side.ps1` 1028→**620 ms**（改**同进程**调桥接；轮询器占空比 40%→25%）· `tr.ps1` 12.9 s→**0.9 s**（原在**空等回执窗口**）。
+  - **活体检验**：新增 `tts\tests\live_smoke.ps1`（17 条**只读**命令逐条 PASS/FAIL）⇒ **17/17**。离线门禁证明不了"命令在活体上能不能用"。
+  - **文档合并**：`TTS_WORKFLOW.md` 并入 **`TTS_RULES.md`**（42,480 → **31,727 B**）⇒ 修掉 3 个**已不存在**的脚本引用（`overview`/`alt_activate`/`star_find`）＋ 3 处过时说法（STATE 路径 · `play.ps1 turn` 的适用条件）。⚠️ 实测只省 **~3.4k tok**，**不是**我先估的 20k。
 - **2026-10-08**：脚本全修（BOM ＋ 真解析器 ×28）· 效率（`play.ps1 turn` 1.5s · `say.ps1` 单进程 · `AGENTS.md` 瘦身）· 官方规则书落地（`Custom_PDF` → Node 下载 → 抽页 → 索引）· 门禁与离线自测入库 · 平台层迁出仓库。
 - **2026-10-09 场 1**（`d2971a8` … `adfc650`）：`nick` 纳入差分 · **回合令牌 Lua（`v13-turntoken`）** · `INJECTION.md` · 三槽去重 · 门禁改"文件输出 ＋ 成功标志" · 记下"六个门禁要在受限模式下跑"的目标。
 - **2026-10-09 场 2**（`6e643c1` · `e22911d` · `2f7e5cd` · `1664441` · `ba6135d` · `98dfab2`）：
