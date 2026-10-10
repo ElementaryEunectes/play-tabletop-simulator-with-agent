@@ -36,8 +36,17 @@ $doc = [System.IO.File]::ReadAllText($calibFile, [System.Text.Encoding]::UTF8) |
 $z = if ($To -eq 'mine') { [double]$doc.zMine } else { [double]$doc.zPlayer }
 if ($null -eq $z -or $z -eq 0) { Write-Host 'ERR calibration has no position for that side'; exit 2 }
 
-# x / y / rotY: take them from the calibration when present, else use the measured defaults for the
-# table this was calibrated on. Kept here (not in the JSON) so an old calibration file still works.
+# Position AND the tracker's saved colour, both together.
+#
+# WHY BOTH - and why this is not optional (explained by the player on 2026-10-11, who watched it happen):
+#   The piece's position and the mod's internal colour must agree. If only the position is written, the
+#   mod still believes the OTHER player is to move, so the player's next End Turn press moves the piece
+#   to THEIR OWN hand (i.e. onto the side it already sits on) and the table looks frozen, while the colour
+#   quietly changes. Writing both keeps them in step, so their press advances the piece to the other side.
+#
+# The colour is read from the calibration (stateMine / statePlayer) rather than recomputed, so this stays
+# a lookup. An old calibration file without those fields still works: only the position is written.
+$col = if ($To -eq 'mine') { [string]$doc.stateMine } else { [string]$doc.statePlayer }
 $point = $null
 foreach ($p in $doc.points) { if ([math]::Abs([double]$p.z - $z) -le [double]$doc.tolerance) { $point = $p } }
 $x = if ($point) { [double]$point.x } else { 0.06 }
@@ -45,15 +54,12 @@ $y = if ($point) { [double]$point.y } else { 1.96 }
 if ($y -le 0) { $y = 1.96 }
 $rotY = 180
 
-Write-Host ("move tracker {0} -> x={1} y={2} z={3} rotY={4}" -f $doc.tracker, $x, $y, $z, $rotY)
+Write-Host ("move tracker {0} -> x={1} y={2} z={3} rotY={4} colour={5}" -f $doc.tracker, $x, $y, $z, $rotY, $col)
 if ($DryRun -eq 1) { Write-Host '(dry run)'; exit 0 }
 
-# Position AND the tracker's saved colour, both together. MEASURED 2026-10-11: writing script_state from
-# here DOES stick (the first read-back looked stale only because it was taken too early), and keeping the
-# two in step is what makes the hand-off consistent - the piece says whose turn it is and so does the
-# mod's own bookkeeping. If stateMine/statePlayer are absent (an old calibration file) only the position
-# is written, which still drives our own turn_side.ps1 judgement.
-$col = if ($To -eq 'mine') { [string]$doc.stateMine } else { [string]$doc.statePlayer }
+# The write itself. MEASURED 2026-10-11: writing script_state from here DOES stick (an early read-back
+# looked stale only because it was sampled before the write landed - do not conclude "it does not work"
+# from one quick read).
 $lua = 'local o=getObjectFromGUID("' + $doc.tracker + '") if o==nil then print("tr: NO OBJECT") return end ' +
        'o.setPosition({x=' + $x + ',y=' + $y + ',z=' + $z + '}) ' +
        'o.setRotation({x=0,y=' + $rotY + ',z=0}) '

@@ -1,4 +1,4 @@
-# VALIDATION.md —— 通用性验证台账（**"对任何 TTS mod 都成立"这句到底验到哪了**）
+﻿# VALIDATION.md —— 通用性验证台账（**"对任何 TTS mod 都成立"这句到底验到哪了**）
 
 > **什么时候读我**：① 你要在文档/README 里写一句"通用"时；② 你要动 `play.ps1` / `dsh_global.lua` / `bootstrap.ps1` 时；
 > ③ 有人问"这个工具链真能用在别的 mod 上吗"。
@@ -142,6 +142,13 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 **修法（它自己文档写明，无需改脚本）**：把**颜色顺序填进它的 `Name` 字段**（描述原文："enter the colors, capitalized and separated by spaces"）＋ **让玩家按一次**让它初始化 `currentColor`。
 实测：`setName("Brown Teal")` ＋ 玩家按一次 ⇒ `currentColor='Brown'`、`script_state='["Brown"]'`、**按钮恢复移动**。
 📌 **副作用教训**：我为了"外部代按"曾用 `messageID 3` **在它的运行环境里重定义** `placeToken`/`findNextPlayerColor`/`moveTurn` —— 那会**污染它的正常行为**（它随后打印 `placeToken: no known position for color=Red/...`）。清理办法 = 把**存档里的原始函数源文**重新执行一遍（`tts\tools\exec_script.ps1` ＋ 从 `LuaScript` 抽出的原文）⇒ 已复原（`RESTORED originals`）。
+
+📌 **后续定案（2026-10-11 02:1x，玩家观察直接推翻了我的"位置功能失效"结论）**：
+玩家描述的现象解释了一切 —— "**只改位置**时，我按一下：`teal→brown`，棋子挪到 **brown 的手牌位置 = z=−15**，看起来像没变；再按一下：`brown→teal`，挪到 **z=+15**"。
+⇒ **它的位置功能是好的**；问题是**位置与内部颜色错位**（我早先只用 `setPosition` 交回、没写 `script_state`）。
+⇒ **正解 = 位置 与 `script_state` 一起写**（`tts\tr.ps1 -To mine|player`，双写后回执 `tr: z=-15 state=["Brown"]`，三项读数一致）。
+⇒ **教训**：① 我第三次在这个会话里"太早下结论"（先是 `getPlayerHand` 缺失、再是"写状态不生效"、再是"位置功能失效"）—— 三次都**被一次同刻读数推翻**；② **改别人物件的"半边"状态**（只改位置/只改颜色）会制造"看起来没反应"的假象，**必须整组一致**。
+🔧 **体检工具**：`tts\tools\tracker_read.lua`（配 `exec_script.ps1`）一次读出 `POS / SAVED_STATE / LIVE_COLOR / LOCKED / NAME` —— **三项同侧即一致**。
 
 **F7 · 桥接原语的"活体"部分**（`🟡` 部分完成，2026-10-09）
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ 每条都得**重烤后真跑一次**。
