@@ -175,6 +175,11 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 **「TTS 进程活着，但 39999 这个 API 端口关了」**，不是"进程崩了"。最可能：**存档被卸载/退回菜单**，或那次重载之后 API 没重开。
 ⇒ 修法：**在 TTS 里确认 External Editor 开着**，或**重启 TTS 并重新载入存档**；回来先 `ds.ps1 -Do ping`。
 📌 **那次哨兵触发是延迟投递**：它描述的是 `03:44:29` 的 `player→mine` 边沿（第 1/500 次），收到时 `cache\turn_side.txt` **已被另一会话删掉** ⇒ **没有可交还的回合**，也不重挂（链路要等 TTS 回来重建）。
+🔁 **API 会"开合"，别当成二值状态**（2026-10-11 03:51–03:52 实测）：`03:51:23` `39999` **LISTENING** 且 `ping` 回 `v16-tracker-guid`（同一 TTS 进程，PID 28632）；
+紧接着我发了一条**完整信封**的 `turn_tracker`（`guid=deadbeef`）⇒ `no reply in 25s`，再测就 `ERR TTS unreachable`，`netstat` 只剩 TIME_WAIT/CLOSE_WAIT。
+同一时间 `Player.log` 尾部是**成片的 `Curl error 56: Recv failure: Connection was reset`**，并以 **`Curl error limit reached: 100 consecutive messages printed`** 收尾（03:51:19 之后不再增长）。
+⚠️ **两次"发探测 ⇒ 随后不可达"都撞在一起**（03:44 那次是**缺 `customMessage` 的信封**，03:51 这次是**完整信封**）⇒ **相关性有，因果未证**：更合理的解释是**该 mod 的素材下载一直被重置、主线程卡住**（命令收下了但没人处理 ⇒ 正是 `no reply in 25s` 的形状）。
+⇒ 处理办法：**别再连发**，改用 **port 哨兵盯 `39999`**（开了才动手）；人那边看 TTS 是不是卡住/图片加载失败。
 ⚠️ **它同时定案了快链引入的一个真缺陷**：**39998 只有一个槽**，而轮询器每 2.5 s 探一次 ⇒ 它每一轮都占这个槽一小片，
 于是**交接**（`tr.ps1`/`exec_script.ps1`）会撞 `listener busy`；缓解 = 把绑定重试从 3 次提到 **6 次/~10 s**（已提交），
 **真正的修法**是"**一个常驻进程独占 39998、其它人走它**"（⇒ `PRIOR_ART.md` 的 hub 方案），不是继续加 retry。

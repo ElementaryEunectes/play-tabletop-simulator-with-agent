@@ -125,6 +125,11 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
+- **2026-10-11 03:5x · 🔁 桌面交接**：**原会话（跑对局那个）上下文满了 ⇒ 本会话接管那台桌面**。
+  接手时的状态：**TTS 的 API（39999）在反复开合**（`03:51:23` 还 `ping = v16-tracker-guid`，随后 `no reply in 25s` ⇒ `ERR TTS unreachable`；同一 TTS 进程，`Player.log` 里 `Curl error 56 … reset` 满 100 条 ⇒ `VALIDATION.md` **F14**）。
+  ⇒ 已挂 **port 哨兵盯 `39999`**（`watch-2`，开了才动手，**不再连发探测**）；链路（轮询器 ＋ file 哨兵）**等 API 稳定后再重建**（步骤 ⇒ `tts\docs\PLAY.md` 回合交接节）。
+  ⚠️ 两条硬规矩继续有效：**同一时刻只有一个会话驱动桌面**；**动手前先 `git log`／`sentinel_list`**（上一轮两个会话就撞过同一个回合）。
+
 - **2026-10-11 凌晨（第三轮 · 归档 ＋ 重烤 v16）**：
   - 📦 **归档**（用户拍板）：`read_turn.ps1`（批量替换事故的残骸；**运行期**坏、`check_ps1` 查不出来）与 `front_watch.ps1`（某一局专用的前台横幅链）**移进 `~\.dsh\archive\tts-legacy\`**（SHA256 对拍一致）＋ `git rm`；`cache\front.txt` 从此没有生产者。指针同步 6 处：`MAINTENANCE` §5 那行 ＋ 跨脚本引用图 · `VALIDATION` L13/F4 · `BOOTSTRAP` §1 E · `TTS_RULES` §三 · `docs\README` 的 `cache\` 行 · 本文件 §4 第 8 条。
   - 🔌 **重烤出 `TS_Save_18.json`**（显示名 = **该局游戏名 ＋ `-v16`**，具体值 ⇒ 该局 `STATE.md`；源 = 最新自动存档；`-KeepLua -KeepTabs`，13 页笔记本原样、DSH 频道页已在）：桥接升到 **`v16-tracker-guid`** —— `turn_tracker` 现在接受调用方给的 `guid`（`turn_side.ps1` / `play.ps1 status` 传 `cache\<game>_turn.json` 的 `tracker`），烤进去的常量只兜底 ⇒ **读的那件 = `tr.ps1` 写的那件**。产物校验：`v16-tracker-guid` 命中、旧 `v15-tags-snap-hand` **0 处**、tracker guid 仍在。
