@@ -44,8 +44,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
       ⇒ 现象 · 三次尝试 · 为什么值得停止 ⇒ **`tts\docs\VALIDATION.md` F10**（按"未解＋未验证"如实记账，别重走）。
    ⚠️ **那次 `spawn` 探测把 TTS 打挂了**（探测前 ping 正常，之后 API 直接不可达、进程还占着 `Player.log`）
       ⇒ **以后一条一条探**，别连着发。
-   ▶ **下一步**：① **重载 17 号**（本轮彻查后的桥接要载入才生效：令牌/记账/埋点都删了，只留 `turn_tracker`）；
-      ② 接着玩时按 `PLAY.md` 的回合流程走（回合交接 ⇒ 本文件 §7.9 的校准 ＋ 哨兵）。
+   ▶ **下一步**：✅ **已完成（2026-10-11）**——17 号已重载，`ping` 回 `v15-tags-snap-hand`（objs=118）、`turn_tracker` 可用；回合交接按 `PLAY.md` 的**快链**走。
    🧹 **2026-10-10 彻查删除**（本轮实验的产物，一律不留在代码里）：`turn_token` · `token_plain` · `spawn_step` ·
       `turn_end` · `turn_get` · `turn_state` · `DSH_TURN_N`/`DSH_STATE` · `__spawn_trace`/`__spawn_last`；
       另删工具 `bake_token.js` / `insert_token.js` / `compare_index.js` / `script_anatomy.js` /
@@ -60,11 +59,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
    🟢 这一路**全过**（传话 · 存档侧索引 · 认物 · 地图）。🔴 但 **`play.ps1` 在这款上 FAIL**（`NO PART`：它要 `cache\<game>_rules.json` 且 `status` 也走 `$Rules.dice/seats`）⇒ **这条缺陷已写进 `TTS_RULES.md` §二 方框**；"通用"目前**只是这一路证据，不是全链证据**。
    📌 学到的两条：① **`obj_index.ps1 -File` 要绝对路径**（相对 cwd 解析，给裸文件名会报 not found）；② 这类 mod 把教学写在 **Notecard** 上（地图有专门一节 ⇒ 开局先读它，再写 `FLOW.md`）。
    ⛔ 仍然**不要**为了验证去造假的第二款游戏（fixture 只验"数据不在代码里"这条契约）。
-2. 🔴 **重烤存档 ⇒ 一次活体验收（仍未做）**：**F8 那 4 条**（见 §4 第 0 条）＋ **回合令牌 `v15-tags-snap-hand`**（⇒ **§7.9**）。
-   两件事都已在 `TS_Save_10.json` 里，所以要**一起去验**（要 TTS 在跑 ＋ 玩家重载存档）。⛔ 重烤前那 4 条一律按**活体不可用**对待。
-3. 🟡 **游戏侧**（⛔ **不是"5 条规则冲突"** —— 那句过时了）：本局（第二款 mod）的真实目的是**验证工具链**，
-   规则/座位/图卡都写着**不必做** ⇒ 唯一剩下的真待办 = **建卡库 `cache\<游戏>_cards.md`**（数据现成：
-   `container:<牌堆guid>` 的 `description` 就是整张牌面；列格式 ⇒ `tts\card.ps1`）。⇒ 细节见 `local\games\<游戏>\STATE.md`（⛔ 不进仓库）。
+2. ✅ **重烤 ＋ 活体验收已完成（2026-10-11）**：载入 `TS_Save_17.json` 后逐条真跑 —— `ping` = `v15-tags-snap-hand`
+   （objs=118）· `players` ⇒ `ok count=2`（`Brown|Player 1`、`Teal|Player 2`）· `take`/`destroy` 失败路径正常 ·
+   `spawn:copy` 正常 · `turn_tracker` 可用 · `container:` 可列牌。⇒ 详见 §4 第 0 条与本文件 §7.9。
+3. 🟡 **游戏侧**：本局（第二款 mod）的目的是**验证工具链** ⇒ 规则/座位/图卡标着**不必做**。
+   ✅ **卡库已建成**（`cache\<游戏>_cards.md`，**171 张**，`tts\card.ps1 -Q <牌名>` 可查；生成器 `tts\tools\build_cards.js`）。
+   ⇒ 这一局**已无真待办**；哪天真要打，按 `local\games\<游戏>\FLOW.md` §5 逐条问玩家。
+3b. 🔴 **每个新会话要重建"活件"（最容易漏）**：② **轮询器**（后台作业 `tts\tools\turn_poller.ps1 -IntervalSec 2.5`，
+   不跨会话）③ **file 哨兵**（`cache\turn_side.txt`，`pattern=^mine`，**必须显式 `max_fires`**，默认 1 次就没了）。
+   ⇒ 步骤与理由 ⇒ `tts\docs\PLAY.md` 回合交接节。
 4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后三块**：**A** `STATE`/`FLOW` 模板（新游戏起手）· **C** `setup.ps1` 向导 · **E** demo ＋ 30 秒录屏（需 TTS）。
    判据：陌生人只有**公开仓库 ＋ Windows ＋ TTS ＋ 一个 workshop mod**，能否在**一小时内**打完一回合？
 5. 🟡 **开源收尾**：`LICENSE`(MIT) ✅ · `README.en.md` ✅ · 路径/隐私 ✅（树里 0 处 `C:\Users\<名字>`）· 离线门禁 **7 条** ✅ ⇒ 剩下"首次上手的时间/成本期望"写进 README 顶部。
@@ -95,9 +98,11 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 - **唯一真源**：`cache\<game>_turn.json`（含 `tracker` guid · 两个落点 · 哪个 z 是"我" · **定这条的原始证据**）。
 - **回合流水**（第几回合）记在 **`local\games\<游戏>\STATE.md`** —— 那是这一局状态的唯一真源，**不另开计数器**。
-- **回合交接**：`tts\tools\turn_calib.ps1 -Discover` → `-Answer mine|player`（写 `cache\<game>_turn.json`，含证据）· 运行时判定 `tts\tools\turn_side.ps1`（哨兵用它）· **交还** `tts\tr.ps1 -To player`。
-  ⚠️ **不要驱动那件工具自己的回合机**：桌上那枚社区 Turn Tracker 用 `Player[color].getPlayerHand()`（**本机 v14.2.2 已无此方法**）⇒ **玩家手按它也不动**（已由玩家确认）⇒ 改用**位置写入**（`tr.ps1`）。跨 mod 驱动的雷区与全表 ⇒ `VALIDATION.md` F12。
-  ⚠️ **哨兵间隔**：本机实测 **15 s 可用（实际约 20 s/次）**，**5 s 会被饿死**（详见 `BOOTSTRAP.md` §C 的哨兵限制）。
+- **回合交接**：`tts\tools\turn_calib.ps1 -Discover` → `-Answer mine|player`（写 `cache\<game>_turn.json`，含证据）· 运行时判定 `tts\tools\turn_side.ps1` · **交还** `tts\tr.ps1 -To player`（~0.9 s）。
+  ✅ **那枚 Tracker 自己是好的**（2026-10-11 玩家实测）：按一下 ⇒ 颜色前进 ＋ 棋子挪到那位的手牌位置。
+  ⛔ 我先前写"它用已删除的 `getPlayerHand()` ⇒ 玩家手按也不动" —— **错**（那个方法**存在**）；真因是它 **`Name` 字段为空**（⇒ `currentColor` 为空 ⇒ 找不到下一个颜色）。
+  ⚠️ **我们改不了它的颜色**（四条路试尽：`callx` 弄挂 TTS · `messageID 3` 空环境 · 写 `script_state` 被 `onSave` 覆盖 · 改 `Name` 只管轮转范围）⇒ **位置是唯一判据，可能要点两次才换边**（玩家已接受）。全表 ⇒ `VALIDATION.md` F13。
+  ⚡ **检测用 file 快链**（`turn_poller.ps1` 2.5 s ＋ file 哨兵 inotify ⇒ **~0.5-3.3 s**）；⛔ 旧的 `command` 哨兵实际 **~20 s** 一次，别再用（⇒ `BOOTSTRAP.md` §C）。
 - ⛔ 判定错了 ⇒ **重跑 `-Discover` ＋ `-Answer`**，**不许**改代码里的数字或用坐标反推（脚本头部有这条）。
 
 
