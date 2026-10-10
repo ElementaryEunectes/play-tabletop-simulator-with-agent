@@ -69,21 +69,30 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 - 平台 ×17 条坑 ＋ 上下文注入与隔离 ⇒ **`platform\MAINTENANCE.md`**（旧编号 §6.8/§6.9 = 那里"校验器阳性对照"两条）。
 - **TTS 桌子本身的开销**（2026-10-09 实测）：重桌子在**后台**仍烧 GPU（647 物件 ≈**73%** vs 空桌 ≈10%）⇒ 拖慢**整机输入**（连记事本都卡，而 CPU 只 10–20%）。修法 = 驱动「**后台应用程序最大帧速率**」20 fps，⚠️ **要重启 TTS 才套用**（不重启 73→73；重启后 73→**11%**）。**用嘴代替手**：DSH **自带**实验性语音输入 `@deepseek-ai/dsh-experimental-voice-input-bundle`（客户端麦克风按钮 ＋ SenseVoice STT）。两条都写在 **`tts\docs\USER_GUIDE.md` §5 常见问题**（面向人，本文件不复述步骤）。
 
-## §7.9 回合令牌验收（`v15-tags-snap-hand`，**已烤进存档、待验**）
+## §7.9 回合记录（`turn_end` / `turn_get`，**不再依赖可点物件**）
 
-桥接 Lua 已加 `turn_token`/`turn_state`（自制可点令牌：点一下把回合号写进**昵称** ⇒ `diff_index.ps1` 现在也差 `nick`）。
-`dsh_global.lua` 是**烤进存档**的 ⇒ 需 `install_save2.ps1` 重装 ＋ **请玩家重载**，然后逐条验：
+**⭐ 载体换了**（2026-10-10）：回合数**不再挂在桌上的物件上**，而是**桥接脚本的全局变量**（`DSH_TURN_N` ＋ `DSH_STATE` 字符串，`onLoad` 恢复）。
+理由：物件那条路每一步都在跟 TTS 对抗，而且"记录回合"是**对任何 mod 都成立**的能力、不该绑在一次性载体上 ⇒ 四条硬事实与完整踩坑记录在 **`tts\docs\VALIDATION.md` F11**。
 
-1. `{cmd="ping"}` 的 `v` = **`v15-tags-snap-hand`**（否则存档没重装成功）。
-2. `{cmd="turn_token"}` ⇒ `ok=true` · `created=true` · 记下 `guid`；**再跑一次**应 `created=false`（幂等）。
-3. 玩家**点一下** ⇒ `{cmd="turn_state"}` 的 `turn` **0→1**、`nick` = `DSH-TURN 1`。（`call…fn="dshBump"` 只验我自己的簿记；mod 的回合机另说。）
-4. `diff_index.ps1 -Snapshot` → 点一次 → 再跑 ⇒ 出现 **`NICK (昵称变化)`** 段且 SUMMARY 含 `nick=1`。
-5. **对照**：TTS 切后台再点 ⇒ 令牌状态**照样读得到**（`front.txt` 此时读不出 `TURN`）。
-6. 任一条不符 ⇒ 记下 `turn_state` 的**原始返回**与 TTS `Console` 的 Lua 报错，**别猜**。
+```powershell
+tts\ds.ps1 -Do turn_end        # 记一回合（+1）
+tts\ds.ps1 -Do turn_get        # 读回：turn=N、state 里带记录时间
+tts\ds.ps1 -Do turn_state      # 同上 ＋ 桌上那块装饰件的信息（有就报，没有也照样 ok）
+```
+
+| 判据 | 期望 |
+|---|---|
+| `turn_end` 两次 | `turn=1` → `turn=2`（**每次调用都记**，不依赖点中什么） |
+| `turn_get` 的 `state` | 形如 `{"turn":2,"at":"22:4x:xx","day":"2026-10-10"}` ⇒ **能看出最后一次记录的时间** |
+| 重载后再 `turn_get` | 回到**存档里存过的那个数**（`DSH_STATE` 随存档走） |
+| 「玩家点一下」这件事 | 仍可用 `token_plain` 造一块装饰件（按钮是 `createButton`，朝向已修）；**点没点中都不影响记账** |
+
+⛔ 已作废：`turn_token`（运行时 `spawnObject` 那条）—— 会弹「自定义板块」模态窗、造出的件在重载后消失。保留但**不要依赖**。
+
 
 ## §8 每请求注入（摘要；机制/预算/安装 ⇒ `tts\docs\INJECTION.md`）
 
-平台宪章 **3,950** ＋ 项目 `AGENTS.md` **3,539** ＋ 本机 `AGENTS.local.md` **1,787** ＝ **≈9.3 KB/请求**（2026-10-09 瘦身：**原 10.5 KB**，省 **1,178 B**）；
+平台宪章 **5,259** ＋ 项目 `AGENTS.md` **3,539** ＋ 本机 `AGENTS.local.md` **1,787** ＝ **≈10.6 KB/请求**（2026-10-09 瘦身省 1,178 B；2026-10-10 加两条平台纪律 +1,309 B ⇒ 净 **≈9.3→10.6 KB**）。
 瘦身的做法 = **凡"门禁已经守着"的判定，注入里不再复述**（火绒修法/profile/`start.cmd`/路径纪律/`param` 版式 ⇒ 只留指针，细则进 `MAINTENANCE.md` §0 · `INJECTION.md` §4 · `USER_GUIDE.md`）。
 ⚠️ 两条硬约束：**`instruction hygiene` 会抓**"承载性指针被删"（本次真抓到 `check_ps1.ps1` 被删）＋ **`AGENTS.local.md` ≤ 4096 B**。
 发布时**不用手打**：`start-agent.ps1` 的一行 `$ProjectDshProfile`（或 `-DshProfile tts-agent`；⚠️ **不是** `dsh tts-agent web`）⇒ **≈5.7 KB**。机制/目录结构/装法 ⇒ **`tts\docs\INJECTION.md` §4 方案 A′**。

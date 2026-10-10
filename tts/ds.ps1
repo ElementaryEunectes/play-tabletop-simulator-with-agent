@@ -159,6 +159,15 @@ switch -Regex ($Do) {
         $cm = @{ cmd = 'token_plain' }
         if ($Matches[1]) { $cm.x = $Matches[1]; $cm.y = $Matches[2]; $cm.z = $Matches[3] }
     }
+    # turn_end[:N]  -> record a turn in the GLOBAL script (no object involved; survives reloads)
+    # turn_get      -> read the recorded turn + when it was recorded
+    # turn_state    -> the same numbers, plus the optional table piece as decoration
+    '^turn_end(?::(\d+))?$' {
+        $cm = @{ cmd = 'turn_end' }
+        if ($Matches[1]) { $cm.turn = $Matches[1] }
+    }
+    '^turn_get$'   { $cm = @{ cmd = 'turn_get' } }
+    '^turn_state$' { $cm = @{ cmd = 'turn_state' } }
     # spawn_step                               -> the second half of `spawn:type` (see DSH_spawnStep:
     #   spawnObject stops the bridge thread, so the reply goes first and the piece is built here)
     '^spawn_step$' { $cm = @{ cmd = 'spawn_step' } }

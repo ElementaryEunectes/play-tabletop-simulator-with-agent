@@ -27,6 +27,40 @@
 -- to use the override; without it the code below falls back to ".".
 DSH_DIR = DSH_DIR or nil
 
+-- ============================ TURN RECORD (no object involved) ============================
+-- The turn count lives HERE, in the Global script, not on a piece on the table.
+--
+-- WHY (2026-10-10, after a long detour that this comment exists to prevent repeating):
+--   * the count has to survive between commands -> a Lua global does exactly that, since every
+--     message runs in the same Global environment (the F8 investigation had already proved this with
+--     its __spawn_trace markers);
+--   * every attempt to carry it on an OBJECT failed for a different reason: spawnObject on a custom
+--     type always opened TTS's "自定义板块" dialog and blocked the thread; objects baked into the save
+--     were dropped by TTS at load (four guids, all gone); clone() works but inherits the source's
+--     script_state; and the piece still disappears on every reload because it is created at runtime.
+--   * "record a turn" is a capability true of ANY mod, so it belongs in the generic layer - the
+--     clickable token is per-session decoration and must not be load-bearing.
+-- Durability: DSH_STATE is a JSON string carried in this same Global script, so it rides along with
+-- whatever save the player loads. onLoad restores it. One turn recorder, one place to read it.
+DSH_TURN_N = DSH_TURN_N or 0
+DSH_STATE  = DSH_STATE  or ""
+
+-- Advance (or set) the turn and re-serialise the state string. Everything that records a turn goes
+-- through here so there is a single writer.
+local function turnCommit(n)
+    local want = tonumber(n)
+    if want == nil then want = (tonumber(DSH_TURN_N) or 0) + 1 end
+    DSH_TURN_N = want
+    local ok, enc = pcall(function()
+        return JSON.encode({ turn = want, at = os.date("%H:%M:%S"), day = os.date("%Y-%m-%d") })
+    end)
+    if ok and type(enc) == "string" then DSH_STATE = enc end
+    if type(broadcastToAll) == "function" then
+        pcall(broadcastToAll, "[DSH] turn " .. tostring(DSH_TURN_N) .. " recorded")
+    end
+    return DSH_TURN_N
+end
+
 function onLoad()
     -- broadcastToAll does not exist in this sandbox (see diag), so guard it instead
     -- of raising an error on every load. It is kept for builds that do have it.
@@ -34,6 +68,11 @@ function onLoad()
         pcall(broadcastToAll, "[DSH] command layer loaded")
     end
     DSH_LOADS = (DSH_LOADS or 0) + 1
+    -- Restore the turn count from the state string this script carries (see the block above).
+    if type(DSH_STATE) == "string" and DSH_STATE ~= "" then
+        local ok, t = pcall(function() return JSON.decode(DSH_STATE) end)
+        if ok and type(t) == "table" and tonumber(t.turn) then DSH_TURN_N = tonumber(t.turn) end
+    end
     -- The XML panel is NOT drawn on load: setUI is absent in this sandbox, and the
     -- notebook (tab 12) is the dialogue channel now.
 end
@@ -1874,18 +1913,19 @@ end
 TURN_TOKEN_NAME = "DSH-TURN"
 
 TURN_TOKEN_LUA = [==[
+-- A CLICKABLE TOKEN FOR A MOD THAT HAS NO TURN TRACKER OF ITS OWN.
+--
+-- WHY THE UI BUTTON, NOT onClick (measured 2026-10-10): the previous version hooked the Object
+-- onClick event and never fired, while this mod's own clickable pieces - a hand-counter Custom_Token
+-- is the one on this table - carry XMLUI buttons and zero onClick handlers (5 object scripts scanned:
+-- onClick count 0). TTS's plain onClick on a tile with no UI is not the delivery this table uses.
+-- The button writes into a UI variable, onValueChanged calls dshBump, and dshBump also flips the tile
+-- and broadcasts, so a click is visible on the table as well as readable from the bridge.
 dshN = 0
 function onSave() return JSON.encode({ n = dshN }) end
-function onLoad(saved)
-    dshN = 0
-    if saved and saved ~= "" then
-        local ok, t = pcall(function() return JSON.decode(saved) end)
-        if ok and type(t) == "table" and tonumber(t.n) then dshN = tonumber(t.n) end
-    end
-    dshRepaint()
-end
 function dshRepaint()
     pcall(function() self.setNickname("DSH-TURN " .. tostring(dshN)) end)
+    pcall(function() self.setVar("turnLabel", "TURN " .. tostring(dshN)) end)
 end
 function dshBump()
     dshN = dshN + 1
@@ -1899,22 +1939,65 @@ function dshBump()
     end
     return dshN
 end
+function onLoad(saved)
+    dshN = 0
+    if saved and saved ~= "" then
+        local ok, t = pcall(function() return JSON.decode(saved) end)
+        if ok and type(t) == "table" and tonumber(t.n) then dshN = tonumber(t.n) end
+    end
+    self.createButton({
+        click_function = "dshOnClick", function_owner = self, label = "END TURN",
+        -- ⚠️ The token sits at rotZ 180 (flipped onto its face), so a button at {0, 0.6, 0} with no
+        -- rotation ends up on the UNDERSIDE with mirrored text - the player's screenshot showed exactly
+        -- that. Rotate it 180 about Z so the label reads correctly on the surface they can see and click.
+        position = { 0, 0.6, 0 }, rotation = { 0, 0, 180 }, width = 500, height = 260,
+        font_size = 120, color = { 0.16, 0.16, 0.16 }, font_color = { 1, 1, 1 },
+    })
+    dshRepaint()
+end
+function dshOnClick(obj, color, alt)
+    dshBump()
+end
+-- kept as a fallback: if this table does deliver plain clicks, they count too
 function onClick(player_color) dshBump() end
 ]==]
+
+-- Read a property of an object: try the ACCESSOR first, then the MEMBER VARIABLE.
+--
+-- The official Object page settles both traps this file hit (api.tabletopsimulator.com/object):
+--   * `name` is "Internal resource name ... generally, you want getName()" - so the raw field holds
+--     "Custom_Token"/"Custom_Tile" and the DISPLAY name only comes from getName();
+--   * there is no getNickname() at all - `nickname` is a member variable. TTS answers a call to the
+--     missing method with "cannot access field getNickname of userdata<LuaObject>", which reads like
+--     a value if you let it through.
+-- So: accessor, then variable, and never hand back an accessor's error text.
+local function prop(o, method, field)
+    local ok, v = pcall(function() return o[method]() end)
+    if not ok then v = nil end
+    if v == nil or tostring(v) == "" then
+        local ok2, f = pcall(function() return o[field] end)
+        if ok2 and f ~= nil then v = f end
+    end
+    if v == nil or (type(v) == "string" and v:find("cannot access field")) then return "" end
+    return tostring(v)
+end
+
+-- Marker stored on the token's DISPLAY name (getName) and, because TTS has no nickname accessor, its
+-- `nickname` member too. Either one matching is enough.
+local function isTokenName(s)
+    if s == nil then return false end
+    s = tostring(s)
+    return s ~= "" and s:sub(1, #TURN_TOKEN_NAME) == TURN_TOKEN_NAME
+end
 
 local function findTurnToken()
     local all = getObjects()
     if type(all) ~= "table" then return nil end
     for _, o in ipairs(all) do
-        local k, nm = "", ""
-        pcall(function() k = tostring(o.getNickname()) end)
-        pcall(function() nm = tostring(o.getName()) end)
-        -- PREFIX match on both, not equality on the name. WHY (measured 2026-10-09): turnToken calls
-        -- o.setName("DSH-TURN"), and TTS stores the token's display name as "DSH-TURN <n>" - so
-        -- `nm == "DSH-TURN"` matched NOTHING, getNickname() came back empty, every turn_token created
-        -- ANOTHER tile, and turn_state kept answering "no turn token yet" while a token sat in the
-        -- middle of the table (index: ff73d9 name="DSH-TURN 0").
-        if k:sub(1, #TURN_TOKEN_NAME) == TURN_TOKEN_NAME or nm:sub(1, #TURN_TOKEN_NAME) == TURN_TOKEN_NAME then
+        -- getName() is the display name (the official doc says exactly this: `name` is the internal
+        -- resource name, "generally you want getName()"). `nickname` is a member variable - TTS has no
+        -- getNickname method on this build. Either carrying the marker identifies our token.
+        if isTokenName(prop(o, "getName", "name")) or isTokenName(prop(o, "getNickname", "nickname")) then
             return o
         end
     end
@@ -1966,9 +2049,12 @@ DSH_tokenPlain = function(m)
     local existing = findTurnToken()
     local paint = function(o)
         pcall(function() o.setName(TURN_TOKEN_NAME) end)
-        pcall(function() o.setNickname(TURN_TOKEN_NAME .. " 0") end)
         pcall(function() o.setScale({ 1, 1, 1 }) end)
         pcall(function() o.setLuaScript(TURN_TOKEN_LUA) end)
+        -- Re-run the object's onLoad so its UI button exists for the script just installed, and so the
+        -- nickname reflects the saved count. Without this an existing token keeps the old script's
+        -- behaviour - measured: the clone's onClick never fired and it had no button at all.
+        pcall(function() o.call("onLoad", { o.script_state or "" }) end)
         local g = nil
         pcall(function() g = o.getGUID() end)
         return tostring(g)
@@ -1999,7 +2085,12 @@ DSH_tokenPlain = function(m)
     local z = tonumber(m and m.z) or 0
     local ok, c = pcall(function() return src.clone({ position = { x = x, y = y, z = z }, smooth = false }) end)
     if not ok or c == nil then return { ok = false, cmd = "token_plain", err = "clone failed: " .. S(c) } end
-    return { ok = true, cmd = "token_plain", created = true, from = "clone", guid = paint(c) }
+    -- ⛔ A CLONE INHERITS THE SOURCE'S script_state. Measured 2026-10-10: the token came out carrying
+    -- the mod hand-counter's state ({"color":"Brown"}), so our onLoad saw a non-empty state, took it
+    -- for "a previous turn count", decoded it, found no `n`, and left dshN = 0 - the token's own count
+    -- was never written. Clear it before installing our script, then onLoad starts from a clean slate.
+    pcall(function() c.script_state = "" end)
+    return { ok = true, cmd = "token_plain", created = true, from = "clone", guid = paint(c), src = tostring(src.getGUID and src.getGUID() or "") }
 end
 
 local function turnToken(m)
@@ -2039,13 +2130,41 @@ end
 
 local function turnState(m)
     local o = findTurnToken()
-    if not o then return { ok = false, cmd = "turn_state", err = "no turn token yet: run cmd=turn_token once" } end
-    local nick, ss = "", ""
-    pcall(function() nick = tostring(o.getNickname()) end)
+    if not o then
+        -- diagnostic: say what the scan actually saw, rather than only "no token"
+        local seen, n = {}, 0
+        for _, x in ipairs(getObjects() or {}) do
+            n = n + 1
+            if n <= 6 then
+                seen[#seen + 1] = "{" .. prop(x, "getName", "name") .. "|" .. prop(x, "getNickname", "nickname") .. "}"
+            end
+        end
+        return { ok = false, cmd = "turn_state", err = "no turn token yet",
+                 scanned = n, sample = table.concat(seen, " ") }
+    end
+    local nick = prop(o, "getNickname", "nickname")
+    local nm = prop(o, "getName", "name")
+    local guid = prop(o, "getGUID", "guid")
+    local ss = ""
     pcall(function() ss = tostring(o.script_state or "") end)
-    local n = nick:match("(%d+)%s*$") or "?"
-    return { ok = true, cmd = "turn_state", guid = o.getGUID(), nick = nick, turn = n, state = ss }
+    -- the number is whatever trails the display name ("DSH-TURN 3"); the nickname accessor does not
+    -- exist on this build, so it is decoration only
+    local n = nm:match("(%d+)%s*$") or nick:match("(%d+)%s*$") or "?"
+    return { ok = true, cmd = "turn_state", guid = guid, name = nm, nick = nick, turn = n, state = ss }
 end
+
+-- The turn recorder's own read: the script's globals are the truth, the piece on the table is not.
+-- Returns the committed state string too, so a caller can see WHEN the last turn was recorded.
+local function turnGet(m)
+    return { ok = true, cmd = "turn_get", turn = tostring(DSH_TURN_N or 0),
+             state = tostring(DSH_STATE or ""), at = os.date("%H:%M:%S") }
+end
+
+local function turnEnd(m)
+    local n = turnCommit(m and m.turn)
+    return { ok = true, cmd = "turn_end", turn = tostring(n), state = tostring(DSH_STATE or "") }
+end
+
 local handlers = {
     ping = function(m) return ping() end,
     -- call a function that lives in an OBJECT's own script.
@@ -2111,7 +2230,24 @@ local handlers = {
     turn_token = function(m) return turnToken(m) end,
     -- spawnObject-free token: clones an existing tile. See DSH_tokenPlain for why.
     token_plain = function(m) return DSH_tokenPlain(m) end,
-    turn_state = function(m) return turnState(m) end,
+    -- THE TURN RECORDER (see the block at the top of this file): no object involved, so it survives
+    -- every reload and cannot be broken by how a piece behaves. turn_end records one turn;
+    -- turn_get reads the count and the timestamp of the last recording.
+    turn_end = function(m) return turnEnd(m) end,
+    turn_get = function(m) return turnGet(m) end,
+    -- Same shape as before plus the authoritative global numbers. The table piece - if one happens to
+    -- be on the table - is reported as decoration only; a missing piece no longer means "no turn yet".
+    turn_state = function(m)
+        local g = turnGet(m)
+        local o = findTurnToken()
+        g.token = nil
+        if o then
+            g.token_guid = prop(o, "getGUID", "guid")
+            g.token_name = prop(o, "getName", "name")
+        end
+        g.cmd = "turn_state"
+        return g
+    end,
     -- container listing: what is actually inside a Bag/Deck right now (getObjects()).
     -- Complements index/all, which only see the table, and draw/take, which pull one card.
     container = function(m)
