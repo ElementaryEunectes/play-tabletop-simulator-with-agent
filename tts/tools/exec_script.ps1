@@ -32,9 +32,25 @@ $TtsPort = 39999
 $EditorPort = 39998
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
-# reply listener first, so TTS can always reach us
-$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $EditorPort)
-$listener.Start()
+# reply listener first, so TTS can always reach us.
+#
+# RETRY THE BIND. Measured 2026-10-11: two of these in quick succession can collide - the previous
+# listener's socket is still in TIME_WAIT and the bind throws, which looked like "the hand-over silently
+# did nothing" because the script had already exited before sending. Three attempts with a short pause
+# removes the flakiness.
+$listener = $null
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+    try {
+        $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $EditorPort)
+        $listener.Start()
+        break
+    } catch {
+        if ($attempt -eq 3) { Write-Host "ERR cannot listen on $EditorPort after 3 attempts: $($_.Exception.Message)"; exit 3 }
+        Write-Host "  listener busy on $EditorPort, retry $attempt/3 ..."
+        Start-Sleep -Milliseconds 1500
+        $listener = $null
+    }
+}
 Write-Host "listening on $EditorPort"
 
 $body = @{ messageID = 3; guid = $Guid; script = $lua } | ConvertTo-Json -Compress
@@ -46,11 +62,20 @@ $stream.Write($bytes, 0, $bytes.Length)
 $stream.Flush()
 Write-Host ("sent {0} bytes; script was {1} chars" -f $bytes.Length, $lua.Length)
 
-# collect whatever comes back (errors and print() show up here; the return value does not)
+# Collect whatever comes back (errors and print() show up here; the return value does not).
+#
+# EXIT ON THE FIRST REPLY, do not sit out the whole window. Measured 2026-10-11: this loop was the reason
+# `tr.ps1` took 12.9 s instead of ~1 s - the caller only needs the confirmation, and waiting for a second
+# message that usually never comes just adds latency to every hand-over. A short grace period after the
+# first reply still catches a following sendExternalMessage.
 $deadline = (Get-Date).AddSeconds($ListenSec)
 $got = 0
 while ((Get-Date) -lt $deadline) {
-    if (-not $listener.Pending()) { Start-Sleep -Milliseconds 150; continue }
+    if (-not $listener.Pending()) {
+        if ($got -gt 0) { break }              # already answered - stop waiting
+        Start-Sleep -Milliseconds 60
+        continue
+    }
     $conn = $listener.AcceptTcpClient()
     $conn.ReceiveTimeout = 3000
     $rs = $conn.GetStream()

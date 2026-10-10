@@ -44,7 +44,9 @@
     ④ 改它的 `Name` ⇒ 只影响**轮转范围**（空名字会跑到 `Red` 这类空座位）。
   - ✅ **我们能做的**：**写位置** —— `tts\tr.ps1 -To mine|player`（唯一稳定生效、且 `turn_side.ps1` 真正读取的量）。**代价**：它的颜色与位置可能不同步 ⇒ 玩家**可能要点两次**才换边（**玩家 2026-10-11 明确接受**）。
   - **玩家侧**：按那枚 **Turn Tracker** 的按钮。**判定以位置为准、不以它的颜色为准。**
-  - **判定**：`tts\tools\turn_side.ps1` 读棋子 `z` 的符号（校准档 `zMine=+15 / zPlayer=−15`；语义由玩家当面确认，见 `cache\<game>_turn.json` 的 evidence）。哨兵 `command` 每 **15 s**（实测约 20 s）探一次，`pattern=TURN-CHANGED`；**别轮询**。
+  - ⚡ **快链（2026-10-11 定稿，延迟 ~2-4 s；此前 ~33 s）**：常驻作业 `tts\tools\turn_poller.ps1`（**每 2.5 s** 读一次位置，**变化才写** `cache\turn_side.txt`）＋ **file 哨兵**（`pattern=^mine`，inotify 推送 **<1 s**）⇒ 检测 **~0.5-3.3 s**（实测 468 ms）。我交还 `tts\tr.ps1 -To player` **~0.9 s**（此前 12.9 s —— 那是 `exec_script.ps1` 空等回执窗口，已改成**收到回执即退出**）。
+    ⚠️ **轮询器是后台作业、不跨会话** ⇒ 新会话要重跑上面那条命令并**重挂 file 哨兵**（旧的 `command` 哨兵每 20 s 一次，已被取代）。
+  - **判定**：`tts\tools\turn_side.ps1` 读棋子 `z` 的符号（校准档 `zMine=+15 / zPlayer=−15`；语义由玩家当面确认）。⛔ **别再用 `command` 哨兵做回合检测**（平台探测实际 ~20 s 一次，是当时延迟的主因）。
   - **体检**：`tts\tools\tracker_read.lua`（经 `exec_script.ps1`）一次读出 `POS / SAVED_STATE / LIVE_COLOR / LOCKED / NAME`。
   - ⛔ **别再用 `callx`/`Object.call` 驱动别的 mod**（会把 TTS 弄失联）；⛔ **别在 `messageID 3` 里改别人物件的函数**（⇒ `VALIDATION.md` F13）。
   - ⚠️ 那枚棋子的 **`Name` 必须写着颜色顺序**（本机 `Brown Teal`）—— 它**文档要求**的配置；清空会让它按 10 色表轮转、跑到 `Red` 这类**空座位**。
