@@ -129,6 +129,8 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
   接手时的状态：**TTS 的 API（39999）在反复开合**（`03:51:23` 还 `ping = v16-tracker-guid`，随后 `no reply in 25s` ⇒ `ERR TTS unreachable`；同一 TTS 进程，`Player.log` 里 `Curl error 56 … reset` 满 100 条 ⇒ `VALIDATION.md` **F14**）。
   ⇒ 已挂 **port 哨兵盯 `39999`**（`watch-2`，开了才动手，**不再连发探测**）；链路（轮询器 ＋ file 哨兵）**等 API 稳定后再重建**（步骤 ⇒ `tts\docs\PLAY.md` 回合交接节）。
   ⚠️ 两条硬规矩继续有效：**同一时刻只有一个会话驱动桌面**；**动手前先 `git log`／`sentinel_list`**（上一轮两个会话就撞过同一个回合）。
+  - 🧹 **删掉遗留件 `DSH-TURN`（`a7bf2e`）**：`destroy:a7bf2e` ⇒ `ok`，复核 `read:a7bf2e` 回 `no object`、`objs 120→119`（F11 那批实验的"物"清掉了）。
+  - ⛔ **随后为了验 L18 发了一条 `turn_tracker` ＋ 假 guid `deadbeef` ⇒ 第三次把 TTS 的 API 打哑**（前两次 03:44/03:51）⇒ 规矩写进 `VALIDATION.md` **F14**：**永不用不存在的 guid 测桥接**；L18 改用**正向验证**（拿一枚真实存在但不是 tracker 的件，应回**它的**位置）。
 
 - **2026-10-11 凌晨（第三轮 · 归档 ＋ 重烤 v16）**：
   - 📦 **归档**（用户拍板）：`read_turn.ps1`（批量替换事故的残骸；**运行期**坏、`check_ps1` 查不出来）与 `front_watch.ps1`（某一局专用的前台横幅链）**移进 `~\.dsh\archive\tts-legacy\`**（SHA256 对拍一致）＋ `git rm`；`cache\front.txt` 从此没有生产者。指针同步 6 处：`MAINTENANCE` §5 那行 ＋ 跨脚本引用图 · `VALIDATION` L13/F4 · `BOOTSTRAP` §1 E · `TTS_RULES` §三 · `docs\README` 的 `cache\` 行 · 本文件 §4 第 8 条。
