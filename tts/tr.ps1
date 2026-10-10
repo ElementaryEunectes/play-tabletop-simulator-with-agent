@@ -17,12 +17,14 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tts\tr.ps1 -To mine
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tts\tr.ps1 -To player
 #
-# ⭐ THE RULE THE PLAYER NAILED (2026-10-11): the piece's saved colour and its position must agree, or
-# the next button press is wasted. Their words: "you moved the position without changing script_state,
-# so the other side has to press twice". Why: the press advances the piece to the hand of the SAVED
-# colour's successor, so if the saved colour still names the side it is already on, the piece lands
-# where it already is and only the colour changed. -State defaults to the saved colour matching -To,
-# which is what keeps it to ONE press per hand-over.
+# ⭐ THE RULE THE PLAYER NAILED (2026-10-11), their words plus their correction:
+#   "you moved the position without changing script_state, so the other side has to press twice"
+#   "the press moves the piece to the hand of the NEXT colour after the saved one - so if that next
+#    colour is still on this side, the piece goes back to where it already was"
+# A press therefore lands the piece on the SUCCESSOR of the saved colour. A hand-over must save the
+# colour whose successor sits on the OTHER side: saving Brown sends the next press to Teal's hand (ours),
+# saving Teal sends it to Brown's (the player's). That is what -State carries, and it is what keeps a
+# hand-over down to ONE press.
 param(
     [string]$Root = '',
     [string]$Game = '',
