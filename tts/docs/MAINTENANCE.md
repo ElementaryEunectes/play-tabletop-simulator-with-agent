@@ -152,7 +152,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `card_index.ps1` · `index_images.ps1` | 把**卡片映射到本地图缓存**（建卡库、认新牌面）—— 卡库已建好，平时不用 |
 | `grab_window.ps1` | 抓 TTS 窗口像素（Unity 下 `PrintWindow` 无效，靠 BitBlt）；"没有 Lua 通道只能看画面"时的兜底 |
 | `tts_click.ps1` | 合成鼠标输入。⚠️ **已定案：合成点击点不到「结束回合」**（玩家那块是桌上的**社区件 Turn Tracker**；TTS 自带那块在屏幕**顶部正中** ⇒ 详见 `TTS_RULES.md` §三） |
-| `front_watch.ps1` · `read_turn.ps1` | **旧叫醒链**（`cache\front.txt` ＋采样横幅色块）—— ⛔ **已被 `turn_poller.ps1` ＋ file 哨兵取代**（见 `TTS_RULES.md` §三）。⚠️ 而且 `read_turn.ps1` **本体至今仍是坏的**（批量替换事故的残骸：`$hotsDir` / `$ilentlyContinue` / `$img.$Dispose()` / `$ist` —— **解析器查不出来**，那是运行期错不是语法错）⇒ **别调用它**；要复用就先逐行还原或连同 `front_watch.ps1` 一起归档（⇒ `VALIDATION.md` F4） |
+| ⛔ **已归档（2026-10-11）**：`front_watch.ps1` · `read_turn.ps1` | **旧叫醒链**（前台横幅 → `cache\front.txt` → `TURN=Pn`）—— 已被 `turn_poller.ps1` ＋ file 哨兵取代，而且 `read_turn.ps1` 本体是**批量替换事故的残骸**（运行期错，解析器查不出来）⇒ 两个文件都**移出了仓库**（归档目录 `~\.dsh\archive\tts-legacy\` ⇒ `VALIDATION.md` F4）。别再在 `tts\` 里找它们 |
 | `validate_lua.js` | **改 `lua\dsh_global.lua` 之前**必跑（并同时改 `DSH_VERSION`） |
 
 ### 🧪 离线测试（**不开 TTS 也能跑**）
@@ -167,7 +167,7 @@ tts\  *.ps1 现役 · lib\bridge.ps1 通用传输包装 · lua\dsh_global.lua �
       tools\ 跨语言小工具 · templates\ 新游戏三模板 · tests\ 离线门禁 ＋ 活体冒烟 · docs\ 全部文档
 ```
 ⚠️ 跨脚本引用：`bootstrap → ds/obj_index/live_index` · `diff_index → live_index` · `live_index → ds` ·
-`read_turn → grab_window/tts_click` · `front_watch → read_turn` · `channel_watch/ttsx/roll/say → ttslib` ·
+`channel_watch/ttsx/roll/say → ttslib` ·
 `play → ttslib/say` · `install_save2 → lua\dsh_global.lua` · `tr/turn_side/turn_poller → tools\exec_script ＋ cache\<game>_turn.json`。
 
 ### ⭐ 两层是怎么分开的

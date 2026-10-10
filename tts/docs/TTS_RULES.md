@@ -74,7 +74,7 @@
   ⛔ **不要自己造标记件**：运行时 `spawnObject` 造自定义件会弹模态窗并挂住线程、烤进存档会被 TTS 丢弃（四条硬事实 ⇒ `VALIDATION.md` F11）。
   回合**流水**（第几回合）记在 `local\games\<游戏>\STATE.md`，**不另设计数器**（一处定义）。
 - ✅ **自动叫醒（2026-10-11 换链）**：常驻作业 `tools\turn_poller.ps1`（每 **2.5 s** 读位置，**变化才写** `cache\turn_side.txt`）＋ **file 哨兵**（`pattern=^mine`，推送 <1 s）⇒ **检测 ~0.5-3.3 s**（实测一次 468 ms）；**平台投递另加 ~23 s**（不在我们手里）⇒ 玩家按完到我开工，总感知 **~25 s**（拆解 ⇒ `PLAY.md` 回合交接节）。
-  ⛔ **旧的 `front_watch.ps1` → `cache\front.txt` → `TURN=P<席位>` 已停用**（依赖"TTS 在前台"，切后台就读不到）。
+  ⛔ **旧的 `front_watch.ps1` → `cache\front.txt` → `TURN=P<席位>` 已停用、并已归档出仓库**（2026-10-11；它依赖"TTS 在前台"，切后台就读不到）。
   ⚠️ **`command` 哨兵**能用但平台 **~20 s** 才探一次（请求 15 s 无效；**5 s 会被饿死** ⇒ `BOOTSTRAP.md` §2 的「哨兵的周期限制」）。
   ⚠️ 轮询器是**后台作业、不跨会话** ⇒ 新会话要重跑它并**重挂 file 哨兵（`max_fires` 必须显式给**，默认 1 次就没了）。命令 ⇒ `PLAY.md` 回合交接节。
 - ⛔ **别用 `callx`/`Object.call` 驱动别的 mod**：实测**两次把 TTS 弄失联**，且**从未修复**（⇒ `VALIDATION.md` F12）。

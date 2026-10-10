@@ -51,7 +51,7 @@
 | L10 | `roll.ps1` 读骰面 | `getValue` = 权威面（① 10 颗骰 · 6 轮实测） | ⚠️ 部分（② 的骰子在 `Infinite_Bag` 里动态生成 ⇒ **未验**） |
 | L11 | 翻牌朝向 `rotZ` 0=上 / 180=下 | ① 在那张桌上标定 | ⛔ **未验**（是"通用原语"但**只在一张桌上标定过**，见 F2） |
 | L12 | 哨兵/叫醒（玩家写字或回合推进能叫醒我） | `channel_watch.ps1` ⇒ `cache\chan.txt` ＋ file 哨兵 `^NEW \d` | ⚠️ 部分（机制通用；② 未重挂验证） |
-| L13 | `front_watch.ps1`（前台横幅 → `TURN=Pn`） | ① 的 mod 自己画横幅才行 | ❌ **对没有横幅的 mod 永远出不了 `TURN=`**（`BOOTSTRAP.md` §1 D 已注明） |
+| L13 | `front_watch.ps1`（前台横幅 → `TURN=Pn`）—— **2026-10-11 已归档**（`~\.dsh\archive\tts-legacy\`，见 F4） | ① 的 mod 自己画横幅才行 | ❌ **对没有横幅的 mod 永远出不了 `TURN=`**（`BOOTSTRAP.md` §1 的唤醒机制已注明） |
 | L14 | 脚本清单/文档指针不断链 | `tts\tests\run_all.ps1` 的 `doc references` 门禁 | ✅ 已实测（离线条） |
 | L15 | 仓库里没有真游戏名（开源边界） | `tts\tests\test_agents_hygiene.ps1` 的游戏名硬线（**唯一例外** = `README.md`/`README.en.md` 的授权声明） | ✅ 已实测（离线条） |
 | L16 | 换任何 mod 都能"一小时内打完一回合" | —— | ⛔ **未验**（`HANDOFF.md` §4 的目标判据；需要**第三方**在一台干净机器上试） |
@@ -73,9 +73,10 @@
 `test_game_data.ps1` 证的是"**数据不在代码里**"这条契约（用否定用例），**不是**"任何 mod 都成立"——后者只有真 mod 能证。
 ⇒ **每次来一款新 mod，都要照 `BOOTSTRAP.md` 走一遍并回写 §1/§2**。这是本文件存在的意义。
 
-**F4 · `front_watch.ps1` 是"某一局专用"残留**（`❌`）
-它靠读 ① 那款 mod 自己画的横幅色块判轮到谁。**换 mod 即失效**，但仍留在 `tts\`（因为 `read_turn.ps1` 引用它）。
-⇒ 别把 `cache\front.txt` 当通用信号源。
+**F4 · `front_watch.ps1` 是"某一局专用"残留**（`❌` → **2026-10-11 已归档**）
+它靠读 ① 那款 mod 自己画的横幅色块判轮到谁。**换 mod 即失效**。
+✅ **处置（2026-10-11，用户拍的）**：它和 `read_turn.ps1` **都移出了仓库** ⇒ `~\.dsh\archive\tts-legacy\`（字节一致，SHA256 对拍过）；
+`cache\front.txt` 从此**没有生产者**，别再把它当信号源。
 ⚠️ **2026-10-11 追加（读文档时别被"休眠保留"骗）**：`read_turn.ps1` 的**本体仍是那次批量替换的残骸** ——
 `$hotsDir`（原 `$ShotsDir`）· `$ilentlyContinue` · `$img.$Dispose()` · `$ist` · 参数 `$S` 被当成 y 坐标……
 **`check_ps1.ps1` 报 0 错**（这些都是**合法的** PowerShell：未定义变量不是语法错），但一跑就错。

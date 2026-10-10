@@ -62,7 +62,7 @@ ds.ps1 -Do count       # 名称直方图
   - `INIT` = 本轮第一次读；`SAME` = 没变；`ERR-<原因>` = 没读到，原因已内联（见下）
   - ⚠️ `channel_watch.ps1` **不再 spawn `ds.ps1`**（2026-10-07 改）：它是后台作业 ⇒ 再 spawn 就是**两层**嵌套子进程
     ⇒ 沙箱掐网络 ⇒ **整个监听静默失效**。现在它 **dot-source `ttslib.ps1` 在自身进程内直接 TCP**（与 `ttsx.ps1` 同一份代码）。
-- ⛔ **旧的 `front_watch.ps1` → `cache\front.txt` → `TURN=Pn` 已停用**（依赖"TTS 在前台"，切后台就读不到；实测该文件现在只剩 `WATCHEND`）⇒ 回合信号一律走上面那条 file 快链。
+- ⛔ **旧的 `front_watch.ps1` → `cache\front.txt` → `TURN=Pn` 已停用，两个脚本也已归档**（2026-10-11 移出仓库：它依赖"TTS 在前台"，切后台就读不到）⇒ 回合信号一律走上面那条 file 快链。
 - **换游戏后必做三步**：① 确认新存档里有**对话笔记本页**（没有就用 `install_save2.ps1` 的 `-KeepTabs` 加一页
   「DSH 对话频道」）；② **重启 `channel_watch`**（旧进程还指着旧存档/已退出）；③ 确认 **file 哨兵还注册着**
   （pattern `^NEW \d`，指向 `cache\chan.txt`，**`max_fires` 显式给**）——哨兵不跨会话持久，**每次开工重新注册**。
