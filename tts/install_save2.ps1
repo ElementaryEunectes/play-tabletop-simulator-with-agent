@@ -22,12 +22,6 @@ param(
     # 2026-10-07 新增：给烤好的存档换一个**有辨识度的显示名**（TTS 载入列表里看到的就是它）。
     # 中文名必须**走文件**（命令行参数过控制台代码页会乱码）：文件内容 = UTF-8 的一行名字。
     [string]$SaveNameFile = '',
-    # 2026-10-09: -BakeToken writes the turn token INTO the save as a real object, the way a mod ships
-    # its own clickable pieces. Why not at runtime: attaching a LuaScript to a spawned object gets the
-    # whole scripted change reverted by TTS (object included), and the bridge's `act` refuses
-    # setLuaScript. The template supplies the tile's art/scale; its Lua comes from dsh_global.lua.
-    [switch]$BakeToken,
-    [string]$TokenTemplateGuid = '',
     [int]$DryRun = 0
 )
 . (Join-Path $PSScriptRoot 'config.ps1')
@@ -176,25 +170,6 @@ try {
     }
 
     $out = $ser.Serialize($o)
-
-    # ---- turn token, written into the save as a real object (see -BakeToken above) ----
-    if ($BakeToken) {
-        if ($TokenTemplateGuid -eq '') { throw '-BakeToken needs -TokenTemplateGuid (a Custom_Tile guid from this save)' }
-        $bak   = Join-Path $DshCache 'save_pretoken.json'
-        $tokd  = Join-Path $DshCache 'save_tokened.json'
-        $resf  = Join-Path $DshCache 'bake_token_result.txt'
-        $baker = Join-Path $DshTts 'tools\bake_token.js'
-        [System.IO.File]::WriteAllText($bak, $out, $utf8)
-        if (Test-Path -LiteralPath $resf) { Remove-Item -LiteralPath $resf -Force }
-        # node's stdout cannot be captured through a pipe under this confinement, so the tool writes
-        # its verdict to $resf and this reads the file (same reason as the gate runner).
-        & node $baker $bak $tokd $TokenTemplateGuid $resf | Out-Null
-        $verdict = ''
-        if (Test-Path -LiteralPath $resf) { $verdict = ([System.IO.File]::ReadAllText($resf, [System.Text.Encoding]::UTF8)).Trim() }
-        L ('bake token: ' + $verdict)
-        if ($verdict -notlike 'RESULT=OK*') { throw ('bake token failed: ' + $verdict) }
-        $out = [System.IO.File]::ReadAllText($tokd, [System.Text.Encoding]::UTF8)
-    }
 
     $chk = $ser.DeserializeObject($out)
 

@@ -1,4 +1,4 @@
-# turn_calib.ps1 - ONE-TIME calibration for "whose turn is it" on a newly taught mod.
+﻿# turn_calib.ps1 - ONE-TIME calibration for "whose turn is it" on a newly taught mod.
 #
 # WHY THIS EXISTS: seat/zone coordinates differ per mod, so the side that means "my turn" cannot be
 # known in advance and must not be inferred (I tried twice: first from screen direction, then by

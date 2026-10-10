@@ -30,18 +30,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
    📊 **活体验收（载入 `TS_Save_11.json` 后逐条真跑）**：
       ✅ `ping` = `v15-tags-snap-hand`（重烤生效）· ✅ `players` ⇒ `ok count=2` ＋ 每座位一行 ·
       ✅ `take` 缺卡 ⇒ `no container with guid ...`（**不再 nil 崩溃**）· ✅ `destroy` 幽灵 ⇒ `no object with guid ...`
-      ✅ **`spawn:copy`** ⇒ `ok mode=copy guid=...`（`clone`，主用途可用）· ✅ `turn_token` `created=true→false`（幂等）
-      ⛔ **`spawn:type`（通用造物）未解**：调 `spawnObject` 会**卡死桥接线程**、随后被 TTS **回滚**（连造物一起撤销）
+      ✅ **`spawn:copy`** ⇒ `ok mode=copy guid=...`（`clone`，主用途可用）
+      ⛔ **`spawn:type`（通用造物）已在代码里显式拒绝**：调 `spawnObject` 会**卡死桥接线程**、随后被 TTS **回滚**（连造物一起撤销）
    🐞 **活体抓出的缺陷（都已修）**：① `spawn:type` 把 **Lua 表**塞给 `spawnObjectJSON`（文档：`spawnObject({type=…})`
       与 `spawnObjectJSON(jsonString)` 是**两个调用**）⇒ 回 nil 却报成"需要 TTS v13.2+"；② **`S(v)` 对 nil 返回 nil**
-      ⇒ 所有 `"..." .. S(x)` 在**要报错的那种值**上当场崩（报错路径自己死了比没有报错路径更糟）。
-   ⛔ **`spawn:type` 已决定停止追查**（试了三种形状都不成立；`spawnObject` 只造内置件、造不出 mod 原件，主用途由 `spawn:copy` 覆盖）
+      ⇒ 所有 `"..." .. S(x)` 在**要报错的那种值**上当场崩（报错路径自己死了比没有报错路径更糟）；
+      ③ `read()` 里引用了不存在的 `m`（**早于本次会话**的旧 bug，一直被误诊成"读不到名字"）⇒ 已删那两行死代码。
+   ⛔ **`spawn:type` 已停止追查，三次尝试的代码全部删除**（请求入队 / `spawn_step` / 诊断埋点都不在了）
       ⇒ 现象 · 三次尝试 · 为什么值得停止 ⇒ **`tts\docs\VALIDATION.md` F10**（按"未解＋未验证"如实记账，别重走）。
    ⚠️ **那次 `spawn` 探测把 TTS 打挂了**（探测前 ping 正常，之后 API 直接不可达、进程还占着 `Player.log`）
       ⇒ **以后一条一条探**，别连着发。
-   ▶ **下一步（按价值排序）**：① **§7.9 回合令牌收尾**（`turn_token` 已幂等过；缺"玩家点一下 ⇒ `turn_state` 0→1 ⇒ 差分出 `NICK` 段"）
-      ——⚠️ 令牌**不在当前存档里**（它是在更早会话造的，早于存档底稿）⇒ 先跑 `turn_token` 再造一次，坐标 = 桌面正中 `0,3,0`；
-      ② 游戏侧 5 条规则冲突（`local\games\<游戏>\STATE.md`）。
+   ▶ **下一步**：① **重载 17 号**（本轮彻查后的桥接要载入才生效：令牌/记账/埋点都删了，只留 `turn_tracker`）；
+      ② 接着玩时按 `PLAY.md` 的回合流程走（回合交接 ⇒ 本文件 §7.9 的校准 ＋ 哨兵）。
+   🧹 **2026-10-10 彻查删除**（本轮实验的产物，一律不留在代码里）：`turn_token` · `token_plain` · `spawn_step` ·
+      `turn_end` · `turn_get` · `turn_state` · `DSH_TURN_N`/`DSH_STATE` · `__spawn_trace`/`__spawn_last`；
+      另删工具 `bake_token.js` / `insert_token.js` / `compare_index.js` / `script_anatomy.js` /
+      `bisect_run.js` / `peek_obj.js` / `peek_custom.js`，以及 `install_save2.ps1` 的 `-BakeToken` 参数与那段代码。
    📌 已顺带修好并活体验过的：`container:<guid>` ⇒ 列出容器内物件的 `guid|名称|昵称|数量|牌面文本(截60字)`。
    ⚠️ 根因是 **`getObjects()` 返回纯 Lua 表、没有方法**（字段直接读 `x.guid/x.name/x.description`）。
    ⇒ 这也是**卡库的来源**（`description` 就是整张牌面），不必再手抄。
@@ -69,25 +73,27 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 - 平台 ×17 条坑 ＋ 上下文注入与隔离 ⇒ **`platform\MAINTENANCE.md`**（旧编号 §6.8/§6.9 = 那里"校验器阳性对照"两条）。
 - **TTS 桌子本身的开销**（2026-10-09 实测）：重桌子在**后台**仍烧 GPU（647 物件 ≈**73%** vs 空桌 ≈10%）⇒ 拖慢**整机输入**（连记事本都卡，而 CPU 只 10–20%）。修法 = 驱动「**后台应用程序最大帧速率**」20 fps，⚠️ **要重启 TTS 才套用**（不重启 73→73；重启后 73→**11%**）。**用嘴代替手**：DSH **自带**实验性语音输入 `@deepseek-ai/dsh-experimental-voice-input-bundle`（客户端麦克风按钮 ＋ SenseVoice STT）。两条都写在 **`tts\docs\USER_GUIDE.md` §5 常见问题**（面向人，本文件不复述步骤）。
 
-## §7.9 回合记录（`turn_end` / `turn_get`，**不再依赖可点物件**）
+## §7.9 回合交接（**用桌上现成的 Turn Tracker ＋ 一次校准**）
 
-**⭐ 载体换了**（2026-10-10）：回合数**不再挂在桌上的物件上**，而是**桥接脚本的全局变量**（`DSH_TURN_N` ＋ `DSH_STATE` 字符串，`onLoad` 恢复）。
-理由：物件那条路每一步都在跟 TTS 对抗，而且"记录回合"是**对任何 mod 都成立**的能力、不该绑在一次性载体上 ⇒ 四条硬事实与完整踩坑记录在 **`tts\docs\VALIDATION.md` F11**。
+**⭐ 最终结论（2026-10-10）**：回合信号**用玩家自己按的那个 Tracker**（社区件，**`Locked`、在存档里**），**不自己造任何物件**。
+❌ 已全部删除（本轮实验的产物）：`turn_token` / `token_plain` / `spawn_step` / `turn_end` / `turn_get` / `turn_state` 与桥接里的记账变量
+（`DSH_TURN_N`/`DSH_STATE`）—— 它们要么被 TTS 撤销、要么与 `STATE.md` 重复记账（第 4 条：一处定义）。
+完整踩坑（四条硬事实）⇒ **`tts\docs\VALIDATION.md` F11**。
+
+**每款 mod 校准一次**（座位坐标每款都不同，**这一步必须做，别推理**）：
 
 ```powershell
-tts\ds.ps1 -Do turn_end        # 记一回合（+1）
-tts\ds.ps1 -Do turn_get        # 读回：turn=N、state 里带记录时间
-tts\ds.ps1 -Do turn_state      # 同上 ＋ 桌上那块装饰件的信息（有就报，没有也照样 ok）
+tts\tools\turn_calib.ps1 -Discover              # 拍快照 → 请玩家按一次 End Turn → 唯一移动的那件 = 信号源
+tts\tools\turn_calib.ps1 -Answer mine|player    # 同一次运行里读坐标＋记录"现在轮到谁"
+tts\tools\turn_calib.ps1 -Show                  # 看校准档、证据、当前判定
+tts\tools\turn_side.ps1                         # 运行时：mine | player | unknown | uncalibrated（哨兵用它）
 ```
 
-| 判据 | 期望 |
-|---|---|
-| `turn_end` 两次 | `turn=1` → `turn=2`（**每次调用都记**，不依赖点中什么） |
-| `turn_get` 的 `state` | 形如 `{"turn":2,"at":"22:4x:xx","day":"2026-10-10"}` ⇒ **能看出最后一次记录的时间** |
-| 重载后再 `turn_get` | 回到**存档里存过的那个数**（`DSH_STATE` 随存档走） |
-| 「玩家点一下」这件事 | 仍可用 `token_plain` 造一块装饰件（按钮是 `createButton`，朝向已修）；**点没点中都不影响记账** |
+- **唯一真源**：`cache\<game>_turn.json`（含 `tracker` guid · 两个落点 · 哪个 z 是"我" · **定这条的原始证据**）。
+- **回合流水**（第几回合）记在 **`local\games\<游戏>\STATE.md`** —— 那是这一局状态的唯一真源，**不另开计数器**。
+- **哨兵**：`tts\tools\turn_side.ps1` 输出翻转即唤醒我（`player -> mine` = 玩家交了回合、轮到我）。
+- ⛔ 判定错了 ⇒ **重跑 `-Discover` ＋ `-Answer`**，**不许**改代码里的数字或用坐标反推（脚本头部有这条）。
 
-⛔ 已作废：`turn_token`（运行时 `spawnObject` 那条）—— 会弹「自定义板块」模态窗、造出的件在重载后消失。保留但**不要依赖**。
 
 
 ## §8 每请求注入（摘要；机制/预算/安装 ⇒ `tts\docs\INJECTION.md`）

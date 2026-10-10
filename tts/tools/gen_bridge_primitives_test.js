@@ -29,11 +29,9 @@ function between(startAnchor, endAnchor, what) {
 }
 const DESTROY_TAIL = '    return { ok = true, cmd = "destroy", guid = guid }\nend';
 // `between` stops BEFORE its end anchor, so add it back: destroy's last two lines must be complete.
-// The block now also carries DSH_spawnStep, which sits between spawn and destroy - the queued-spawn
-// second half is only meaningful with both halves in the same file.
-const block = between('local placeFace = function(o, x, y, z, faceup)', DESTROY_TAIL, 'helpers + players + spawn + spawn_step + destroy') + DESTROY_TAIL;
-if (!block.includes('DSH_takeOne = function') || !block.includes('DSH_destroy = function') || !block.includes('DSH_spawnStep = function')) {
-    console.error('EXTRACT INCOMPLETE: takeOne/spawnStep/destroy missing'); process.exit(1);
+const block = between('local placeFace = function(o, x, y, z, faceup)', DESTROY_TAIL, 'helpers + players + spawn + destroy') + DESTROY_TAIL;
+if (!block.includes('DSH_takeOne = function') || !block.includes('DSH_destroy = function')) {
+    console.error('EXTRACT INCOMPLETE: takeOne/destroy missing'); process.exit(1);
 }
 if (!block.endsWith(DESTROY_TAIL)) { console.error('EXTRACT SHORT: destroy tail not included'); process.exit(1); }
 const startLine = raw.slice(0, raw.indexOf('local placeFace = function(o, x, y, z, faceup)')).split('\n').length;
@@ -217,16 +215,10 @@ const footer = [
     '    check("spawn by copy answers ok with a new guid", sc.ok == true and tostring(sc.guid):sub(1, 6) == "clone-", sc.err)',
     '    local sj = DSH_spawn({ json = \'{"Name":"Custom_Tile"}\' })',
     '    check("spawn from JSON answers ok with a new guid", sj.ok == true and tostring(sj.guid):sub(1, 6) == "spawn-", sj.err)',
+    '    -- spawn by TYPE is deliberately refused: spawnObject on a custom type opens TTS\'s modal dialog',
+    '    -- and blocks the thread (three shapes tried, see VALIDATION F10). The refusal must be loud.',
     '    local st = DSH_spawn({ type = "Block", x = 3, y = 2, z = 3 })',
-    '    check("spawn by type queues instead of spawning inline", st.ok == true and tostring(st.mode) == "type" and tostring(st.queued) == "true" and tostring(st.type) == "Block", st.err)',
-    '    check("spawn by type did NOT spawn before the reply", __spawn_last == nil, __spawn_last)',
-    '    -- the queued piece is built by the NEXT message; the callback is how the guid comes back',
-    '    local ss = DSH_spawnStep({})',
-    '    check("spawn_step answers ok and reports it called spawnObject", ss.ok == true and ss.called == true and tostring(ss.result) == "table", ss.err)',
-    '    check("spawn_step filled the callback guid", tostring(__spawn_last):sub(1, 5) == "type-", __spawn_last)',
-    '    check("spawn_step left a trace ending at the call", tostring(__spawn_trace):find("step returned ok=true") ~= nil, __spawn_trace)',
-    '    local se = DSH_spawnStep({})',
-    '    check("spawn_step with nothing queued fails loudly", se.ok == false and tostring(se.err):find("nothing queued") ~= nil, se.err)',
+    '    check("spawn by type is refused loudly and names the alternative", st.ok == false and tostring(st.err):find("copyguid") ~= nil, st.err)',
     '    local sn = DSH_spawn({})',
     '    check("spawn with nothing to spawn fails loudly", sn.ok == false and tostring(sn.err):find("need json") ~= nil, sn.err)',
     '    -- a nil from the API must come back as the REPORTED failure, not as a crash: the first live',

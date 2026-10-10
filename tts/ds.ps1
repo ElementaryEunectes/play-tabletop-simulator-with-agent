@@ -153,24 +153,6 @@ switch -Regex ($Do) {
     }
     # destroy:<guid>                           -> remove an object from the table
     '^destroy:([^:]+)$' { $cm = @{ cmd = 'destroy'; guid = $Matches[1] } }
-    # token_plain[:x:y:z]                      -> build the turn token by CLONING a table tile.
-    #   clone() never opens TTS's custom-tile dialog, which spawnObject always did (see DSH_tokenPlain)
-    '^token_plain(?::(-?[\d.]+):(-?[\d.]+):(-?[\d.]+))?$' {
-        $cm = @{ cmd = 'token_plain' }
-        if ($Matches[1]) { $cm.x = $Matches[1]; $cm.y = $Matches[2]; $cm.z = $Matches[3] }
-    }
-    # turn_end[:N]  -> record a turn in the GLOBAL script (no object involved; survives reloads)
-    # turn_get      -> read the recorded turn + when it was recorded
-    # turn_state    -> the same numbers, plus the optional table piece as decoration
-    '^turn_end(?::(\d+))?$' {
-        $cm = @{ cmd = 'turn_end' }
-        if ($Matches[1]) { $cm.turn = $Matches[1] }
-    }
-    '^turn_get$'   { $cm = @{ cmd = 'turn_get' } }
-    '^turn_state$' { $cm = @{ cmd = 'turn_state' } }
-    # spawn_step                               -> the second half of `spawn:type` (see DSH_spawnStep:
-    #   spawnObject stops the bridge thread, so the reply goes first and the piece is built here)
-    '^spawn_step$' { $cm = @{ cmd = 'spawn_step' } }
     # spawn is the one command whose payload is JSON (colons and quotes inside), so only the SHORT
     # forms get a command-line syntax. Everything else goes through -Json with a full envelope:
     #   ds.ps1 -Json '{"messageID":2,"customMessage":{"cmd":"spawn","json":"{\"Name\":\"Custom_Tile\"}","x":5,"y":2,"z":0}}'

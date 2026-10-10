@@ -116,9 +116,10 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ 每条都得**重烤后真跑一次**。
 **已跑（载入 `TS_Save_11.json` 后逐条真跑）**：`ping` 版本对 · `players` 回 `ok count=2` ＋ 每座位一行 ·
 `take` 缺卡回 `no container with guid ...` · `destroy` 幽灵回 `no object with guid ...` ·
-**`spawn:copy` 回 `ok mode=copy guid=...`（objs +1）** · `turn_token` `created=true→false`（幂等）。
+**`spawn:copy` 回 `ok mode=copy guid=...`（objs +1）**。
 ⇒ **`spawn:copy` 覆盖"造物"这个硬前提的主用途**（复制桌上现成棋子，连卡面/Lua/状态一起）。
-⛔ **`spawn:type`（通用造物）未解，已停止追查** ⇒ 见下 **F10**。`spawn:json` 同样走 `spawnObjectJSON`，**未单独验**。
+⛔ **`spawn:type`（通用造物）已在代码里显式拒绝**（`spawnObject` 造自定义件必弹模态窗）⇒ 见下 **F10**；
+`spawn:json`（走 `spawnObjectJSON`）**未单独活体验**，但离线用例覆盖。
 ⚠️ 本次 `spawn` 的**第一次探测把 TTS 打挂了**（探测前 `ping` 正常，之后 API 不可达、进程仍占着 `Player.log`）⇒ **以后一条一条探**。
 ⚠️ **两个缺陷就是这次活体抓出来的**（离线门禁看不见，因为没有任何用例走 `type` 这条路、桩也从不回 nil）：
 1. **`spawn:type` 把 Lua 表塞给了 `spawnObjectJSON`**。文档（`api.tabletopsimulator.com/base`）写得很清楚：
@@ -140,11 +141,10 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 **三次尝试（都不成立，留证以免重走）**：
 1. **不再触碰新造物件**（去掉 `getLuaScript`/`call("onLoad")`／`type` 路径不再 `placeFace`）⇒ 仍静默；
 2. **改用 `callback_function`**（不等返回值，官方文档给的取对象方式）⇒ **仍静默**，说明卡的是**调用**而非"等返回值"；
-3. **拆成两条消息**（`spawn:type` 只入队并**立刻回执**，`spawn_step` 在下一条消息里才造物）⇒ **未验证即停止**。
-   ⇒ 该路已实现、门禁有用例（`spawn_step` 的队列/回空/回调 guid），但**活体未验**：**按未验证对待**。
+3. **拆成两条消息**（请求只入队并立刻回执，下一条消息才造物）⇒ **未验证即停止，代码已删除**（`spawn_step` 不再存在）。
 **为什么不值得再追**：`spawnObject` 只造 **TTS 内置件**，造不出 mod 的原件（那些是 Custom 对象，走 `clone`／`spawnObjectJSON`）；
 本局真正需要的是"复制桌上现成棋子" ⇒ 由 **`spawn:copy` 覆盖**（已活体验过）。⇒ 记录在此，等真的需要通用造物时再捡起来。
-🔎 **留着的诊断面**：`spawn_trace` / `spawn_last` 经 `{cmd="diag"}` 可读（入口/入队/回调 guid），`spawn_step` 命令仍在桥上。
+🔎 **诊断面已清除**：`spawn_trace` / `spawn_last` 埋点与 `spawn_step` 命令随本次彻查一并删除（`spawn:type` 现在**显式拒绝**并指向 `copyguid`）。
 
 **F11 · "可点的回合标记"这条需求本身选错了载体 —— ✅ 已换载体（2026-10-10）**
 **最初的目标**（`HANDOFF §7.9`）：让**玩家点一下**即被观测到 ⇒ 做一个**可点令牌**，点一下把回合号写进**昵称**，`diff_index` 顺便差 `nick`。
@@ -157,10 +157,14 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 | 3 | **`clone` 能造、能留、脚本会初始化**，但它**继承源对象的 `script_state`** | `token_plain` 造的令牌带着模组计数板的 `{"color":"Brown"}` |
 | 4 | **可点入口是 `createButton`（XMLUI），不是物件 `onClick`**；且按钮要按物件朝向摆放 | 模组 5 个物件脚本里 `onClick` 出现 **0** 次；按钮曾倒贴在底面（玩家截图） |
 
-**换的载体**：回合数改由**桥接脚本的全局变量**承载（`DSH_TURN_N` ＋ `DSH_STATE`，`onLoad` 恢复）——
-它**跨命令存活**（这次会话早期给 F8 做埋点用的 `__spawn_trace` **已经证明过这一点**）、**不依赖任何物件**、**不随重载消失**（随存档走）。
-命令：`turn_end`（+1，`turn_end:N` 可设值）· `turn_get`（turn ＋ 最后一次记录时间）· `turn_state`（同上，桌上那块装饰件有就捎带报告）。
-⇒ **§7.9 的判据从"点中物件"改成"`turn_end` 被调用"**：玩家一句"我结束回合"即可，**点没点中都不影响记账**。
+**换的载体（最终）**：**桌上玩家自己按的那个 Turn Tracker**（社区件，`Locked=true`、**在存档里**）+ **每款 mod 一次校准**
+（`tts\tools\turn_calib.ps1` → `cache\<game>_turn.json` → 运行时 `tts\tools\turn_side.ps1`，哨兵盯它翻转）。
+⇒ **§7.9 的判据 = "Tracker 从你那一侧移到我的侧"**（`player -> mine`），**玩家按一次即可，不需要打字**。
+
+⛔ **本轮做的那些实验全部删除**（2026-10-10 彻查）：`turn_token` · `token_plain` · `spawn_step` · `turn_end` · `turn_get` ·
+`turn_state` · 桥接里的 `DSH_TURN_N`/`DSH_STATE` 记账变量 · `__spawn_trace`/`__spawn_last` 埋点。
+两条理由：① 它们要么被 TTS 撤销、要么要靠重载才生效；② **回合流水本就该记在 `STATE.md`**（那一局状态的唯一真源）——
+另开计数器就是第 4 条禁止的"同一事实两处"。**留着的只有**：Tracker 校准 ＋ `turn_side.ps1`（实时信号）＋ `turn_tracker` 命令（读那件的位置）。
 
 **两条 API 级硬事实**（都是官方文档写明的，我先前却在猜 —— 已写进平台宪章第 4 条）：
 
