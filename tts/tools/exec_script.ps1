@@ -14,7 +14,11 @@
 # documented but never arrives here). To see anything, the script itself must print() or call
 # sendExternalMessage() - those arrive as messageID 2 / 4.
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -File tts\tools\exec_script.ps1 -Guid 0e731f -LuaFile x.lua
+#   powershell -NoProfile -ExecutionPolicy Bypass -File tts\tools\exec_script.ps1 -Guid <tracker guid> -LuaFile x.lua
+#
+# A .lua file cannot take a parameter, and a per-match guid must not be baked into a tracked file
+# (2026-10-11): if the file contains the literal __GUID__, it is replaced with this call's -Guid
+# before the script is sent. That is how tools\tracker_read.lua stays generic.
 param(
     [string]$Root = '',
     [Parameter(Mandatory = $true)][string]$Guid,
@@ -26,6 +30,7 @@ if ($Root -eq '') { $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 if (-not (Test-Path -LiteralPath $LuaFile)) { Write-Host "ERR no such Lua file: $LuaFile"; exit 2 }
 $lua = [System.IO.File]::ReadAllText((Resolve-Path $LuaFile), [System.Text.Encoding]::UTF8)
+$lua = $lua.Replace('__GUID__', $Guid)
 if ($lua.Trim() -eq '') { Write-Host 'ERR Lua file is empty'; exit 2 }
 
 $TtsPort = 39999

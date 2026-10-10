@@ -2,7 +2,9 @@
 -- Prints only; changes nothing. Run through tts\tools\exec_script.ps1.
 --
 --   powershell -NoProfile -ExecutionPolicy Bypass -File tts\tools\exec_script.ps1 -Guid <guid> -LuaFile tts\tools\tracker_read.lua
-local guid = "0e731f"
+-- The guid comes from exec_script.ps1's -Guid (it substitutes the __GUID__ placeholder); nothing
+-- per-match may be baked into this tracked file.
+local guid = "__GUID__"
 local o = nil
 pcall(function() o = getObjectFromGUID(guid) end)
 if o == nil then print("tracker: NOT ON TABLE (" .. guid .. ")") return end

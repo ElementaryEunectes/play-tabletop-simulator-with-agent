@@ -76,6 +76,12 @@
 **F4 · `front_watch.ps1` 是"某一局专用"残留**（`❌`）
 它靠读 ① 那款 mod 自己画的横幅色块判轮到谁。**换 mod 即失效**，但仍留在 `tts\`（因为 `read_turn.ps1` 引用它）。
 ⇒ 别把 `cache\front.txt` 当通用信号源。
+⚠️ **2026-10-11 追加（读文档时别被"休眠保留"骗）**：`read_turn.ps1` 的**本体仍是那次批量替换的残骸** ——
+`$hotsDir`（原 `$ShotsDir`）· `$ilentlyContinue` · `$img.$Dispose()` · `$ist` · 参数 `$S` 被当成 y 坐标……
+**`check_ps1.ps1` 报 0 错**（这些都是**合法的** PowerShell：未定义变量不是语法错），但一跑就错。
+而 `front_watch.ps1` 每轮都会调它 ⇒ **这条链即使被重新启用也跑不起来**。
+⛔ **没有修**（链已停用）：要复用就得逐行还原（原始意图可从 `git show 3fbbde9:tts/read_turn.ps1` 与同事故后修好的
+`index_images.ps1`/`tts_api.ps1` 头部描述推断），或者把两个文件一起移出仓库（"死脚本别留 `tts\`"）。
 
 **F5 · 桥接的 `exec`/`callx` 边界未验**（`⛔`，`BOOTSTRAP.md` §5 已列）
 已知对"带脚本的物件"有效；无脚本物件 / 反复调用 / 并发 ⇒ **未验**。

@@ -76,6 +76,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 5. 🟡 **开源收尾**：`LICENSE`(MIT) ✅ · `README.en.md` ✅ · 路径/隐私 ✅（树里 0 处 `C:\Users\<名字>`）· 离线门禁 **7 条** ✅ ⇒ 剩下"首次上手的时间/成本期望"写进 README 顶部。
 6. ⚪ **平台层不随仓库走**（十几条坑只在 harness home）⇒ 开源用户只有 `tts\docs\MAINTENANCE.md` §0；**"等玩家点结束回合"依赖 DSH 的 sentinel**，换 agent 平台会退化成轮询。
 7. ⚪ **火绒**（环境事实，不是待办）⇒ §9。
+8. ⚪ **`tts\read_turn.ps1` 是坏的**（2026-10-11 发现）：批量替换事故的残骸（`$hotsDir`/`$ilentlyContinue`/`$img.$Dispose()`/`$ist`），`check_ps1` 查不出来。它属**已停用**的 `front_watch` 链 ⇒ 二选一（**等人拍板**）：① 逐行还原；② 连同 `front_watch.ps1` 一起移出仓库（"死脚本别留 `tts\`"）。台账 ⇒ `tts\docs\VALIDATION.md` F4。
 
 ## §6 环境与坑 ⇒ 两处（本文件不复述）
 
@@ -121,6 +122,14 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
+- **2026-10-11 凌晨（第二轮 · 事实核对）**（`ec971b8` ＋ 随后一次）：**拿台账把文档逐条对了一遍**，改掉一批"文档在说谎"的地方。
+  - **结束回合**：`getPlayerHand()` 那条**旧结论全删**（实测那个方法**存在**；真因是它的 `Name` 字段为空）；补上"按的是**存档颜色的下一位**"、"`Locked=true` ⇒ **玩家也拖不动**"、"颜色与位置可能错位 ⇒ **可能要点两次**"、"**平台投递另加 ~23 s**（总感知 ~25 s）"。涉及 `TTS_RULES` §三 · `PLAY` · `USER_GUIDE` · `tr.ps1` 头。
+  - **数字全部重量过**：门禁 **7** 条（en 版写 6，已改）· `tts\` 下 **45** 个 `.ps1`（README 写 40）· 注入 **5,047 B**（`tts\doctor.ps1` 实测；README 把项目那份写成 2.9 KB）· 平台坑 **×17**（docs/README 写 ×16）· 桥接用例 **30**（两处写 16 / 31）· 进程启动 **~0.27 s**（两份 README 写 0.35 s）。
+  - **`$DSH_HOME` 的说法原来反了**：启动器**默认不动**它 ⇒ harness home 那份 `AGENTS.md` **照旧注入**（两份 README 原文写"机器上不放、全局槽零注入"）。发布配置要**先填** `$ProjectDshProfile`（代码里现在是 `''`）。
+  - **`PLAY.md` 的"通用"动词表其实是一款游戏的控制层**（且 `status` 一行与同文件自相矛盾）⇒ 换成通用形状＋指针；骰子/结算顺序那几条改指该局 `FLOW.md`。
+  - **`BOOTSTRAP` 结构性重排**：§1 的**两个 `D.`** 拆成 D/E 并补上**现行回合交接链**（校准 ＋ `turn_poller` ＋ `^mine` file 哨兵 ＋ **`max_fires` 必须显式**）；`front_watch → front.txt → TURN=` 标为**已停用**；§2 的 `A·C·B·C` 理成 A/B/C（校准改成不带字母的"每款一次"）；§1 里那段**夹在两步中间的排障块**挪成 §1c；删掉与 `setup.ps1 -InitGame` 打架的**手抄骨架**；§6 的 `v12-callx`/`init.ps1`/`front_watch` 实例更新。
+  - **代码侧（都活体验过）**：`tracker_read.lua` 里那枚**写死的本局 guid** 换成 `__GUID__`（由 `exec_script.ps1 -Guid` 替换）⇒ 实测读回 `LOCKED/LIVE_COLOR/LIVE_NAME`；`tr.ps1` 删掉**猜坐标的兜底**（校准档没有落点就报错退出，实测 dry-run 走校准档）；`live_smoke.ps1` 不再写死某局颜色，改用校准档的 `stateMine`（**只读我方手牌**，符合隐藏信息纪律）⇒ 活体 **17/17**。
+  - **新发现（未修，等人拍板）**：`tts\read_turn.ps1` **本体还是批量替换事故的残骸**（`$hotsDir`/`$ilentlyContinue`/`$img.$Dispose()`/`$ist`）：`check_ps1.ps1` 报 **0 错**（这些都是"合法的" PowerShell，未定义变量不是语法错），但一跑就错，而 `front_watch.ps1` 每轮都调它 ⇒ 那条已停用的链**即使重启也跑不起来**（⇒ `VALIDATION.md` F4）。
 - **2026-10-11 凌晨**（`fc9eba6`）：**文档按"规则 / 代码"分家**（用户拍的边界：**代码相关进 `MAINTENANCE.md`**、**接手新 mod 的流程进 `BOOTSTRAP.md`**）。
   - `TTS_RULES.md` **只留现场规则**：跟人配合 · 一回合 · 按钮定案（**§三**）· 能力边界 §四（差分/Lua 沙箱/计数器/移动/落板）· 找物认牌 §五 · 截图 §六 · **TTS 行为坑 §七** · 换局 §八。
   - 迁出：**§二 工具清单**（含目录 · 跨脚本引用 · ⭐**两层怎么分**）⇒ `MAINTENANCE.md` **§5** · **§八 改游戏内 Lua** ⇒ **§6** · **§九 的 sanity check ＋ PowerShell 陷阱表** ⇒ **§7** · **§九 的 8 步开局** ⇒ `BOOTSTRAP.md` **§2c**。

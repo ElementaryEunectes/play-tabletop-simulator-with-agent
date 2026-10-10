@@ -152,7 +152,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `card_index.ps1` · `index_images.ps1` | 把**卡片映射到本地图缓存**（建卡库、认新牌面）—— 卡库已建好，平时不用 |
 | `grab_window.ps1` | 抓 TTS 窗口像素（Unity 下 `PrintWindow` 无效，靠 BitBlt）；"没有 Lua 通道只能看画面"时的兜底 |
 | `tts_click.ps1` | 合成鼠标输入。⚠️ **已定案：合成点击点不到 mod 的「结束回合」按钮** ⇒ 基本没用 |
-| `front_watch.ps1` · `read_turn.ps1` | **旧叫醒链**（`cache\front.txt` ＋采样横幅色块）—— ⛔ **已被 `turn_poller.ps1` ＋ file 哨兵取代**（见 `TTS_RULES.md` §三），保留但不接新东西 |
+| `front_watch.ps1` · `read_turn.ps1` | **旧叫醒链**（`cache\front.txt` ＋采样横幅色块）—— ⛔ **已被 `turn_poller.ps1` ＋ file 哨兵取代**（见 `TTS_RULES.md` §三）。⚠️ 而且 `read_turn.ps1` **本体至今仍是坏的**（批量替换事故的残骸：`$hotsDir` / `$ilentlyContinue` / `$img.$Dispose()` / `$ist` —— **解析器查不出来**，那是运行期错不是语法错）⇒ **别调用它**；要复用就先逐行还原或连同 `front_watch.ps1` 一起归档（⇒ `VALIDATION.md` F4） |
 | `validate_lua.js` | **改 `lua\dsh_global.lua` 之前**必跑（并同时改 `DSH_VERSION`） |
 
 ### 🧪 离线测试（**不开 TTS 也能跑**）

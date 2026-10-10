@@ -42,6 +42,18 @@ if ($null -eq $idx0.err -and $null -ne $idx0.custom -and [string]$idx0.custom.ok
 }
 if ($someGuid -eq '') { Write-Host 'WARN no guid available - guid-taking commands will be SKIPped' }
 
+# The `hand` probe reads a HAND, so the hidden-information rule says it must aim at MY OWN colour -
+# taken from this match's calibration file (stateMine). Without calibration the probe is SKIPped rather
+# than pointed at somebody else's hand. (Before 2026-10-11 this file hardcoded one match's colour.)
+$someColor = ''
+if ([string]$DshGame -ne '' -and [string]$DshCache -ne '') {
+    $calib = Join-Path $DshCache ($DshGame + '_turn.json')
+    if (Test-Path -LiteralPath $calib) {
+        try { $someColor = [string](([System.IO.File]::ReadAllText($calib, [System.Text.Encoding]::UTF8) | ConvertFrom-Json).stateMine) } catch { }
+    }
+}
+if ($someColor -eq '') { Write-Host 'WARN no calibrated seat colour - the hand probe will be SKIPped (it must read MY OWN hand)' }
+
 $tests = @(
     @{ n = 'ping'; c = @{ cmd = 'ping' }; want = 'v' },
     @{ n = 'count'; c = @{ cmd = 'count' } },
@@ -53,7 +65,7 @@ $tests = @(
     @{ n = 'selftest'; c = @{ cmd = 'selftest' } },
     @{ n = 'env'; c = @{ cmd = 'env' } },
     @{ n = 'turn_tracker'; c = @{ cmd = 'turn_tracker' } },
-    @{ n = 'hand'; c = @{ cmd = 'hand'; player = 'Brown'; action = 'get' } },
+    @{ n = 'hand'; c = @{ cmd = 'hand'; player = $someColor; action = 'get' }; needsColor = $true },
     @{ n = 'noteread'; c = @{ cmd = 'noteread' } },
     @{ n = 'tablist'; c = @{ cmd = 'tablist' } },
     @{ n = 'whose'; c = @{ cmd = 'whose'; guids = $someGuid }; needsGuid = $true },
@@ -65,6 +77,7 @@ $tests = @(
 $pass = 0; $fail = 0
 foreach ($t in $tests) {
     if ($t.needsGuid -and $someGuid -eq '') { Write-Host ("SKIP  {0,-14} (no guid on the table)" -f $t.n); continue }
+    if ($t.needsColor -and $someColor -eq '') { Write-Host ("SKIP  {0,-14} (no seated colour on the table)" -f $t.n); continue }
     # Via Invoke-Tts, not Bridge: Bridge's -Soft turns an ok=false REPLY into $null, which reads as "no
     # reply" and hides the bridge's own error text.
     $r = Send $t.c

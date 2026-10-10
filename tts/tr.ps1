@@ -13,10 +13,10 @@
 #   What still works is writing a Transform: the piece moves, the colour of the piece does not follow
 #   but the turn itself is recorded in the game's STATE.md (this game's single source of truth).
 #
-#   The two resting places are MEASURED, not guessed: the tracker sat at z=+15 for the agent (Teal) and
-#   z=-15 for the player (Brown); x~0.06, y~1.96, rotY=180 is how it rested there. They live in
-#   cache\<game>_turn.json next to the zMine/zPlayer that turn_side.ps1 already uses, so there is one
-#   place to change if a future table differs.
+#   The two resting places are MEASURED, not guessed, and they live in cache\<game>_turn.json
+#   (points[], next to the zMine/zPlayer that turn_side.ps1 already uses) - written by
+#   tools\turn_calib.ps1. This script reads them and REFUSES to move anything when the calibration
+#   has no point for that z: it never falls back to a remembered coordinate.
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tts\tr.ps1 -To mine
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tts\tr.ps1 -To player
@@ -66,9 +66,13 @@ $col = if ($State -eq 'mine') { [string]$doc.stateMine }
        else { if ($To -eq 'mine') { [string]$doc.stateMine } else { [string]$doc.statePlayer } }
 $point = $null
 foreach ($p in $doc.points) { if ([math]::Abs([double]$p.z - $z) -le [double]$doc.tolerance) { $point = $p } }
-$x = if ($point) { [double]$point.x } else { 0.06 }
-$y = if ($point) { [double]$point.y } else { 1.96 }
-if ($y -le 0) { $y = 1.96 }
+# The resting point comes from the calibration file - never from a fallback here. A guessed x/y is how
+# one wrong coordinate reaches the table; if the point is missing, say so and stop (turn_calib.ps1
+# rewrites the file).
+if (-not $point) { Write-Host ("ERR calibration has no resting point for z={0} (re-run tools\turn_calib.ps1)" -f $z); exit 2 }
+$x = [double]$point.x
+$y = [double]$point.y
+if ($y -le 0) { Write-Host 'ERR calibration point has a non-positive y'; exit 2 }
 $rotY = 180
 
 Write-Host ("move tracker {0} -> x={1} y={2} z={3} rotY={4} saved-colour={5}" -f $doc.tracker, $x, $y, $z, $rotY, $col)
