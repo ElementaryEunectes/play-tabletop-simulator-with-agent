@@ -46,6 +46,8 @@
   - **玩家侧**：按那枚 **Turn Tracker** 的按钮。**判定以位置为准、不以它的颜色为准。**
   - ⚡ **快链（2026-10-11 定稿，延迟 ~2-4 s；此前 ~33 s）**：常驻作业 `tts\tools\turn_poller.ps1`（**每 2.5 s** 读一次位置，**变化才写** `cache\turn_side.txt`）＋ **file 哨兵**（`pattern=^mine`，inotify 推送 **<1 s**）⇒ 检测 **~0.5-3.3 s**（实测 468 ms）。我交还 `tts\tr.ps1 -To player` **~0.9 s**（此前 12.9 s —— 那是 `exec_script.ps1` 空等回执窗口，已改成**收到回执即退出**）。
     ⚠️ **轮询器是后台作业、不跨会话** ⇒ 新会话要重跑上面那条命令并**重挂 file 哨兵**（旧的 `command` 哨兵每 20 s 一次，已被取代）。
+    ⛔ **重挂 file 哨兵必须显式给 `max_fires`** —— 不写就默认 **1 次**、触发后**自动结束**（2026-10-11 真踩过：自测那一下就把订阅耗掉了，快链静默失效）。本仓库用 **`max_fires=500`**。
+    ⛔ **但"永久防重复"靠的是模式本身、不是 `max_fires`**（玩家定的）：`^player`＝该你行动、`^mine`＝轮到我，每次触发都在"上一条指令**执行完毕**"之后才被推送 ⇒ 不会在**同一动作**上重复触发（同一文件内容不会再次产生"no-match→match"边沿，只有它**再次变化**才会），所以不会重复执行，也**不需要动作完成后再重挂**。
   - **判定**：`tts\tools\turn_side.ps1` 读棋子 `z` 的符号（校准档 `zMine=+15 / zPlayer=−15`；语义由玩家当面确认）。⛔ **别再用 `command` 哨兵做回合检测**（平台探测实际 ~20 s 一次，是当时延迟的主因）。
   - **体检**：`tts\tools\tracker_read.lua`（经 `exec_script.ps1`）一次读出 `POS / SAVED_STATE / LIVE_COLOR / LOCKED / NAME`。
   - ⛔ **别再用 `callx`/`Object.call` 驱动别的 mod**（会把 TTS 弄失联）；⛔ **别在 `messageID 3` 里改别人物件的函数**（⇒ `VALIDATION.md` F13）。
