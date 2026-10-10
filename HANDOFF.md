@@ -1,13 +1,12 @@
 # HANDOFF.md —— 交接简报（最近更新 **2026-10-11 凌晨** · 回合交接已校准 · 文档已按"规则 / 代码"分家）
 
-> **怎么读**：本文件 = "现在到哪了 + 先干什么"（**按需读，不注入**）。
+> **怎么读（按这个顺序）**：**§1 启动** → **§4 待办**（**现在真正剩的只有两条**：E（demo ＋ 30 秒录屏）与**冷启动验证**）→ **§7.9 回合交接** → **§9 本轮纪要**。
 > 长期规矩 ⇒ `AGENTS.md`（本项目）＋ `$DSH_HOME\AGENTS.md`（平台宪章）；改东西前 ⇒ `tts\docs\MAINTENANCE.md`；坑 ×17 ＋ 注入机制 ⇒ harness home 的 `platform\MAINTENANCE.md`。
-> **文档全索引 ⇒ `tts\docs\README.md`**（那张表里没有的细节，本文件也不复述）。
+> **文档全索引 ⇒ `tts\docs\README.md`**；**本局状态 ⇒ `local\games\<游戏>\STATE.md`**（唯一真源：含"现在轮到谁"与续局步骤，本文件不复述游戏名与槽位）。
 > ⚠️ **先做 §1 的启动动作**，否则脚本会读写一个不存在的旧目录。
->
-> 🔴 **接手先做这一件事**：**让玩家重载当前存档槽**（槽位 / `SaveName` / 物件数 ⇒ **`local\games\<当前游戏>\STATE.md`**，本文件不复述游戏名与槽位）。
-> 本轮彻查后桥接变了（删掉令牌/记账/埋点，只留 `turn_tracker`）⇒ **不重载则桥上还是旧版**。
-> 回合交接**不受影响**（它走 `cache\<游戏>_turn.json` ＋ file 哨兵；快路径用桥接的 `turn_tracker`（v15 就有，**不是**本轮新命令），取不到才回落到 `ds.ps1 -Do 'index:250'` ⇒ 只会变慢，不会断）。
+> ⚠️ **每个新会话要重建两个活件**（它们**不跨会话**）：轮询器（后台作业 `tts\tools\turn_poller.ps1 -IntervalSec 2.5`）＋ **file 哨兵**（`cache\turn_side.txt`，`pattern=^mine`，**`max_fires` 必须显式给**）⇒ 步骤 ⇒ `tts\docs\PLAY.md` 回合交接节。
+> 🔌 **桥接版本**：盘上现在跑的是 **`v15-tags-snap-hand`**（`TS_Save_17.json`）；仓库源码已升 **`v16-tracker-guid`**（`turn_tracker` 可按调用方的 guid 读那件，见 `MAINTENANCE.md` §5）⇒ **要重烤 ＋ 请玩家重载**才生效；不重载则一切照旧可用。
+> ✅ **验证两件套**：门禁 `tts\tests\run_all.ps1`（7 条）· 活体 `tts\tests\live_smoke.ps1`（17 条**只读**，需要 TTS）。
 
 ## §1 启动（必做，30 秒）
 
@@ -24,6 +23,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 **为什么**：本仓库只放**对任何 TTS mod 都成立**的通用工具链（判据 ⇒ `AGENTS.md`）。
 
 ## §4 待办（按优先级）
+
+> 🧭 **看这一行就够**：**现在真正待办只有两条** —— ① 第 **4** 条里的 **E（demo ＋ 30 秒录屏）**；② 同条的 **冷启动验证**（clone 到新目录 ＋ 独立 `$DSH_HOME`，照 README 走一遍）。
+> 其余各条的状态：**0 / 1 / 2 已结清** · **3 / 5 是口径与收尾**（按需）· **3b 是"每个新会话要做的动作"**（不是待办）· **6 / 7 环境事实** · **8 等你拍板**（`read_turn.ps1` 修还是归档）。
 
 0. ✅ **F8 已定案并修好（2026-10-09）**：`players` / `take` / `spawn` / `destroy` 在活体上**不是"名字是 nil"那么简单** ——
    v14 那段原语被**拼接进了 `setCount()` 的中间**（插在它最后一条语句和它自己的 `return out` / `end` 之间）⇒
