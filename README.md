@@ -46,11 +46,11 @@
 | 要干什么 | 读什么 |
 |---|---|
 | 平台纪律（跨项目，自动注入） | `AGENTS.md` |
-| **做 TTS 工作**（工具地图 · 按钮 · 桥接坑 · 一句话约定） | `tts\docs\TTS_RULES.md` |
+| **做 TTS 工作**（按钮定案 · 能力边界 · 认牌 · TTS 行为坑 · 一句话约定） | `tts\docs\TTS_RULES.md` |
 | 每局开工 | `tts\docs\PLAY.md`（**通用**每回合卡）＋ `local\games\<游戏>\STATE.md`（该局状态，**不进仓库**）· 换 mod 才需 `tts\docs\BOOTSTRAP.md` |
 | 本局规则/技能/骰面 | `local\games\<游戏>\FLOW.md`（**不进仓库**）·
     卡面文本 `cache\<游戏>_cards.md`（`cache\` 不入库，脚本会重建/手抄） |
-| 脚本清单（⭐常用 / 💤休眠 / 改名前必读的引用图） | `tts\docs\TTS_RULES.md` §二 工具清单 |
+| 脚本清单（⭐常用 / 💤休眠 / 改名前必读的引用图）· 改游戏内 Lua · 写入前检查 | `tts\docs\MAINTENANCE.md` §5–§7 |
 | 换局 / 冷启动 | `tts\docs\BOOTSTRAP.md` |
 | **人怎么用（拿给玩家看）** | `tts\docs\USER_GUIDE.md` |
 | 文档与目录总索引 | `tts\docs\README.md` |

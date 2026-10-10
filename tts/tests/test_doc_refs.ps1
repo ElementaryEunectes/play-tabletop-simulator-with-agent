@@ -12,8 +12,8 @@
 #     CONTRIBUTING.md LICENSE start-agent.ps1). Those break when something moves.
 #     Bare filenames like `roll.ps1` are prose, not paths - v1 flagged ~270 of those and was useless.
 #   * a backticked token is often a COMMAND (`tts\play.ps1 turn`) or carries an annotation
-#     (`tts\docs\TTS_RULES.md` §二): take only the first word. An annotation glued straight onto the
-#     path with a full-width bracket (`...TTS_RULES.md（§二 工具清单）`) is read as part of the path
+#     (`tts\docs\MAINTENANCE.md` §5): take only the first word. An annotation glued straight onto the
+#     path with a full-width bracket (`...MAINTENANCE.md（§5 工具清单）`) is read as part of the path
 #     and reported as broken - keep a SPACE before it (this gate caught two such rows on 2026-10-09).
 #   * FAIL for a missing path that should ship; INFO for gitignored trees (cache\ out\ local\ logs\
 #     shots\ archive\) and for lines about archived material (those scripts live in

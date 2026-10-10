@@ -54,10 +54,10 @@ the bridge, the sentinel and every script run **locally**; no service fees beyon
 | What you want | Read |
 |---|---|
 | Platform discipline (cross-project, auto-injected) | `AGENTS.md` |
-| **Doing TTS work**: tool map, the End Turn button, bridge traps, the one-line conventions | `tts\docs\TTS_RULES.md` |
+| **Doing TTS work**: the End Turn ruling, capability limits, card identity, TTS-specific traps, the one-line conventions | `tts\docs\TTS_RULES.md` |
 | Starting a round | `tts\docs\PLAY.md` (generic per-turn card) + `local\games\<game>\STATE.md` (that match's state, not shipped); `tts\docs\BOOTSTRAP.md` only when changing mods |
 | This game's rules, skills and dice faces | `local\games\<game>\FLOW.md` (not shipped) · card text in `cache\` |
-| Script inventory (core / dormant / rename-time reference graph) | `tts\docs\TTS_RULES.md` section 2 |
+| Script inventory (core / dormant / rename-time reference graph) · editing the in-game Lua · pre-write checks | `tts\docs\MAINTENANCE.md` sections 5-7 |
 | New game, cold start | `tts\docs\BOOTSTRAP.md` |
 | **How a human uses it** (hand this to the player) | `tts\docs\USER_GUIDE.md` (Chinese) |
 | Doc and directory index | `tts\docs\README.md` |

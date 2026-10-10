@@ -14,9 +14,9 @@
 |---|---|---|
 | 移动/重命名任何被文档提到的文件 | 所有引用它的 `.md`（grep 旧名） | ✅ `test_doc_refs.ps1` |
 | 桥接 Lua（`tts\lua\dsh_global.lua`） | `DSH_VERSION` ＋ `HANDOFF.md` §4 ＋ **重装存档 ＋ 请玩家重载** | ⚠️ 只有 `validate_lua.js` |
-| 「结束回合」的可行性判定 | ⛔ **只改 `TTS_RULES.md` §四**（唯一真源），别处只留指针 | ❌ |
-| 新**原语**（桥接能力） | `TTS_RULES.md` §二 ＋ `HANDOFF.md` §4 | ❌ |
-| 新**脚本** | `TTS_RULES.md` §二 ＋ `tts\docs\README.md` 目录约定 | ❌ |
+| 「结束回合」的可行性判定 | ⛔ **只改 `TTS_RULES.md` §三**（唯一真源），别处只留指针 | ❌ |
+| 新**原语**（桥接能力） | `tts\docs\MAINTENANCE.md` §5（工具清单）＋ `HANDOFF.md` §4 | ❌ |
+| 新**脚本** | `tts\docs\MAINTENANCE.md` §5（工具清单）＋ `tts\docs\README.md` 目录约定 | ❌ |
 | **每回合要走的路**（动词/哨兵） | `tts\docs\PLAY.md` ＋ `USER_GUIDE.md` | ❌ |
 | **启动方式** 或 harness home | `AGENTS.md` 启动段 · `INJECTION.md` · `README`/`USER_GUIDE` | ❌ |
 | `AGENTS.md`（**每请求都计费**） | 跑 `test_agents_hygiene.ps1`（体积 ＋ 5 个承载性指针） | ✅ |

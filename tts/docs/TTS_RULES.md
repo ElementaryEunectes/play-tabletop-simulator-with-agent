@@ -1,24 +1,24 @@
-# TTS_RULES.md —— Tabletop Simulator 代玩规则与技术手册（**做 TTS 工作时读一次**）
+# TTS_RULES.md —— Tabletop Simulator 代玩规则手册（**做 TTS 工作时读一次**）
 
 > **什么时候读我**：任务是在 TTS 里替人打桌游（任何一款）时。
 > **别的项目不要读我** —— 平台纪律在 `~/.dsh\AGENTS.md`（自动注入）。
-> ⚠️ **别整份读**：按下面的路由表取要用的那节。本文件 = **规则 ＋ 工具 ＋ 能力边界 ＋ 坑**（原先的 `TTS_WORKFLOW.md` 已并入，2026-10-11）。
+> ⚠️ **别整份读**：按下面的路由表取要用的那节。本文件 = **现场规则 ＋ 能力边界 ＋ TTS 行为坑**（原先的 `TTS_WORKFLOW.md` 已并入，2026-10-11）。
+> ⛔ **代码/工具那半不在这里**：工具清单 ⇒ `MAINTENANCE.md` §5 · 改游戏内 Lua ⇒ §6 · 写入前 sanity check ＋ PowerShell 陷阱 ⇒ §7 · 接手新 mod 的施工顺序 ⇒ `BOOTSTRAP.md` §2c。
 > 每回合那一份是 **`local\games\<游戏>\STATE.md`**（⛔ 不进仓库）；每回合通用动作 ⇒ `PLAY.md`。
 
 | 我要干什么 | 读哪节 |
 |---|---|
 | 跟玩家怎么配合 / 响应窗口 / 隐藏信息 | **§一** |
-| 找个脚本 / 判断"这脚本能不能动" | **§二**（工具清单**唯一真源**） |
-| 一回合怎么走 | **§三** |
-| 「结束回合」到底能不能程序按 | **§四**（**唯一真源**） |
-| **"他刚才干了什么"** / 差分能识别什么 | **§五**（先看能力边界） |
-| 改棋盘上的数字 / 挪棋子 / 计数器不动 | **§五**（5.2 计数器 · 5.3 移动 · 5.4 落板） |
-| 换存档 / 桌上有什么 / **某物到底在哪** | **§六**（6.2 是标准动作） |
-| 认一张牌 / 一个指示物 | **§六 6.3** —— ⚠️ **hash 不够**时看拼图那条 |
-| 必须截图时 | **§七** |
-| 给物件装 / 改游戏内 Lua | **§八（每次都要走那三步）** |
-| **接手一款没见过的新 mod** | **§九**（含 ⚠️ 写入前 sanity check ＋ PowerShell 陷阱） |
-| 撞上怪现象 | **§十** ＋ `MAINTENANCE.md` |
+| 一回合怎么走 | **§二** |
+| 「结束回合」到底能不能程序按 | **§三**（**唯一真源**） |
+| **"他刚才干了什么"** / 差分能识别什么 | **§四**（先看 4.1 能力边界） |
+| 改棋盘上的数字 / 挪棋子 / 计数器不动 | **§四**（4.3 计数器 · 4.4 移动 · 4.5 落板） |
+| 换存档 / 桌上有什么 / **某物到底在哪** | **§五**（5.2 是标准动作） |
+| 认一张牌 / 一个指示物 | **§五 5.3** —— ⚠️ **hash 不够**时看拼图那条 |
+| 必须截图时 | **§六** |
+| 撞上怪现象 | **§七** ＋ `MAINTENANCE.md` §0 |
+| 找个脚本 / 判断"这脚本能不能动" / 改 Lua / 写入前检查 | ⛔ 不在这里 ⇒ **`MAINTENANCE.md`**（§5 · §6 · §7） |
+| **接手一款没见过的新 mod** | ⛔ 不在这里 ⇒ **`BOOTSTRAP.md` §2c** |
 
 ## 零、一句话原则（方法别选错）
 
@@ -47,78 +47,7 @@
 - ⭐ **对手翻出的公开牌必须主动读**（事件牌/结算牌）：不读就无法核对计数。**别等他提醒。**
 - ⚠️ **请玩家做动作的四条教训**（都踩过）：① **尽早要一个锚点**（请他拖个棋子到参照点，比任何图像分析都快准）；② **别连续试错放置**（每错一次就动一次他的棋盘）；③ **不确定就明说**（"我读图不可靠，请你看一眼"）；④ **别用截图判断棋子落在哪格**。
 
-## 二、工具清单（`tts\*.ps1`，按频率 · **找脚本/清理时读我 —— 唯一真源**）
-
-> 规则：**根目录只放现役工具**；死的/实验性的在 `~\.dsh\archive\tts-legacy\`（⚠️ **不在本仓库**，别再去找）。
-> **改任何 `.ps1` 之后必须跑 `check_ps1.ps1`**（补 BOM ＋ 真解析器全量校验）。
-
-### ⭐ 核心（每局都在用）
-
-| 脚本 | 干什么 |
-|---|---|
-| **`play.ps1`** | **通用入口/分发器**：读 `GAME=` ⇒ 转发给该游戏的**控制层** `local\games\<game>\control\play.ps1`。✅ **没有控制层时 `status`（或裸调用）也能用**：桥接版本 · 物件数 · 在位玩家 · 轮到谁（2026-10-11 起） |
-| **`ds.ps1`** | **跟 TTS 说话的高层入口**：`-Do 'ping / tabread / getState:<g> / setCount:<g>:<n> / act:<g>:<verb> / move:… / draw:… / all:<n> / read:<g>'`；v14 起 `players` · `take:<堆>:<CardID>:<x>:<y>:<z>` · `destroy:<g>` · `spawn:copy:<g>:…` · `player:<Color>:<turn\|blind>`；v15 起 `container:<g>` · `hand:<Color>:holding\|<give>\|<draw>` · tags/吸附点。**`spawn:type` 已被桥接显式拒绝**（见 §十） |
-| **`roll.ps1`** | 掷/读骰面：**必须明说意图** `-Roll`（掷）/ `-NoRoll`（只读）；**裸调用 `exit 2` 且不接触 TTS** |
-| `ttslib.ps1` · `ttsx.ps1` | **唯一的 TCP 传输层**（`ttslib` **dot-source，别 spawn**）· 原始通道（只回 `customMessage`） |
-| `dsbatch.ps1` | 一条进程跑多条 `ds.ps1` 命令（`-Commands 'a;;b'`）⚠️ 两层子进程会被沙箱掐网络 ⇒ 优先逐条 |
-| `say.ps1` | 往笔记本对话频道发一条（**中文走 `-MessageFile`**）；单进程就地 TCP |
-| `live_index.ps1` · `diff_index.ps1` · **`diff_hidden.ps1`** | 整桌实时快照（CSV）· 差分（`-Snapshot` 冻结基线）· **带隐藏区遮蔽的 diff（对外显示一律用它）** |
-| `card.ps1` | 查卡库 `cache\<game>_cards.md`（`-Q '<名字>'`）＋ 别名表；**无 `-Q` 只回用法 + `exit 2`** |
-| `check_ps1.ps1` | **改完 `.ps1` 必跑**：补 BOM ＋ 真解析器校验（递归） |
-| **`doctor.ps1`** | **新机器/新 clone 第一步**（只读体检）：PowerShell · 路径 · TTS 目录 · 39999 · node · **每请求注入字节数** |
-| **`setup.ps1`** | **首次上手向导**（默认只读）：打印"到第一回合"的 8 步 ＋ 转给 `doctor.ps1`。`-InitGame <slug>` 从 `tts\templates\` 建 `local\games\<slug>\` 并把 `GAME=` 指过去（先备份）· `-DryRun 1` 预览 |
-| **`tr.ps1`** | **交还回合**：`-To mine\|player` 搬那枚回合标记（`-State` 指定存档颜色）· 坐标取自 `cache\<game>_turn.json` |
-| `tools\turn_calib.ps1` · `tools\turn_side.ps1` | 每款 mod **一次校准**（`-Discover`/`-Answer`/`-Show`）· 运行时判定**轮到谁**（`mine\|player\|unknown\|uncalibrated`） |
-| `tools\turn_poller.ps1` | 后台作业：每 2.5 s 读位置、**变化才写** `cache\turn_side.txt` ⇒ 配 file 哨兵做**快速叫醒** |
-| `tests\live_smoke.ps1` | **烤完桥接/重载后跑它**：17 条**只读**命令逐条 PASS/FAIL，一次看清哪个子集坏了（离线门禁测不出"命令在活体上到底能不能用"） |
-
-### 🔧 常用（按需）
-
-| 脚本 | 干什么 |
-|---|---|
-| `obj_index.ps1` | **存档侧**全量物件索引 → `cache\obj_index.csv`（含 url hash / `src` / **规则书 `pdfurl`** / 容器关系 / GMNotes；**滞后 ~5 分钟**）· `-Hist` 出名称直方图 |
-| `guidinfo.ps1` | 给定 guid → 从存档切出 **CardID / deck / 位置**（**认牌用**） |
-| `bags_dump.ps1` · `bag_list.ps1` | 展开容器（牌堆/袋）内容 → `cache\bag_contents.txt` |
-| `bootstrap.ps1` | **换局/新存档**重新认物：默认只打座位表+摘要，全表写 `cache\session_map.md`（`-Full` 打全表）；认物规则**不在代码里** ⇒ 读 `local\games\<游戏>\objects.json`（schema ⇒ `BOOTSTRAP.md` §1b）。`-Inventory` ⇒ `cache\obj_inventory.md`（教新 mod 用） |
-| `install_save2.ps1` | **写存档的唯一通道**（灌 `lua\dsh_global.lua` ＋ 修 notebook tab id；需一次提权）；日志写 `cache\install2_log.txt` |
-| `crop_zoom.ps1` | 裁图 ＋ 放大转真 PNG（**读卡面/查图用**；`Mods\Images` 里扩展名常与真实格式不符） |
-| `tts_api.ps1` | TTS **External Editor API（39999）** 原始客户端；`tools\exec_script.ps1` = 走它的 **`messageID 3`** 执行 Lua（**安全**，见 §十） |
-
-### 💤 休眠但别删（删了会踩坑）
-
-| 脚本 | 什么时候才需要 |
-|---|---|
-| `card_index.ps1` · `index_images.ps1` | 把**卡片映射到本地图缓存**（建卡库、认新牌面）—— 卡库已建好，平时不用 |
-| `grab_window.ps1` | 抓 TTS 窗口像素（Unity 下 `PrintWindow` 无效，靠 BitBlt）；"没有 Lua 通道只能看画面"时的兜底 |
-| `tts_click.ps1` | 合成鼠标输入。⚠️ **已定案：合成点击点不到 mod 的「结束回合」按钮** ⇒ 基本没用 |
-| `front_watch.ps1` · `read_turn.ps1` | **旧叫醒链**（`cache\front.txt` ＋采样横幅色块）—— ⛔ **已被 `turn_poller.ps1` ＋ file 哨兵取代**（见 §四），保留但不接新东西 |
-| `validate_lua.js` | **改 `lua\dsh_global.lua` 之前**必跑（并同时改 `DSH_VERSION`） |
-
-### 🧪 离线测试（**不开 TTS 也能跑**）
-
-7 条、唯一入口 `tts\tests\run_all.ps1`（"退出码 0 ＋ 输出含成功标志"才算过）⇒ 逐条清单 ⇒ `CONTRIBUTING.md` §3。
-⚠️ 改测试判定逻辑前**先造一个"坏"的阳性对照**（本仓库两次"假绿"）。`check_ps1.ps1` 是递归的 ⇒ 测试自身也受校验。
-📌 **活体那半**：`tests\live_smoke.ps1`（需要 TTS）。
-
-### 目录与跨脚本引用（改名/清理前先看）
-
-```
-tts\  *.ps1 现役 · lib\bridge.ps1 通用传输包装 · lua\dsh_global.lua 桥接本体（别动）
-      tools\ 跨语言小工具 · templates\ 新游戏三模板 · tests\ 离线门禁 ＋ 活体冒烟 · docs\ 全部文档
-```
-⚠️ 跨脚本引用：`bootstrap → ds/obj_index/live_index` · `diff_index → live_index` · `live_index → ds` ·
-`read_turn → grab_window/tts_click` · `front_watch → read_turn` · `channel_watch/ttsx/roll/say → ttslib` ·
-`play → ttslib/say` · `install_save2 → lua\dsh_global.lua` · `tr/turn_side/turn_poller → tools\exec_script ＋ cache\<game>_turn.json`。
-
-### ⭐ 两层是怎么分开的
-
-- **`tts\` = 通用层**（对任何 mod 都成立）：传话 `ttslib`/`ds`/`ttsx`/`say` · 看 `obj_index`/`live_index`/`diff_*` · 认物 `bootstrap`（数据在 `local\games\<游戏>\objects.json`）· 查卡 `card` · 写存档 `install_save2` · 传输包装 `lib\bridge.ps1`。
-- **`local\games\<游戏>\control\` = 该游戏的控制层**（不进仓库，按 `BOOTSTRAP.md` §2 教出来）：`play.ps1`（入口，带自己的 `param()`）＋ 模块（`dice`/`rules`/`verbs`…）＋ 数据 `cache\<game>_rules.json`。
-- ⇒ 换一款游戏 ＝ **加一个 `control\` 目录 ＋ 改 `GAME=` 一行**，仓库一行都不用动。
-- ⛔ 控制层里**不许写死仓库路径**（配置由 `tts\config.ps1` 提供：`$DshGameControl`/`$DshLibTtslib`/`$DshLibBridge`/`$DshGameRules`）；**必须 UTF-8 带 BOM**（`local\` 不在 `check_ps1.ps1` 扫描范围内）。
-- ✅ 判"桥接在不在"**永远**用 `ds.ps1 -Do ping`（版本号即凭据）—— **别拿 `play.ps1 <动词>` 当连通性检查**（它要先跑控制层，控制层可能在碰 TTS 之前就因缺文件失败，那是分层设计不是桥接断了）。
-
-## 三、一回合怎么走
+## 二、一回合怎么走
 
 1. 读**那一份**：`local\games\<游戏>\STATE.md` = **这一局状态的唯一真源**（比分/资源/待办）＋ 该游戏 `FLOW.md`（规则/坐标）。
 2. **核对盘面（一条命令拿实测值）**：**有控制层的游戏**用 `play.ps1 turn`（盘面＋骰面＋招式＋笔记本尾条，全只读）；
@@ -128,7 +57,7 @@ tts\  *.ps1 现役 · lib\bridge.ps1 通用传输包装 · lua\dsh_global.lua �
 4. 摆玩家的选项；我自己的行动直接执行。
 5. 写回 STATE（**只改"当前"块与待办**，**≤5 KB**）→ 报一行公开事实 → **等哨兵叫醒**（不轮询）。
 
-## 四、「结束回合」按钮 —— ⭐ **唯一真源**（要改只改这一节）
+## 三、「结束回合」按钮 —— ⭐ **唯一真源**（要改只改这一节）
 
 - ✅ 它就是右上角那块「**Player N**」横幅本身（悬停弹出"点击结束回合"）。
 - ⛔ **我程序里按不了**：普通点击 / `-Absolute` / 绿星三种都试过全无效（**TTS 不吃合成输入**）。
@@ -140,13 +69,13 @@ tts\  *.ps1 现役 · lib\bridge.ps1 通用传输包装 · lua\dsh_global.lua �
   回合**流水**（第几回合）记在 `local\games\<游戏>\STATE.md`，**不另设计数器**（一处定义）。
 - ✅ **自动叫醒（2026-10-11 换链）**：常驻作业 `tools\turn_poller.ps1`（每 **2.5 s** 读位置，**变化才写** `cache\turn_side.txt`）＋ **file 哨兵**（`pattern=^mine`，推送 <1 s）⇒ **检测 ~0.5-3.3 s**（实测一次 468 ms）。
   ⛔ **旧的 `front_watch.ps1` → `cache\front.txt` → `TURN=P<席位>` 已停用**（依赖"TTS 在前台"，切后台就读不到）。
-  ⚠️ **`command` 哨兵**能用但平台 **~20 s** 才探一次（请求 15 s 无效；**5 s 会被饿死** ⇒ `BOOTSTRAP.md` §C）。
+  ⚠️ **`command` 哨兵**能用但平台 **~20 s** 才探一次（请求 15 s 无效；**5 s 会被饿死** ⇒ `BOOTSTRAP.md` §2 的「哨兵的周期限制」）。
   ⚠️ 轮询器是**后台作业、不跨会话** ⇒ 新会话要重跑它并**重挂 file 哨兵（`max_fires` 必须显式给**，默认 1 次就没了）。命令 ⇒ `PLAY.md` 回合交接节。
 - ⛔ **别用 `callx`/`Object.call` 驱动别的 mod**：实测**两次把 TTS 弄失联**，且**从未修复**（⇒ `VALIDATION.md` F12）。
 
-## 五、能力边界：能读什么、能写什么
+## 四、能力边界：能读什么、能写什么
 
-### 5.1 差分能识别什么（**读玩家操作**）
+### 4.1 差分能识别什么（**读玩家操作**）
 
 TTS **没有事件流**（订阅不到"他点了那张牌的快捷动作"），只能看**状态**：`diff_index.ps1 -Snapshot` 冻结基线 → 让他行动 → 再跑一次看差异。
 
@@ -162,13 +91,13 @@ TTS **没有事件流**（订阅不到"他点了那张牌的快捷动作"），�
 - **结构上识别不到**：容器内部 · 隐藏区（`diff_hidden.ps1` 故意折叠）· 纯点击无状态变化 · 两次快照间的**中间态** · 二选一的效果 · 意图/时序 · 牌面文字（只认 hash＋CardID）。
 - ⇒ **差分是安全网，不是玩家报告的替代品**。纪律：他每次宣告 = **响应窗口**，**以他报的为准**（与 §一"以物为准"配合：矛盾时请他摊牌）。
 
-### 5.2 Lua 沙箱的能力边界（实测）
+### 4.2 Lua 沙箱的能力边界（实测）
 
 `sandbox` 里 **`load` / `loadstring` / `eval` / `setUI` / `io` / `loadfile` 全是 nil** ⇒ 命令层必须是**显式白名单 + 手写分支**，不能动态构造调用。
 已验可用 verb：`getPosition/setPosition` · `getRotation/setRotation` · `getScale/setScale` · `getBounds/getBoundsNormalized/getVisualBoundsNormalized` · `getGMNotes/setGMNotes` · `getName/setName` · `getDescription/setDescription` · `getColorTint/setColorTint` · `getLock/setLock` · `getValue/setValue` · `getQuantity` · `flip` · `shuffle` · `deal` · `setState/getStates` · `positionToLocal/positionToWorld` · `getScreenPosition`。
 ⚠️ **`setLuaScriptState` 不存在**（`script_state` 是**成员变量**，直接赋值）—— **且成员变量 verb 必须在"方法查找"之前处理**，否则误报 `object has no method ...`（绕了两轮）。
 
-### 5.3 计数器的两种机制（别搞混）
+### 4.3 计数器的两种机制（别搞混）
 
 | 机制 | 谁在用 | 读 | 写 |
 |---|---|---|---|
@@ -177,7 +106,7 @@ TTS **没有事件流**（订阅不到"他点了那张牌的快捷动作"），�
 
 ⚠️ 只改存档值**不会动屏幕上的数字**（脚本没重读）⇒ 要用 `setcount`（它走 `desc + customSet() + script_state` 并**回读**验证）。
 
-### 5.4 移动物件的正确写法
+### 4.4 移动物件的正确写法
 
 ```lua
 o.setPosition({ x, y, z })          -- ✅ 直接位置参数
@@ -185,13 +114,13 @@ o.setPosition({ x, y, z })          -- ✅ 直接位置参数
 ```
 ⇒ `ds.ps1` 里 `move:`/`rotate:` 走**专用 handler**，**不要**用通用 `act:` 去调 `setPosition`。
 
-### 5.5 「落在板子上」的判据
+### 4.5 「落在板子上」的判据
 
 放完**一定回读** `getPosition`：板面高度 = 板中心 y + 板厚/2。棋子 y 明显高于它 = 在板上；接近桌面 y ≈ 2 = **掉到桌子上了**（曾把棋子放到板外：y 从 2.6 变 1.9）。
 
-## 六、找物件与认牌
+## 五、找物件与认牌
 
-### 6.1 先建「物件索引」，别用 Lua 全扫描
+### 5.1 先建「物件索引」，别用 Lua 全扫描
 
 **问题**：Lua `getObjects()` 只给顶层物件（袋子/牌堆里的拿不到）；而 `find:`/`count:` 这类**批量命令在 400+ 物件时会 15–90 秒超时**。
 ⚠️ **更正（2026-10-04）**：`find:` 从来不是"超时"—— **凡是返回列表的命令都发不出回复**，因为 `sendExternalMessage` 无法序列化嵌套表，而那句没包 pcall，整个回复流程静默死掉（**已修**：列表压成 JSON 字符串 + 包 pcall）。判别诀窍：**发一个不存在的命令**（一定回 `no handler`）；**命令已知却完全不回 = 就是这个 bug**。
@@ -200,7 +129,7 @@ o.setPosition({ x, y, z })          -- ✅ 直接位置参数
 关键实现要点：用 `JavaScriptSerializer`（**提高 `MaxJsonLength`**）解析，**不要用 `ConvertFrom-Json`**（带大 Lua 的存档会抛异常）；递归走 `ObjectStates`/`ContainedObjects`/`ChildObjects`/`States`；**袋里的物件在取出前不是顶层物件**，所以要展开容器；`ConvertFrom-Json` 出来是 PSCustomObject ⇒ **用 `$v.FaceURL`，不要 `$v['FaceURL']`**。
 **查东西**：直接对 CSV 用 grep/Import-Csv，比任何 Lua 命令都快。
 
-### 6.2 看全貌 + 定位「这东西到底在哪」
+### 5.2 看全貌 + 定位「这东西到底在哪」
 
 | 来源 | 结论 |
 |---|---|
@@ -217,7 +146,7 @@ o.setPosition({ x, y, z })          -- ✅ 直接位置参数
 
 ⚠️ **两条血泪教训**：① **别按"离某个参照点最近"判身份**（我把两座移动城市的归属弄反，还错报"某玩家城市放错 25 格"）⇒ **反投影成图素、裁图直读编号**；② **别把"我按推算值摆的东西"当成验证**（循环验证）。
 
-### 6.3 认牌：**hash ＋ CardID**，不认名字
+### 5.3 认牌：**hash ＋ CardID**，不认名字
 
 - 存档里卡片名字都是 `Card`/`CardCustom`，唯一身份是图片 URL：`CustomDeck.<CardID>.FaceURL` 尾段 **40 位十六进制 hash**。
 - **同一图在不同主机域名不同**（`steamusercontent-a.akamaihd.net` vs `cloud-3.steamusercontent.com`）⇒ **匹配 hash，别匹配整条 URL**。
@@ -226,10 +155,9 @@ o.setPosition({ x, y, z })          -- ✅ 直接位置参数
   （实例：8 张板共用拼图、`NumWidth=4,NumHeight=2` ⇒ 我按 hash 判"4 张一样的牌"并凭记忆贴名字，**全错**。）
 - **规则**：① 认牌 = `FaceURL` hash **＋ `CardID`**（必要时加 `NumWidth/NumHeight`）；② **拿不到 `CardID` 就不要猜名字**（直说"不知道"或把拼图按格裁开看）；③ 查 `CardID` 用 `guidinfo.ps1 -Guid <g1>,<g2>`。
 - ⛔ **不要让模型手抄 hash**（我把 48 个 hash 手打进 CSV，全是编的）⇒ 一定用工具从图里取。
-- ⚠️ **不要用 `JavaScriptSerializer` 解析这些存档**（实测抛 `ArgumentException`，而且**异常会把整份 JSON 打进 stderr**，token 成本极高）⇒ 用正则截取。
-- ⚠️ **`powershell -File x.ps1 -Guid a,b,c`** 会把 `a,b,c` 当**一个字符串**传进来，数组参数**不会**自动按逗号拆 ⇒ 脚本里自己 `-split ','`。（同类：`f $arr[0] $arr[1]` 会把整个数组绑给第一个参数。）
+- ⚠️ **取 `CardID` 的两个实现坑**（`JavaScriptSerializer` 解析存档 · `-File` 不按逗号拆数组参数）⇒ `MAINTENANCE.md` §7。
 
-## 七、截图与窗口（只在必要时用）
+## 六、截图与窗口（只在必要时用）
 
 > **省 token 纪律**：状态一律用 Lua 读，**不要用截图**。必须截图时：
 
@@ -242,61 +170,7 @@ o.setPosition({ x, y, z })          -- ✅ 直接位置参数
 - 抓完先看字节数：几百字节 = 全黑/失败，几 MB = 成功。
 - ⚠️ `grab_window.ps1` 引用的 `alt_activate.ps1` **已不在仓库**（归档）⇒ 要前台就**手动切**或用 `tts_click.ps1` 的护栏逻辑。
 
-## 八、改游戏内 Lua 的安全流程（每次都要走）
-
-```powershell
-node tts\validate_lua.js tts\lua\dsh_global.lua        # 1) 语法校验（必跑！曾抓到 here-string 里字面量 `r`n）
-& powershell -NoProfile -File 'tts\install_save2.ps1'  # 2) 从最新自动存档重建槽位（需 danger-full-access）
-# 3) 让玩家 Menu → Load → <上一步写出的槽位>（槽位名以本次实际安装结果为准）
-```
-- `validate_lua.js` = luaparse（依赖：`npm i luaparse` 或设 `LUAPARSE_DIR`）。
-- **PowerShell here-string 不转义反引号**：单引号 here-string 里写 `` `r`n `` 会原样进 Lua。
-- **notebook 页 `id` 必须唯一**，否则 `getNotebookTabs()` 顺序不稳定、写入永远写偏。
-- 写盘后 `ds.ps1 -Do ping` 的 **`loads=`** 会变 ⇒ 这是判断玩家是否重载过的依据。
-- 存档目录在 workspace 之外 ⇒ 写盘需**单次提权**（预期行为）。
-- 📌 改完**跑一次 `tests\live_smoke.ps1`**（离线门禁证明不了命令在活体上能用）。
-
-## 九、接手一款没见过的新 mod：标准开局
-
-```
-1. ping / tabread                        → 确认连通 + 读玩家留言
-2. obj_index.ps1 + bags_dump.ps1         → 全量物件表（本地 grep，别用 Lua 扫）
-3. 找板子：getPosition/getRotation/getBounds → 记下中心、rotY、尺寸
-4. ⭐ 坐标初始化：请玩家做一次校准动作（把棋子拖到明确参照点 → getPosition）
-5. 认物：bootstrap.ps1 -Inventory → 写 local\games\<游戏>\objects.json → bootstrap.ps1 出地图
-6. 算目标坐标 → move: → getPosition 回读   → 逐个确认落点
-7. 写状态：setGMNotes / setScriptState     → 回读确认
-8. say.ps1 汇报 + 请玩家确认                → 只问一次，别反复
-```
-（完整换 mod 流程 ⇒ `BOOTSTRAP.md` §2 ＋ §2b"教出控制层"。）
-
-### ⚠️ 写入前的强制 sanity check（血的教训）
-
-我曾把 `$OZ - $SZ*$py` 写成让 PowerShell 把 `-SZ` 当参数、`$py` 当**指数**，算出 **2.8×10²¹** 的坐标，把一个模型移过去后**被物理引擎销毁**。
-**规矩：任何 `move:` 之前，先打印目标坐标并检查范围**（板子半宽用 `act:<boardGuid>:getBounds` **当场读**，别照抄旧数字）：
-
-```powershell
-if ([math]::Abs($x) -gt $half -or [math]::Abs($z) -gt $half) { Write-Host "REFUSED: ($x, $z) off the board"; exit 1 }
-```
-
-**配套的 PowerShell 陷阱（每条都实际咬过我）**：
-
-| 写法 | 后果 |
-|---|---|
-| `$a - $b * $c` 在表达式/参数位 | `-b` 被当成**参数名**，`$c` 变指数 → 天文数字 |
-| `[math]::Round($a - $b*$c, 3)` | 表达式求值失败或算错 |
-| `f $arr[0] $arr[1]` | 整个**数组**绑给第一个参数 → "cannot convert System.Object[] to System.Double" |
-| `$g` 之类单字母变量 + `-G` 参数 | 撞名，类型错乱 |
-| here-string 里的 `` `r`n `` | 原样写进 Lua → 语法错误 |
-| **含中文的 `.ps1` 存成无 BOM 的 UTF-8** | ⚠️ `powershell -File` 按 ANSI 读 ⇒ 中文乱码 ⇒ 报一堆 `Missing closing ')'`。**必须带 BOM** |
-| 双引号串里再写 `"` | 字符串提前结束 ⇒ 解析失败（用 `「」` 或 `` `" ``） |
-| 双引号串里的 `` `t ``（想写路径） | 反引号是转义符 ⇒ 被吃掉（改用单引号） |
-
-**一律：先取成 typed 标量、显式加括号、写盘前打印验证。** 含中文的脚本写完**先空跑一次**。
-
-> **另一类"陷阱"在数据**：某 mod 有 **5 个 `HandTrigger`** —— 四个在座位排（z≈−115）、一个离群的在 z=+114。**按 x 排序会把离群那个插进座位中间，让所有玩家归属整体错位。** ⇒ **凡"按某个坐标排序来分配身份"，先确认没有离群样本。**
-
-## 十、⚠️ TTS 特有的坑（都付过代价）
+## 七、⚠️ TTS 特有的坑（都付过代价）
 
 - **牌在容器里读不到**：桥接只索引顶层物件 ⇒ 读手牌/牌堆内容要**请玩家把牌拖到桌上**；手牌计数板**不可信**（曾读数 3、实际 5）。
 - **卡面文本读得到就别标"未确认"**：卡表大图在 `Mods\Images`，用 `crop_zoom.ps1` 裁格读图。
@@ -314,7 +188,7 @@ if ([math]::Abs($x) -gt $half -or [math]::Abs($z) -gt $half) { Write-Host "REFUS
 - ⚠️ **延迟/挂账效果不会自己冒出来**：卡面写"本回合收尾阶段…"的，**收尾第 1 步必须倒查本回合用过的牌有没有挂账**。
 - 含中文的 `.ps1` 手写时**尽量用 ASCII 注释**；`check_ps1.ps1` 能补 BOM。
 
-## 十一、换局 / 新游戏
+## 八、换局 / 新游戏
 
 - **冷启动 / 换局 / 换模组**：照 `tts\docs\BOOTSTRAP.md` 走（三种情形 ＋ 共同核心四步）；`ds.ps1 -Do ping` 是任何情形的第一步。
 - **guid 全变** ⇒ 识别一律靠 **hash ＋ nick ＋ scale ＋ 坐标关系**，**绝不用记住的 guid**；上一局的坐标/常量一律作废（资源点上放什么常常是开局随机）。

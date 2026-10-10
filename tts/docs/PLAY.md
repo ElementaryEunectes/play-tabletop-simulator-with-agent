@@ -6,7 +6,7 @@
 
 ## 通用动作（动词 · 哨兵 · 状态页维护）
 
-> 规则/技能/骰面 = 该游戏的 `local\games\<游戏>\FLOW.md`（⛔ **不进仓库**）· TTS 通用坑与**工具清单** = `TTS_RULES.md` · **本节不重复它们**。
+> 规则/技能/骰面 = 该游戏的 `local\games\<游戏>\FLOW.md`（⛔ **不进仓库**）· TTS 通用坑 = `TTS_RULES.md` · **工具清单与脚本维护** = `MAINTENANCE.md` §5–§7 · **本节不重复它们**。
 
 ### 一回合（照抄）
 
@@ -31,7 +31,7 @@
 | `defense -Seat moon [-Apply -Incoming N]` | 我的防御；**不加 `-Roll` 只读** |
 | `say -TextFile <utf8>` | 往笔记本发一行（中文**必须**走文件） |
 
-⚠️ **别 read 控制层入口本体** —— 当前游戏的控制层在 `local\games\<游戏>\control\`（`play.ps1` ＋ `dice`/`rules`/`verbs` 等模块，**要改哪块就读哪块**）；仓库里的 `tts\play.ps1` 只是**分发器**（解析 `GAME=` ⇒ 把参数原样转发）。分层与契约 ⇒ `TTS_RULES.md` §二 方框。技能数据 `cache\<game>_rules.json`（= `$DshGameRules`），卡面 `tts\card.ps1 -Q '<名>'`。
+⚠️ **别 read 控制层入口本体** —— 当前游戏的控制层在 `local\games\<游戏>\control\`（`play.ps1` ＋ `dice`/`rules`/`verbs` 等模块，**要改哪块就读哪块**）；仓库里的 `tts\play.ps1` 只是**分发器**（解析 `GAME=` ⇒ 把参数原样转发）。分层与契约 ⇒ `MAINTENANCE.md` §5 的「两层是怎么分开的」。技能数据 `cache\<game>_rules.json`（= `$DshGameRules`），卡面 `tts\card.ps1 -Q '<名>'`。
 ⚠️ `setLock` 坏了（`cannot convert userdata to Boolean`）⇒ 重掷只能逐颗 `ds.ps1 -Do act:<骰guid>:roll`。
 ⚠️ **骰子**：`roll.ps1` 必须明说 `-Roll`/`-NoRoll`（裸调用 `exit 2`）；**判定以玩家报的为准**。
 ⚠️ **结算顺序**：宣告 → 先问他改不改骰 → 防御掷骰 → 才扣血。**数字没谈定先跑 `-Apply -WhatIf`**（打印 `WILL WRITE` 但不写）；`-Apply` 真写后脚本自己回读，不一致即 `BAD DATA`。
@@ -59,7 +59,7 @@
   - **体检**：`tts\tools\tracker_read.lua`（经 `exec_script.ps1`）一次读出 `POS / SAVED_STATE / LIVE_COLOR / LOCKED / NAME`。
   - ⛔ **别再用 `callx`/`Object.call` 驱动别的 mod**（会把 TTS 弄失联）；⛔ **别在 `messageID 3` 里改别人物件的函数**（⇒ `VALIDATION.md` F13）。
   - ⚠️ 那枚棋子的 **`Name` 必须写着颜色顺序**（本机 `Brown Teal`）—— 它**文档要求**的配置；清空会让它按 10 色表轮转、跑到 `Red` 这类**空座位**。
-- ⛔ **"我点不了那个按钮"的判定与理由只有一处**：`TTS_RULES.md` §四 —— **别处不要再复述**；哪天它能被按下去，只改那一处。
+- ⛔ **"我点不了那个按钮"的判定与理由只有一处**：`TTS_RULES.md` §三 —— **别处不要再复述**；哪天它能被按下去，只改那一处。
 - 新会话**必须重挂**哨兵（编号每会话不同，先 `sentinel_list`）。
 - 收工：`sentinel_cancel` ＋ kill 后台作业。
 

@@ -34,7 +34,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\doctor.ps1     # 只读�
 ds.ps1 -Do ping        # 期望 ok v=<DSH_VERSION> objs=<n> loads=<n>
 ```
 - 版本号 = **"新桥接有没有真的进去"的唯一凭据**。`no reply` ⇒ 桥接不在（走 §2）。
-- ⚠️ **用 `ds.ps1 -Do ping`，别用 `play.ps1 status`**（后者要先有该游戏的 `cache\<game>_rules.json`，否则连 TTS 都没碰就报 `NO PART`；理由见 `TTS_RULES.md` §二 的方框）。
+- ⚠️ **用 `ds.ps1 -Do ping`，别用 `play.ps1 status`**（后者要先有该游戏的 `cache\<game>_rules.json`，否则连 TTS 都没碰就报 `NO PART`；理由见 `MAINTENANCE.md` §5 的「两层是怎么分开的」）。
 - ⚠️ TTS 只接收、不吃合成输入 ⇒ 我**不能点按钮**；连「结束回合」都是玩家点。
 
 **C. 盘点与重认**（guid 每局/每模组都变，**只认 hash + nick + scale + 坐标关系**）
@@ -206,7 +206,7 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
 1. **先定位**：`find:规则` / `find:Rule` / `find:说明` / `find:手册`，或从 `count` 直方图里挑名字可疑的物件。
    （例：对局型 mod 桌上常有一本「规则书（中x.y英x.y版本）」，`0f4dfd` @ (190,−0.01)。）
 2. **先判形态，再决定怎么读**（省 token 的关键）：
-   - `Custom_Model`/`Custom_Tile` 贴图 ⇒ 用「附录A / `TTS_RULES.md` §6.2」的图素↔世界换算**裁图读**，只裁要用的区域；
+   - `Custom_Model`/`Custom_Tile` 贴图 ⇒ 用「附录A / `TTS_RULES.md` §5.2」的图素↔世界换算**裁图读**，只裁要用的区域；
    - `Deck`/`Bag`（一叠卡）⇒ `act:<guid>:getQuantity` 看几张，再决定逐张 `draw` 或按 hash 认；
    - 有纯文本（`getGMNotes`/`getDescription` 非空）⇒ 直接 `read`。
 3. **只读"开局必需"的四件事**：① 起始 HP/CP（或等价资源）② 回合/阶段流程 ③ 胜负与终局条件 ④ 手牌/牌堆的初始设置。
@@ -255,6 +255,25 @@ local\games\<游戏>\
 
 **验证（离线优先）**：控制层里带一个 `-SelfTest`（**不碰 TTS**）：用写死的用例核对招式名/骰面映射与
 `cache\<game>_rules.json` 一致 ⇒ 改中文或改数据后能立刻发现漂移。跑法：`tts\play.ps1 -SelfTest`。
+
+## §2c 接手一款没见过的新 mod：**标准开局**（8 步）
+
+> **什么时候读我**：`ping` 通了、要在这款 mod 上真正开工的时候 —— §2 解决"怎么让它通"，本节是**通了的施工顺序**。
+> ⚠️ **写入前必须先过 sanity check**（坐标范围 ＋ typed 标量）⇒ `MAINTENANCE.md` §7：这一步曾把一个模型送到物理引擎手里销毁。
+
+```
+1. ping / tabread                        → 确认连通 + 读玩家留言
+2. obj_index.ps1 + bags_dump.ps1         → 全量物件表（本地 grep，别用 Lua 扫）
+3. 找板子：getPosition/getRotation/getBounds → 记下中心、rotY、尺寸
+4. ⭐ 坐标初始化：请玩家做一次校准动作（把棋子拖到明确参照点 → getPosition）
+5. 认物：bootstrap.ps1 -Inventory → 写 local\games\<游戏>\objects.json → bootstrap.ps1 出地图
+6. 算目标坐标 → move: → getPosition 回读   → 逐个确认落点
+7. 写状态：setGMNotes / setScriptState     → 回读确认
+8. say.ps1 汇报 + 请玩家确认                → 只问一次，别反复
+```
+（完整换 mod 流程 ⇒ §2 ＋ §2b"教出控制层"。）
+
+---
 
 ## §3 状态页规范（**一个游戏一份，绝不共用**）
 > 规则/边界全在 `AGENTS.md`（常驻宪章）；本节只讲**换局时怎么落状态页**。

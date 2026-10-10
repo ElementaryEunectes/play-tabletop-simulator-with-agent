@@ -56,7 +56,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 1. ✅ **D2 已完成（2026-10-09）**：**对局型 mod** 的 `local\games\<游戏>\objects.json` 写好（8 个区块）⇒ `bootstrap.ps1` 恢复可用（`cache\session_map.md` = 92 行 / 3.9 KB；HP·CP 4 行 · 牌堆 2 · 骰子 5+5 · 英雄板 2 · 规则书 1）。
    📌 关键：**索引里同一物件常有两行**（容器副本 1523/1659）⇒ 每个区块都要 `topLevel: true`；这条已写进 `BOOTSTRAP.md` §1b 与数据文件自身的 `_note`。换英雄/换局：`bootstrap.ps1 -Inventory` 取新 hash 加一行。
    ⚠️ **"任何 mod 都成立"：第二款 mod 实测 = 半过（2026-10-09 晚，详情见 `tts\docs\VALIDATION.md`）**：**非对局型** mod（自带 116 KB Global 脚本 ＋ 12 页笔记本）⇒ `install_save2.ps1 -KeepLua -KeepTabs` 烤进存档、模组自带脚本**原样保留** ⇒ 玩家重载后 **`ping` 回 `v13-turntoken`** ⇒ `obj_index.ps1 -File <绝对路径>`（625 行）⇒ `bootstrap.ps1 -Inventory`（190 nicks / 41 hashes）⇒ 写 `objects.json`（7 区块）⇒ **115 行地图**。
-   🟢 这一路**全过**（传话 · 存档侧索引 · 认物 · 地图）。🔴 但 **`play.ps1` 在这款上 FAIL**（`NO PART`：它要 `cache\<game>_rules.json` 且 `status` 也走 `$Rules.dice/seats`）⇒ **这条缺陷已写进 `TTS_RULES.md` §二 方框**；"通用"目前**只是这一路证据，不是全链证据**。
+   🟢 这一路**全过**（传话 · 存档侧索引 · 认物 · 地图）。🔴 但 **`play.ps1` 在这款上 FAIL**（`NO PART`：它要 `cache\<game>_rules.json` 且 `status` 也走 `$Rules.dice/seats`）⇒ **这条缺陷已写进 `MAINTENANCE.md` §5 的「两层是怎么分开的」**；"通用"目前**只是这一路证据，不是全链证据**。
    📌 学到的两条：① **`obj_index.ps1 -File` 要绝对路径**（相对 cwd 解析，给裸文件名会报 not found）；② 这类 mod 把教学写在 **Notecard** 上（地图有专门一节 ⇒ 开局先读它，再写 `FLOW.md`）。
    ⛔ 仍然**不要**为了验证去造假的第二款游戏（fixture 只验"数据不在代码里"这条契约）。
 2. ✅ **重烤 ＋ 活体验收已完成（2026-10-11）**：载入 `TS_Save_17.json` 后逐条真跑 —— `ping` = `v15-tags-snap-hand`
@@ -105,7 +105,7 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
   ✅ **那枚 Tracker 自己是好的**（2026-10-11 玩家实测）：按一下 ⇒ 颜色前进 ＋ 棋子挪到那位的手牌位置。
   ⛔ 我先前写"它用已删除的 `getPlayerHand()` ⇒ 玩家手按也不动" —— **错**（那个方法**存在**）；真因是它 **`Name` 字段为空**（⇒ `currentColor` 为空 ⇒ 找不到下一个颜色）。
   ⚠️ **我们改不了它的颜色**（四条路试尽：`callx` 弄挂 TTS · `messageID 3` 空环境 · 写 `script_state` 被 `onSave` 覆盖 · 改 `Name` 只管轮转范围）⇒ **位置是唯一判据，可能要点两次才换边**（玩家已接受）。全表 ⇒ `VALIDATION.md` F13。
-  ⚡ **检测用 file 快链**（`turn_poller.ps1` 2.5 s ＋ file 哨兵 inotify ⇒ **~0.5-3.3 s**）；⛔ 旧的 `command` 哨兵实际 **~20 s** 一次，别再用（⇒ `BOOTSTRAP.md` §C）。
+  ⚡ **检测用 file 快链**（`turn_poller.ps1` 2.5 s ＋ file 哨兵 inotify ⇒ **~0.5-3.3 s**）；⛔ 旧的 `command` 哨兵实际 **~20 s** 一次，别再用（⇒ `BOOTSTRAP.md` §2 的「哨兵的周期限制」）。
 - ⛔ 判定错了 ⇒ **重跑 `-Discover` ＋ `-Answer`**，**不许**改代码里的数字或用坐标反推（脚本头部有这条）。
 
 
@@ -142,7 +142,7 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 - **2026-10-09 场 3**（**验证转向**：目标从"打游戏"改成"验项目"）：
   - **通用性首次有了反例**：第二款真 mod（**非对局型**）⇒ 传话/存档/索引/认物/地图**全过**，`play.ps1` **FAIL**。
-    ⇒ 逐层台账（断言 · 证据 · **未验就写未验**）＝ **`tts\docs\VALIDATION.md`**；`play.ps1` 的边界写进 `TTS_RULES.md` §二 方框。
+    ⇒ 逐层台账（断言 · 证据 · **未验就写未验**）＝ **`tts\docs\VALIDATION.md`**；`play.ps1` 的边界写进 `MAINTENANCE.md` §5 的「两层是怎么分开的」。
   - **硬线落地**：受跟踪文件里 **0 处真游戏名**（唯一例外 = 两个 README 的授权声明）⇒ 门禁 `test_agents_hygiene.ps1` 新增扫描 ＋ **4 条自检**（看见植入名 / 分支数 / 条目数 / 除 BOM 外纯 ASCII）。上线即抓出 **14 个文件**的违规。
   - ⚠️ **这次"假绿"抓了两回**：① 淘汰名单写成 `@('a' + 'b', 'c' + 'd')` ⇒ 数组只有 1 个元素、正则**没有 `|`**、扫描器全瞎，而阳性对照因为**用同一个坏串**照样 PASS；② 后来一次合并编辑**吃掉一行** ⇒ 某个名字悄悄不再被扫（分支数检查 7/7 也照样 PASS）⇒ 补"条目数必须等于 N"。
   - ⚠️ **真事故两条**（⇒ `MAINTENANCE.md` §0/§4）：**丢 BOM → 工具壳按 ANSI 读 → 语法错 → `check_ps1` 把乱码固化**；**编辑工具把 `dsh_global.lua` 行尾归一**（2 行注释变 95 增 95 删，靠 `git diff --numstat` 抓出并重做）。
