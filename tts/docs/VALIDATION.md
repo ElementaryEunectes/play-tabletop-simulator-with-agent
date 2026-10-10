@@ -170,7 +170,11 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 **`Player.log` 尾部**：一长串 `Curl error 56: Recv failure: Connection was reset` ＋ 一次 Unity 资源卸载（`Unloaded 38 unused Assets`）。
 **两个候选，都没证**：① 我那个**坏信封**（缺 `messageID`/`customMessage`）；② TTS 自己在**大量素材下载被重置**之后卡住/退出。
 📌 **同刻的第二个会话独立观察到同一件事**（提交 `d04f452`，03:45:51）：它那次**交接失败在 `listener busy on 39998`**（不是 39999），随后也发现"**TTS 已关闭**（39999 无监听）"，
-并据此**停掉轮询器、取消它那个 file 哨兵、删掉还在写 `mine` 的 `cache\turn_side.txt`**。⇒ 结论按两边的共同观测写：**TTS 是掉了/被关了，不是"桥接哑了"**。
+并据此**停掉轮询器、取消它那个 file 哨兵、删掉还在写 `mine` 的 `cache\turn_side.txt`**。
+⚠️ **03:49 补正（别把结论写重了）**：`Player.log` **仍在增长**（最后写入 `03:48:05`，尾部只有两次 Unity 资源卸载、**没有崩溃/退出痕迹**）⇒ 准确说法是
+**「TTS 进程活着，但 39999 这个 API 端口关了」**，不是"进程崩了"。最可能：**存档被卸载/退回菜单**，或那次重载之后 API 没重开。
+⇒ 修法：**在 TTS 里确认 External Editor 开着**，或**重启 TTS 并重新载入存档**；回来先 `ds.ps1 -Do ping`。
+📌 **那次哨兵触发是延迟投递**：它描述的是 `03:44:29` 的 `player→mine` 边沿（第 1/500 次），收到时 `cache\turn_side.txt` **已被另一会话删掉** ⇒ **没有可交还的回合**，也不重挂（链路要等 TTS 回来重建）。
 ⚠️ **它同时定案了快链引入的一个真缺陷**：**39998 只有一个槽**，而轮询器每 2.5 s 探一次 ⇒ 它每一轮都占这个槽一小片，
 于是**交接**（`tr.ps1`/`exec_script.ps1`）会撞 `listener busy`；缓解 = 把绑定重试从 3 次提到 **6 次/~10 s**（已提交），
 **真正的修法**是"**一个常驻进程独占 39998、其它人走它**"（⇒ `PRIOR_ART.md` 的 hub 方案），不是继续加 retry。
