@@ -71,7 +71,8 @@ the bridge, the sentinel and every script run **locally**; no service fees beyon
 
 1. **Windows + PowerShell 5.1** — the scripts use `System.Drawing`, WinRT and GDI screen grabs.
 2. **DSH**, the agent harness that provides the tool calls and the sentinel wake-up mechanism.
-   This work area *is* `$DSH_HOME` for it.
+   Harness home and work area are two different things: by default they are separate, and only
+   `-RepoAsHome` makes this repository the `$DSH_HOME`.
 3. **Tabletop Simulator** plus the target mod. `tts\lua\dsh_global.lua` is injected into a save
    by `install_save2.ps1` and becomes the bridge.
 4. **Node.js** — only for `tts\validate_lua.js`, which must be run before touching the Lua.
@@ -89,8 +90,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfil
 `doctor.ps1` also works out **how many bytes get injected on every request**: this repository's
 `AGENTS.md` (about 1.9 KB) plus **the `AGENTS.md` in *your* harness home**. That second file is
 **not part of this repository** — it is the harness's *user-global* instruction file
-(`$DSH_HOME\AGENTS.md`). If `DSH_HOME` points at this repository, the two deduplicate into one
-(which is what `start-agent.ps1` arranges).
+(`$DSH_HOME\AGENTS.md`). If `DSH_HOME` points at this repository (which only `-RepoAsHome` arranges),
+the two deduplicate into one.
 
 ⚠️ `.gitattributes` (`* -text`) **freezes line endings and encoding**: a clone is byte-identical
 to what was committed. **Do not switch it to `text=auto`** — that rewrites every stored blob

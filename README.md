@@ -59,7 +59,7 @@
 ## 跑起来需要什么
 
 1. **Windows + PowerShell 5.1**（脚本用了 `System.Drawing`、WinRT、GDI 抓屏）。
-2. **DSH**（提供哨兵与工具调用；本工作区就是 `$DSH_HOME`）。
+2. **DSH**（提供哨兵与工具调用）—— harness home 与工作区是**两个概念**：默认分开（`$DSH_HOME` 指向 harness 的家）；加 `-RepoAsHome` 才把本仓库当 `$DSH_HOME`。
 3. **Tabletop Simulator** + 目标模组；`tts\lua\dsh_global.lua` 通过 `install_save2.ps1` 灌进存档建立桥接。
 
 ## 在新机器上（**新 clone 的第一步**）
@@ -72,7 +72,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfil
 ```
 
 `doctor.ps1` 会顺便算出**每请求注入多少字节**：本仓库的 `AGENTS.md`（**≈1.9 KB**）＋ **你这台机器 harness home 里的 `AGENTS.md`**。
-第二份**不在本仓库里** —— 它是 harness 的**用户全局**文件（`$DSH_HOME\AGENTS.md`）。若 `DSH_HOME` 就指向本仓库，两份会**去重成一份**（`start-agent.ps1` 就是这个用法）。
+第二份**不在本仓库里** —— 它是 harness 的**用户全局**文件（`$DSH_HOME\AGENTS.md`）。若 `DSH_HOME` 就指向本仓库（只有加 `-RepoAsHome` 才这么设），两份会**去重成一份**。
 
 ⚠️ 本仓库用 `.gitattributes`（`* -text`）**锁住行尾与编码**：clone 出来的字节与提交的完全一致。**别改成 `text=auto`** —— 那会一次性重写所有文件的 blob，还可能碰坏 `.ps1` 必须保留的 UTF-8 BOM。
 
