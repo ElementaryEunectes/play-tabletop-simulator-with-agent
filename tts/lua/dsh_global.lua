@@ -2165,6 +2165,38 @@ local function turnEnd(m)
     return { ok = true, cmd = "turn_end", turn = tostring(n), state = tostring(DSH_STATE or "") }
 end
 
+-- The turn signal the PLAYER drives, and the piece they press is a real object in the save.
+--
+-- WHY THIS REPLACES EVERYTHING WE TRIED (measured 2026-10-10): the table carries the community
+-- "Turn Tracker" Custom_Token (locked, so only its own button moves it). Pressing its End Turn button
+-- teleports it between the two hand zones: z = -15 (the player's side) and z = +15 (mine), a clean
+-- 30-unit jump with no other object moving. It is IN THE SAVE, so unlike a runtime-spawned token it
+-- survives every reload, and it needs no button, script or state of ours at all.
+-- So the whole question "whose turn is it / did the player end their turn" reduces to reading one
+-- position - which is also exactly what a sentinel can watch from outside without holding a session.
+TURN_TRACKER_GUID = TURN_TRACKER_GUID or "0e731f"
+
+local function turnTrackerState()
+    local o = nil
+    pcall(function() o = getObjectFromGUID(TURN_TRACKER_GUID) end)
+    if o == nil then
+        return { ok = false, cmd = "turn_tracker", err = "no object with guid " .. tostring(TURN_TRACKER_GUID),
+                 guid = TURN_TRACKER_GUID }
+    end
+    local pos = nil
+    pcall(function() pos = o.getPosition() end)
+    if type(pos) ~= "table" then
+        return { ok = false, cmd = "turn_tracker", err = "no position", guid = TURN_TRACKER_GUID }
+    end
+    local z = tonumber(pos.z) or 0
+    -- the token rests on one hand zone or the other; the sign of z is the whole answer
+    local side = "unknown"
+    if z > 1 then side = "mine" elseif z < -1 then side = "player" end
+    return { ok = true, cmd = "turn_tracker", guid = TURN_TRACKER_GUID, side = side,
+             x = string.format("%.2f", tonumber(pos.x) or 0),
+             z = string.format("%.2f", z), at = os.date("%H:%M:%S") }
+end
+
 local handlers = {
     ping = function(m) return ping() end,
     -- call a function that lives in an OBJECT's own script.
@@ -2235,6 +2267,8 @@ local handlers = {
     -- turn_get reads the count and the timestamp of the last recording.
     turn_end = function(m) return turnEnd(m) end,
     turn_get = function(m) return turnGet(m) end,
+    -- reads the table's own Turn Tracker piece: which side it sits on is whose turn it is
+    turn_tracker = function(m) return turnTrackerState() end,
     -- Same shape as before plus the authoritative global numbers. The table piece - if one happens to
     -- be on the table - is reported as decoration only; a missing piece no longer means "no turn yet".
     turn_state = function(m)

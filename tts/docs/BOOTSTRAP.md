@@ -148,6 +148,28 @@ ds.ps1 -Do count       # 名称直方图
 - 改完 `.ps1` 必跑 `check_ps1.ps1`；改 `.lua` 必跑 `node tts\validate_lua.js` **并改 `DSH_VERSION`**。
 - 玩家载入烤好的存档 → 回到 §1 B 验版本号。
 
+**C. 校准"轮到谁"（每款 mod 一次，2 分钟）** —— ⭐ **座位/手牌区坐标每款 mod 都不同，这件事没有通用解，必须初始化一次。**
+
+```powershell
+# ① 发现信号：脚本拍快照 → 提示玩家按一次 End Turn → 再拍 → 唯一移动的那件就是它
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tools\turn_calib.ps1 -Discover
+# ② 记录归属：READ THE PIECE FIRST, then answer for THAT moment
+powershell ... -File tts\tools\turn_calib.ps1 -Answer mine      # 现在轮到 agent（我）
+powershell ... -File tts\tools\turn_calib.ps1 -Answer player    # 现在轮到玩家
+# ③ 任何时候查：显示存档 + 现在的判定
+powershell ... -File tts\tools\turn_calib.ps1 -Show
+# 运行时读取（哨兵用的就是它）
+powershell ... -File tts\tools\turn_side.ps1        # mine | player | unknown | uncalibrated
+```
+
+- **产物**：`cache\<game>_turn.json`（**唯一真源**）= `tracker` guid ＋ 两个落点坐标 ＋ **哪个 z 是"我"** ＋ **定这条的原始证据**（谁、什么时候、当时读数）。换 mod ⇒ 重跑 ① ②，**不改代码**。
+- **三条防错设计**（都是为今天踩过的坑加的）：
+  1. **同刻取样**：`-Answer` 在**同一次运行里**读坐标＋记录你的回答 ⇒ **杜绝"旧读数配新回答"**（我正是这样错了两次）；
+  2. **拒绝猜**：`-Discover` 若看到**不是恰好一件**物件移动 ⇒ **拒绝写档**（避免把"多点了一下"记成信号）；
+  3. **运行时宁可 unknown**：坐标飘出 `tolerance` 就回 `unknown`（哨兵不触发），**不猜**。
+- ⛔ **绝不用坐标/屏幕方位/日志反推归属**；判定错了就**重跑 ①②**，不要手改数字（脚本头部与 `turn_side.ps1` 都写了这条）。
+
+
 **B. 读懂这个陌生模组**（三步）
 1. **读脚本**：存档 JSON 里**每个物件都带 `LuaScript`**，主键 `LuaScript` = Global 脚本。
    用 `JavaScriptSerializer` 解析 → 递归 `ObjectStates` / `States[*].ObjectStates` / `ContainedObjects`
