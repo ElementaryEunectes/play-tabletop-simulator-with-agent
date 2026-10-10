@@ -1951,6 +1951,57 @@ local function tokenArt()
     return nil
 end
 
+-- Guid whose object is used as the token's art/shape source, filled in when a save is baked.
+-- Empty means "find any Custom_Tile on the table", which is the normal case.
+TURN_TOKEN_TEMPLATE = TURN_TOKEN_TEMPLATE or ""
+
+-- Build the turn token WITHOUT spawnObject, by cloning a tile that is already on the table.
+--
+-- WHY (measured 2026-10-10): every route through spawnObject produced TTS's "自定义板块" dialog -
+-- with no image parameter AND with image/image_bottom supplied - and objects baked into a save were
+-- dropped by TTS at load (four different guids, all gone). clone() has neither problem: it never
+-- opens the dialog and the piece persists; the player confirmed seeing clones appear on the table.
+-- The clone inherits the tile's art and grid flags, so the token matches the table's own pieces.
+DSH_tokenPlain = function(m)
+    local existing = findTurnToken()
+    local paint = function(o)
+        pcall(function() o.setName(TURN_TOKEN_NAME) end)
+        pcall(function() o.setNickname(TURN_TOKEN_NAME .. " 0") end)
+        pcall(function() o.setScale({ 1, 1, 1 }) end)
+        pcall(function() o.setLuaScript(TURN_TOKEN_LUA) end)
+        local g = nil
+        pcall(function() g = o.getGUID() end)
+        return tostring(g)
+    end
+    if existing then
+        return { ok = true, cmd = "token_plain", reused = true, guid = paint(existing) }
+    end
+    local src = nil
+    for _, o in ipairs(getObjects() or {}) do
+        -- ⚠️ getObjects() entries may be PLAIN TABLES (the same trap as the 147-card container listing
+        -- and the F8 investigation): calling o.getName() then throws and the pcall leaves the name
+        -- empty, so this loop found nothing and token_plain answered "no Custom_Tile to clone".
+        -- Read the field first, fall back to the method.
+        local nm = ""
+        pcall(function() if o.name ~= nil then nm = tostring(o.name) end end)
+        if nm == "" or nm == "Custom_Tile" then
+            pcall(function() nm = tostring(o.getName()) end)
+        end
+        if nm == "Custom_Tile" or nm == "Custom_Token" then src = o; break end
+    end
+    -- Fall back to a direct lookup of the template this bridge was baked against.
+    if not src and TURN_TOKEN_TEMPLATE ~= "" then
+        pcall(function() src = getObjectFromGUID(TURN_TOKEN_TEMPLATE) end)
+    end
+    if not src then return { ok = false, cmd = "token_plain", err = "no Custom_Tile on the table to clone" } end
+    local x = tonumber(m and m.x) or 0
+    local y = tonumber(m and m.y) or 1.6
+    local z = tonumber(m and m.z) or 0
+    local ok, c = pcall(function() return src.clone({ position = { x = x, y = y, z = z }, smooth = false }) end)
+    if not ok or c == nil then return { ok = false, cmd = "token_plain", err = "clone failed: " .. S(c) } end
+    return { ok = true, cmd = "token_plain", created = true, from = "clone", guid = paint(c) }
+end
+
 local function turnToken(m)
     local o = findTurnToken()
     local created = false
@@ -2058,6 +2109,8 @@ local handlers = {
     index = function(m) return index(m.limit) end,
     run = function(m) return run(m, m.code) end,
     turn_token = function(m) return turnToken(m) end,
+    -- spawnObject-free token: clones an existing tile. See DSH_tokenPlain for why.
+    token_plain = function(m) return DSH_tokenPlain(m) end,
     turn_state = function(m) return turnState(m) end,
     -- container listing: what is actually inside a Bag/Deck right now (getObjects()).
     -- Complements index/all, which only see the table, and draw/take, which pull one card.
