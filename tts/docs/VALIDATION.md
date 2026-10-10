@@ -128,6 +128,21 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 **两个可复用的坑**：① **脚本必须"直连 TCP 从文件发"** —— 经 `-Lua` 参数传会被吃掉**引号**（`print("A")` 到达时变成 `print(A)` ⇒ 打印 nil）；② **多行脚本经命令行会被改坏**（`unexpected symbol near '='`）。
 **排查时机**：`Player.log` 的**最后写入时间**比进程列表可靠（本机 `Get-Process`/`Get-CimInstance` **看不到** TTS，尽管它在跑；`netstat` 看 `CLOSE_WAIT`/`LISTENING` 才准）。
 
+**F13 · 桌上那枚社区 Turn Tracker 的"按钮没反应" —— ✅ 根因是它的 `Name` 字段为空（2026-10-11）**
+**现象**：玩家按它的 `End Turn` 没反应（棋子不动）、也拖不动（`LOCKED=true`）；控制台**没有新红字**。
+**⛔ 我先前的错误结论（已推翻）**：我写成了"它用 `Player[color].getPlayerHand()`，而本机已删掉这个方法 ⇒ 按钮对玩家也坏"。
+**实测反驳**：在同一环境里探测 `Player[getSeatedPlayers()[1]].getPlayerHand` 得到 **`function`**（**存在**）。
+**真正根因（同刻读数）**：`o.getName()=''` ＋ `script_state='[""]'` ⇒ 它内部 `currentColor` 是**空字符串**：
+```lua
+findNextPlayerColor: playerList = explode(self.getName())   -- 名字空 ⇒ 列表无效
+                     ⇒ playerList = getSeatedPlayers()      -- 回退分支
+                     ⇒ 找 color == currentColor("") 找不到 ⇒ 打印 "color was not found"、返回 nil
+moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot access field  of userdata<^LuaGlobalPlayer>"
+```
+**修法（它自己文档写明，无需改脚本）**：把**颜色顺序填进它的 `Name` 字段**（描述原文："enter the colors, capitalized and separated by spaces"）＋ **让玩家按一次**让它初始化 `currentColor`。
+实测：`setName("Brown Teal")` ＋ 玩家按一次 ⇒ `currentColor='Brown'`、`script_state='["Brown"]'`、**按钮恢复移动**。
+📌 **副作用教训**：我为了"外部代按"曾用 `messageID 3` **在它的运行环境里重定义** `placeToken`/`findNextPlayerColor`/`moveTurn` —— 那会**污染它的正常行为**（它随后打印 `placeToken: no known position for color=Red/...`）。清理办法 = 把**存档里的原始函数源文**重新执行一遍（`tts\tools\exec_script.ps1` ＋ 从 `LuaScript` 抽出的原文）⇒ 已复原（`RESTORED originals`）。
+
 **F7 · 桥接原语的"活体"部分**（`🟡` 部分完成，2026-10-09）
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ 每条都得**重烤后真跑一次**。
 **已跑（载入 `TS_Save_11.json` 后逐条真跑）**：`ping` 版本对 · `players` 回 `ok count=2` ＋ 每座位一行 ·
