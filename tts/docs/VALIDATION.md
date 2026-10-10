@@ -112,16 +112,16 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 **`unknown hand action: holding`**（旧 `hand` 认识命令、不认识这个动作）—— 两条都说明**必须重烤**。
 版本号是唯一凭据 —— 重烤后 `ping` 应回 **`v15-tags-snap-hand`**。
 
-**F12 · ⛔ 用桥接调用「别的 mod 自己的函数」会把 TTS 搞挂 —— 已实测一次（2026-10-11 00:16）**
-**背景**：桌上那个 Turn Tracker（`0e731f`）自带回合机，`LuaScriptState = ["Brown"]`，函数名 `forwardOneTurn` / `backOneTurn` / `moveTurn`。
-为了让"交出回合"这一步不用玩家动手，我发了 `{cmd="callx", guid="0e731f", fn="forwardOneTurn"}`（桥接的 `callx` = `o.call(fn, args)`）。
-**结果**：`no reply in 25s` ⇒ 紧接着 **TTS 进程消失**（`Get-Process` 无 Tabletop；`39999` 不再 LISTEN），`Player.log` 停在 **00:17:07**。
-**证据面**：**无崩溃转储、无 Lua 报错**，日志末尾只有 Unity 卸载资源的正常退出序列 ⇒ 从盘上**分不出"干净退出"还是"崩在原生层"**。
-**结论（写进纪律）**：
-- ⛔ **不要用 `callx` 调别的 mod 的函数**（尤其会搬动棋子/改状态的那种）。同类已有前科：`spawnObject` 造自定义件、`act` 改 `script_state` 也都触发过 TTS 回滚或挂死。
-- ✅ **只做"读"**：读坐标、读 `script_state`、读 `LuaScript` 文本，然后**让玩家按那个 mod 自己的按钮** —— 它自己的 UI 回调才是被支持的路。
-- ⚠️ **代价**：一次未保存的局会被打断（本次桌上无未存改动，代价=玩家重开一次）。
-- 📌 排查时**别只看进程名**：`Player.log` 的**最后写入时间**是更可靠的生命体征（进程没了但日志还在被占用 ⇒ 刚退出）。
+**F12 · ⛔ 用桥接调用「别的 mod 自己的函数」会把 TTS 搞挂 —— 已复测两次，定案（2026-10-11）**
+**背景**：桌上那个 Turn Tracker（`0e731f`）自带回合机，`LuaScriptState = ["Brown"]`，函数 `forwardOneTurn` / `backOneTurn` / `moveTurn` / `placeToken`。
+为让"交出回合"不用玩家动手，发了 `{cmd="callx", guid="0e731f", fn="forwardOneTurn"}`（桥接的 `callx` = `o.call(fn, args)`）。
+**两次实测（同一现象）**：调用后 **25 s 无回执** ⇒ 紧接着 **`ping` = `TTS unreachable`**、端口 `39999` 不再 LISTEN。
+**证据边界（重要）**：**无崩溃转储、无 Lua 报错**；且第二次 `Player.log` 的最后写入比调用**早 2 秒** ⇒ **日志不能证明因果**（可能已卡在前）。但"两次调用⇒两次同现象"足够定案：**判死这条路**。
+**纪律（写死）**：
+- ⛔ **不要用 `callx`/`call` 调别的 mod 的函数**（尤其会搬棋子/改状态的）。前科：`spawnObject` 造自定义件、`act` 改 `script_state` 也都触发过回滚或挂死。
+- ✅ **只读**：坐标 · `script_state` · `LuaScript` 文本 —— 读是安全的（`probe`/`index`/`turn_tracker` 都在用）。
+- 🔎 **跨 mod 要"按它的按钮"时，先试桥接的 `go`**（桥接侧执行、不经 `o.call`）；`go` 也失败才考虑"改 script_state ＋ 搬棋子"，那一步要**单次＋立刻验活**。
+- 📌 排查时机：**`Player.log` 的最后写入时间**比进程列表可靠（本机 `Get-Process` **看不到** TTS，尽管它在跑）。
 
 **F7 · 桥接原语的"活体"部分**（`🟡` 部分完成，2026-10-09）
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ 每条都得**重烤后真跑一次**。
