@@ -49,6 +49,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
    ▶ **下一步**：✅ **已完成（2026-10-11）**——17 号已重载，`ping` 回 `v15-tags-snap-hand`（objs=118）、`turn_tracker` 可用；回合交接按 `PLAY.md` 的**快链**走。
    🧹 **2026-10-10 彻查删除**（本轮实验的产物，一律不留在代码里）：`turn_token` · `token_plain` · `spawn_step` ·
       `turn_end` · `turn_get` · `turn_state` · `DSH_TURN_N`/`DSH_STATE` · `__spawn_trace`/`__spawn_last`；
+   ⚠️ **但桌上的"件"还在**（2026-10-11 用 `tts\tools\dump_lua.ps1 -List` 抓到）：`DSH-TURN`（`guid a7bf2e`，2,053 B，`state {"n":0}`）**没有任何引用 ⇒ 可删**（⇒ `VALIDATION.md` F11）。
       另删工具 `bake_token.js` / `insert_token.js` / `compare_index.js` / `script_anatomy.js` /
       `bisect_run.js` / `peek_obj.js` / `peek_custom.js`，以及 `install_save2.ps1` 的 `-BakeToken` 参数与那段代码。
    📌 已顺带修好并活体验过的：`container:<guid>` ⇒ 列出容器内物件的 `guid|名称|昵称|数量|牌面文本(截60字)`。
@@ -127,8 +128,10 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 - **2026-10-11 凌晨（第三轮 · 归档 ＋ 重烤 v16）**：
   - 📦 **归档**（用户拍板）：`read_turn.ps1`（批量替换事故的残骸；**运行期**坏、`check_ps1` 查不出来）与 `front_watch.ps1`（某一局专用的前台横幅链）**移进 `~\.dsh\archive\tts-legacy\`**（SHA256 对拍一致）＋ `git rm`；`cache\front.txt` 从此没有生产者。指针同步 6 处：`MAINTENANCE` §5 那行 ＋ 跨脚本引用图 · `VALIDATION` L13/F4 · `BOOTSTRAP` §1 E · `TTS_RULES` §三 · `docs\README` 的 `cache\` 行 · 本文件 §4 第 8 条。
   - 🔌 **重烤出 `TS_Save_18.json`**（显示名 = **该局游戏名 ＋ `-v16`**，具体值 ⇒ 该局 `STATE.md`；源 = 最新自动存档；`-KeepLua -KeepTabs`，13 页笔记本原样、DSH 频道页已在）：桥接升到 **`v16-tracker-guid`** —— `turn_tracker` 现在接受调用方给的 `guid`（`turn_side.ps1` / `play.ps1 status` 传 `cache\<game>_turn.json` 的 `tracker`），烤进去的常量只兜底 ⇒ **读的那件 = `tr.ps1` 写的那件**。产物校验：`v16-tracker-guid` 命中、旧 `v15-tags-snap-hand` **0 处**、tracker guid 仍在。
-  - ⏳ **等玩家重载**：`Menu → Save & Load → Load →` 那个新显示名（⇒ `local\games\<游戏>\STATE.md`）；**重载前盘上仍是 v15**（功能照常，`turn_tracker` 的多余字段被忽略）。重载后 `ds.ps1 -Do ping` 应回 `v16-tracker-guid`。
-  - 💡 顺带：归档目录里那份 `dump_scripts.ps1` 就是"把存档里每个物件的 `LuaScript` 抽成文件"的**现成工具**（正是这次抽 tracker 脚本手写的那件事）⇒ 真要把它做成现役工具，应当**修好那一份**（两条写死路径改走 `config.ps1`），而不是新写一个。
+  - ✅ **玩家已重载（03:44）**：`ds.ps1 -Do ping` ⇒ **`ok v=v16-tracker-guid objs=118 loads=1`** —— 桥接确实换成了 v16，`turn_tracker` 的 guid 参数已在盘上。⛔ 但**活体验证没做完**：20 秒后 TTS 就不再监听 39999（⇒ `VALIDATION.md` **F14**，根因未定）⇒ "`guid=deadbeef` 应回 `no object with guid deadbeef`"那一步还欠着。
+  - 🧰 **新现役工具 `tts\tools\dump_lua.ps1`**（把存档里物件的 `LuaScript` 抽成文件；`-Guid` 单件 / 默认全部 / `-List` 只报不写）—— 修的是归档里那份 `dump_scripts.ps1`（曾写死两条机器路径）。**已验**：`-Guid 0e731f` 抽出的 tracker 脚本与先前那份备份 **SHA256 一致**（5,578 B / 170 行）。
+  - 🔎 **它顺带抓出一个遗留**：桌上还有一枚我们造的 `DSH-TURN`（`guid a7bf2e`，2,053 B，`state {"n":0}`）—— F11 那批实验的**件**（代码删了，件没删）；没有任何引用 ⇒ **可删**（⇒ `VALIDATION.md` F11）。
+  - ⛔ **03:45 TTS 失联**（不再监听 39999、`Player.log` 停在 03:45:05）：候选 ① 我发的**缺 `customMessage` 的信封**、② TTS 自己在大量 `Curl error 56` 之后卡住 —— **根因未定**，按"未解＋未验证"记进 `VALIDATION.md` **F14**；教训两条：**`-Json` 只发完整信封**、**一条一条探**（F10 的老规矩）。⚠️ 轮询器为了诊断**已停** ⇒ TTS 回来后重挂（本文件 §4 第 3b 条 ＋ `PLAY.md`）。
 
 - **2026-10-11 凌晨（第二轮 · 事实核对）**（`ec971b8` ＋ 随后一次）：**拿台账把文档逐条对了一遍**，改掉一批"文档在说谎"的地方。
   - **结束回合**：`getPlayerHand()` 那条**旧结论全删**（实测那个方法**存在**；真因是它的 `Name` 字段为空）；补上"按的是**存档颜色的下一位**"、"`Locked=true` ⇒ **玩家也拖不动**"、"颜色与位置可能错位 ⇒ **可能要点两次**"、"**平台投递另加 ~23 s**（总感知 ~25 s）"。涉及 `TTS_RULES` §三 · `PLAY` · `USER_GUIDE` · `tr.ps1` 头。

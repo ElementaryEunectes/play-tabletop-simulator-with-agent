@@ -38,7 +38,7 @@
 
 | # | 断言 | 证据（可重跑） | 状态 |
 |---|---|---|---|
-| L1 | 桥接能被烤进**任意**存档且**不弄坏 mod 自带的 Global 脚本** | `install_save2.ps1 -KeepLua -KeepTabs`；之后 `ping` 回 **`v15-tags-snap-hand`**（历次版本号都算通过：`v13-turntoken` → `v14-primitives` → `v15-tags-snap-hand`）（版本号 = 唯一凭据） | ✅ 已实测（②） |
+| L1 | 桥接能被烤进**任意**存档且**不弄坏 mod 自带的 Global 脚本** | `install_save2.ps1 -KeepLua -KeepTabs`；之后 `ping` 回 **`v16-tracker-guid`**（历次版本号都算通过：`v13-turntoken` → `v14-primitives` → `v15-tags-snap-hand` → `v16-tracker-guid`）（版本号 = 唯一凭据；v16 是 2026-10-11 03:44 玩家重载 `TS_Save_18.json` 后实测） | ✅ 已实测（②） |
 | L2 | mod 自带的 116 KB Global 脚本 ＋ 12 页笔记本**原样保留** | 存档里笔记本页数与模组脚本 `function` 名逐条比对（②） | ✅ 已实测（②） |
 | L3 | 纯 PowerShell 传话层不需要知道任何游戏 | `ds.ps1 -Do ping` ⇒ `ok v=v15-tags-snap-hand objs=115 loads=1` | ✅ 已实测（①②） |
 | L4 | 存档侧全量索引不依赖游戏 | `obj_index.ps1 -File <存档绝对路径>` ⇒ 625 行 CSV（②）· 242 KB（①） | ✅ 已实测（①②） |
@@ -48,6 +48,7 @@
 | L8 | 隐藏区折叠规则**外置**，可跨游戏 | `diff_hidden.ps1 -Game <游戏>` ＋ `cache\hidden_zones.csv` | ⚠️ 部分（① 定过规则；② **未标过边界**） |
 | L9 | 两层是**真的**分开的：`tts\play.ps1` 只是分发器，控制层住在 `local\games\<游戏>\control\` | ① 当前游戏无控制层 ⇒ 报 `NO PART this game has no control layer yet: ...`，**且不碰 TTS**；② 切到有控制层的那一款 ⇒ 入口加载它并**真的读到盘面**（当时回 `BAD DATA ... no object with guid cdd19a`＝控制层的数据过期，不是分层失败） | ✅ 已实测（2026-10-09 两向都试过） |
 | L17 | **原语覆盖**：TTS 的往返操作我们够不够用 | 见 F6 的缺口表 | ⚠️ **约七成**（有余量靠 External Editor `exec` 兜底） |
+| L18 | `turn_tracker` 认**调用方给的 guid**（读的那件 = 校准档写的那件，不再只看烤进去的常量） | 完整信封 `{"messageID":2,"customMessage":{"cmd":"turn_tracker","guid":"<坏 guid>"}}` ⇒ 应回 `no object with guid …`；给对 ⇒ 回位置与 `side` | ⛔ **未验**（代码已改 ＋ 已烤进 v16；活体验证因 TTS 03:45 失联欠着 ⇒ F14） |
 | L10 | `roll.ps1` 读骰面 | `getValue` = 权威面（① 10 颗骰 · 6 轮实测） | ⚠️ 部分（② 的骰子在 `Infinite_Bag` 里动态生成 ⇒ **未验**） |
 | L11 | 翻牌朝向 `rotZ` 0=上 / 180=下 | ① 在那张桌上标定 | ⛔ **未验**（是"通用原语"但**只在一张桌上标定过**，见 F2） |
 | L12 | 哨兵/叫醒（玩家写字或回合推进能叫醒我） | `channel_watch.ps1` ⇒ `cache\chan.txt` ＋ file 哨兵 `^NEW \d` | ⚠️ 部分（机制通用；② 未重挂验证） |
@@ -162,6 +163,16 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 🔧 **体检工具**：`tts\tools\tracker_read.lua`（配 `exec_script.ps1`）一次读出 `POS / SAVED_STATE / LIVE_COLOR / LOCKED / NAME` —— **`POS` 与 `LIVE_COLOR` 同侧才算对齐**。
 🧠 **同一类错我这一小时犯了三次**（"`getPlayerHand` 已删"、"写状态不生效"、"它的位置功能坏了"），**每次都被一次同刻读数推翻** ⇒ 规矩：**改别人物件的状态不能只改一半；谈"前后"必须用同一时刻的读数**。
 
+**F14 · 验到 `v16` 之后 20 秒，TTS 不再监听 39999 —— `⛔ 根因未定`（2026-10-11 03:45）**
+**时间线（都是实测）**：`03:44:34` `ping` 成功 ⇒ **`ok v=v16-tracker-guid objs=118 loads=1`**（玩家刚重载 `TS_Save_18.json`，新桥接确实生效）；
+随后我发了一个**缺 `customMessage` 的信封**（`ds.ps1 -Json '{"cmd":"turn_tracker","guid":"deadbeef"}'`，本意是验"桥接认调用方的 guid"）⇒ 无回执，`ERR no reply in 25s`；
+`03:45:05` 起 `Player.log` **不再增长**，`39999` **不再 LISTENING**（`netstat` 只剩 TIME_WAIT/CLOSE_WAIT），`ds.ps1 -Do ping` 变 **`ERR TTS unreachable`**。
+**`Player.log` 尾部**：一长串 `Curl error 56: Recv failure: Connection was reset` ＋ 一次 Unity 资源卸载（`Unloaded 38 unused Assets`）。
+**两个候选，都没证**：① 我那个**坏信封**（缺 `messageID`/`customMessage`）；② TTS 自己在**大量素材下载被重置**之后卡住/退出。
+（沙箱里 `Get-Process`/`tasklist` **看不到** TTS，也看不到占端口的 PID ⇒ 只能靠 `netstat` ＋ `Player.log` 的 mtime 判断，这两条都用上了。）
+**纪律（照 F10 的老教训）**：⛔ **`ds.ps1 -Json` 只发完整信封**（`{"messageID":2,"customMessage":{…}}`）；⛔ **一条一条探，别连着发**。
+**还没做**：TTS 回来后 ① 验版本号是否仍为 `v16`；② 用完整信封补做 `turn_tracker` 的 guid 验证（⇒ L18）；③ 重挂轮询器与 file 哨兵。
+
 **F7 · 桥接原语的"活体"部分**（`🟡` 部分完成，2026-10-09）
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ 每条都得**重烤后真跑一次**。
 **已跑（载入 `TS_Save_11.json` 后逐条真跑）**：`ping` 版本对 · `players` 回 `ok count=2` ＋ 每座位一行 ·
@@ -213,6 +224,11 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 
 ⛔ **本轮做的那些实验全部删除**（2026-10-10 彻查）：`turn_token` · `token_plain` · `spawn_step` · `turn_end` · `turn_get` ·
 `turn_state` · 桥接里的 `DSH_TURN_N`/`DSH_STATE` 记账变量 · `__spawn_trace`/`__spawn_last` 埋点。
+⚠️ **2026-10-11 发现：代码删了，件还在** —— 桌上仍有一枚我们造的 `DSH-TURN`（`guid a7bf2e`，`Custom_Token`，脚本 **2,053 B**，`state {"n":0}`；
+脚本头写着"给没有回合标记的 mod 用的可点令牌"，带 XMLUI 按钮，点一下翻面并 `broadcastToAll("[DSH] turn N ended")`）。
+**没人引用它**（校准档 `cache\<game>_turn.json` 与桥接常量都是 `0e731f`）⇒ **玩家可以把它删掉**。
+看出它的工具：`tts\tools\dump_lua.ps1 -List`（列出存档里每个带 `LuaScript` 的件）。
+
 两条理由：① 它们要么被 TTS 撤销、要么要靠重载才生效；② **回合流水本就该记在 `STATE.md`**（那一局状态的唯一真源）——
 另开计数器就是第 4 条禁止的"同一事实两处"。**留着的只有**：Tracker 校准 ＋ `turn_side.ps1`（实时信号）＋ `turn_tracker` 命令（读那件的位置）。
 

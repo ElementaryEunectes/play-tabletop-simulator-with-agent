@@ -117,7 +117,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | 脚本 | 干什么 |
 |---|---|
 | **`play.ps1`** | **通用入口/分发器**：读 `GAME=` ⇒ 转发给该游戏的**控制层** `local\games\<game>\control\play.ps1`。✅ **没有控制层时 `status`（或裸调用）也能用**：桥接版本 · 物件数 · 在位玩家 · 轮到谁（2026-10-11 起） |
-| **`ds.ps1`** | **跟 TTS 说话的高层入口**：`-Do 'ping / tabread / getState:<g> / setCount:<g>:<n> / act:<g>:<verb> / move:… / draw:… / all:<n> / read:<g>'`；v14 起 `players` · `take:<堆>:<CardID>:<x>:<y>:<z>` · `destroy:<g>` · `spawn:copy:<g>:…` · `player:<Color>:<turn\|blind>`；v15 起 `container:<g>` · `hand:<Color>:holding\|<give>\|<draw>` · tags/吸附点。**`spawn:type` 已被桥接显式拒绝**（见 `TTS_RULES.md` §七） |
+| **`ds.ps1`** | **跟 TTS 说话的高层入口**：`-Do 'ping / tabread / getState:<g> / setCount:<g>:<n> / act:<g>:<verb> / move:… / draw:… / all:<n> / read:<g>'`；v14 起 `players` · `take:<堆>:<CardID>:<x>:<y>:<z>` · `destroy:<g>` · `spawn:copy:<g>:…` · `player:<Color>:<turn\|blind>`；v15 起 `container:<g>` · `hand:<Color>:holding\|<give>\|<draw>` · tags/吸附点；v16 起 `turn_tracker` 可带 `guid`（认调用方指定的那件，不带 = 烤进去的常量）。**`spawn:type` 已被桥接显式拒绝**（见 `TTS_RULES.md` §七）。⚠️ **`-Json` 只收完整信封**（`{"messageID":2,"customMessage":{…}}`）—— 塞裸命令会被吞，且可能是"把 TTS 弄哑"的候选之一（⇒ `VALIDATION.md` F14） |
 | **`roll.ps1`** | 掷/读骰面：**必须明说意图** `-Roll`（掷）/ `-NoRoll`（只读）；**裸调用 `exit 2` 且不接触 TTS** |
 | `ttslib.ps1` · `ttsx.ps1` | **唯一的 TCP 传输层**（`ttslib` **dot-source，别 spawn**）· 原始通道（只回 `customMessage`） |
 | `dsbatch.ps1` | 一条进程跑多条 `ds.ps1` 命令（`-Commands 'a;;b'`）⚠️ 两层子进程会被沙箱掐网络 ⇒ 优先逐条 |
@@ -144,6 +144,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `install_save2.ps1` | **写存档的唯一通道**（灌 `lua\dsh_global.lua` ＋ 修 notebook tab id；需一次提权）；日志写 `cache\install2_log.txt` |
 | `crop_zoom.ps1` | 裁图 ＋ 放大转真 PNG（**读卡面/查图用**；`Mods\Images` 里扩展名常与真实格式不符） |
 | `tts_api.ps1` | TTS **External Editor API（39999）** 原始客户端；`tools\exec_script.ps1` = 走它的 **`messageID 3`** 执行 Lua（**安全**，见 `TTS_RULES.md` §七） |
+| **`tools\dump_lua.ps1`** | **把存档里物件的 `LuaScript` 抽成文件**（**离线，不碰 TTS**）：`-Guid <g> -OutFile <f>` 抽那**一件**（**改别人脚本前的备份**动作）· 默认把 ≥`-MinChars`（50）的**全部**导出到 `cache\scripts\` · `-List` 只报不写 ⇒ 取代了归档里那份 `dump_scripts.ps1`（后者写死两条机器路径） |
 
 ### 💤 休眠但别删（删了会踩坑）
 
