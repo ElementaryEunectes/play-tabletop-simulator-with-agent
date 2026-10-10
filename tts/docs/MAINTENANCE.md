@@ -56,6 +56,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 - ⚠️ **工具自己先归一 `\r\n`**：这些文件是 CRLF ⇒ `readFileSync(...).split('\n')` 会让每行**末尾带 `\r`**，于是
   ① `^local ` 这类行首判定**全部失配**、② 往行尾追加语句会追加到 `\r` **之后** ⇒ 注入的标记**永远不到达**，
   看起来就像"这段代码根本没执行"——**这正是 F8 排查里那个假线索的成因**。凡按行处理都要 `.replace(/\r\n/g, '\n')`。
+- ⛔ **量行尾不能用 PowerShell 重定向**：`git show HEAD:f > x` 会**被 PowerShell 自己改写行尾**，量到的是 PS 的产物不是 blob。
+  用 `git_blob_eol.js <repo> <rev> <file> <tmpfile>`（`execFileSync` 配 `stdio:['ignore', fd, 'ignore']` —— 本沙箱**抓不到子进程 stdout**，只能让它写文件）。
+  同类：`git_blob_cmp.js` 判断"blob 与工作区**是否只差行尾**"（归一后比 sha256）。
+  2026-10-10 实例：`edit` 工具把一份 **LF** 的 `dsh_global.lua` 写成了 **CRLF** ⇒ git 把整个文件算成改写（**2023 行**，
+  而真实改动是 15 增 402 删）。`git diff --numstat` 一出现"增删数 ≈ 文件总行数"就是这个病，**改回 LF 再 amend**（见 §4）。
 
 ## 2. 三个指令槽（**上限写在门禁里，不在这里复述**）
 
@@ -75,3 +80,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 `$ErrorActionPreference = 'Stop'` · **先全量校验锚点再统一写盘** · 写前兜底"内容短于 N 字符就拒绝写" · 能追加就别重写 · **`local\` 没有版本控制 ⇒ 改前先备份** · 逐文件 `edit` 优于一个脚本一次改多文件。细节 ⇒ 平台层 `MAINTENANCE.md` 坑 14/15。
 - ⚠️ **不许顺手改行尾**：`.gitattributes` = `* -text` ⇒ **签出不做任何转换**，仓库里**故意混用 CRLF / LF**（有的文件本身就是混合的）。改写文件的工具若把行尾归一，就是把"一行修复"变成**整文件 diff**（2026-10-09：改 2 行注释变成 95 增 95 删）。
   ⇒ 改完先看 `git diff --numstat <file>`：**增删数远大于你想改的行数 ⇒ 行尾或编码被动过了**，立刻 `git checkout HEAD -- <file>` 重来；要改中文只想动几行时，用**字节级字符串替换**而不是整文件重写（替换串本身不含行尾即安全）。
+  📌 2026-10-10 **又犯一次**（`edit` 工具写 `dsh_global.lua` 时统一了行尾）⇒ **`edit`/`write` 工具也会动行尾**，不只批量替换；
+  提交前用 `git diff --numstat` 复核一遍，事后用 `tts\tools\git_blob_eol.js` 确认**提交进去的那份**行尾没变（`git show` 的结果经 PS 重定向不可信）。
