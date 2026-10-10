@@ -102,11 +102,11 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 ## §8 每请求注入（摘要；机制/预算/安装 ⇒ `tts\docs\INJECTION.md`）
 
-平台宪章 **6,316** ＋ 项目 `AGENTS.md` **3,539** ＋ 本机 `AGENTS.local.md` **1,787** ＝ **≈11.4 KB/请求**
-（2026-10-09 瘦身省 1,178 B；2026-10-10 平台层加了 3 条纪律：先查现成答案 · 先搜生态/插件市场 · 先质疑载体 ⇒ 3,950→6,316 B，**每请求 +2.4 KB**）。
-⚠️ 平台层是**每条纪律都计费**的：再往里加条目之前先问"它能不能落在项目文档里"（项目层只在有 `.git` 的工作区注入，平台层**处处都注入**）。
-瘦身的做法 = **凡"门禁已经守着"的判定，注入里不再复述**（火绒修法/profile/`start.cmd`/路径纪律/`param` 版式 ⇒ 只留指针，细则进 `MAINTENANCE.md` §0 · `INJECTION.md` §4 · `USER_GUIDE.md`）。
-⚠️ 两条硬约束：**`instruction hygiene` 会抓**"承载性指针被删"（本次真抓到 `check_ps1.ps1` 被删）＋ **`AGENTS.local.md` ≤ 4096 B**。
+平台宪章 **2,217** ＋ 项目 `AGENTS.md` **1,982** ＋ 本机 `AGENTS.local.md` **848** ＝ **5,047 B ≈ 4.93 KB/请求**
+（用户 2026-10-10 定的硬指标：**注入总量 <5 KB，超了思考时间过长**；此前是 11.4 KB ⇒ 本轮省 **6.5 KB/请求**）。
+瘦身原则：**只留"触发条件 ＋ 结论"，例子与机制说明全部转指针**（`MAINTENANCE.md` §0 · `INJECTION.md` §4 · `USER_GUIDE.md`）；**凡"门禁已经守着"的判定，注入里不再复述**。
+⚠️ 三条硬约束：**`instruction hygiene` 会抓**"承载性指针被删"（`start-agent.ps1`/`PLAY.md`/`local\games`/`tts\config.ps1`/`check_ps1.ps1` **必须留在项目层**）＋ 项目层 ≤3840 B ＋ 本机层 ≤4096 B。
+⚠️ 平台层**处处都注入** ⇒ 往那里加条目前先问"它能不能落在项目文档里"（项目层只在有 `.git` 的工作区注入）。**加完必须重新量三份合计**。
 发布时**不用手打**：`start-agent.ps1` 的一行 `$ProjectDshProfile`（或 `-DshProfile tts-agent`；⚠️ **不是** `dsh tts-agent web`）⇒ **≈5.7 KB**。机制/目录结构/装法 ⇒ **`tts\docs\INJECTION.md` §4 方案 A′**。
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
