@@ -143,7 +143,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `bootstrap.ps1` | **换局/新存档**重新认物：默认只打座位表+摘要，全表写 `cache\session_map.md`（`-Full` 打全表）；认物规则**不在代码里** ⇒ 读 `local\games\<游戏>\objects.json`（schema ⇒ `BOOTSTRAP.md` §1b）。`-Inventory` ⇒ `cache\obj_inventory.md`（教新 mod 用） |
 | `install_save2.ps1` | **写存档的唯一通道**（灌 `lua\dsh_global.lua` ＋ 修 notebook tab id；需一次提权）；日志写 `cache\install2_log.txt` |
 | `crop_zoom.ps1` | 裁图 ＋ 放大转真 PNG（**读卡面/查图用**；`Mods\Images` 里扩展名常与真实格式不符） |
-| `tts_api.ps1` | TTS **External Editor API（39999）** 原始客户端；`tools\exec_script.ps1` = 走它的 **`messageID 3`** 执行 Lua（**安全**，见 `TTS_RULES.md` §七） |
+| `tts_api.ps1` | TTS **External Editor API（39999）** 原始客户端；`tools\exec_script.ps1` = 走它的 **`messageID 3`** 执行 Lua（**安全**，见 `TTS_RULES.md` §七）。⚠️ **39998 只有一个槽**：轮询器每 2.5 s 占它一片 ⇒ 交接会撞 `listener busy`（`exec_script.ps1` 已把绑定重试提到 6 次/~10 s）；**根治 = 常驻进程独占 39998**（hub 方案 ⇒ `PRIOR_ART.md`；⇒ `VALIDATION.md` F14） |
 | **`tools\dump_lua.ps1`** | **把存档里物件的 `LuaScript` 抽成文件**（**离线，不碰 TTS**）：`-Guid <g> -OutFile <f>` 抽那**一件**（**改别人脚本前的备份**动作）· 默认把 ≥`-MinChars`（50）的**全部**导出到 `cache\scripts\` · `-List` 只报不写 ⇒ 取代了归档里那份 `dump_scripts.ps1`（后者写死两条机器路径） |
 
 ### 💤 休眠但别删（删了会踩坑）

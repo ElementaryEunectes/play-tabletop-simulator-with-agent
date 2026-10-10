@@ -183,7 +183,8 @@ o.setPosition({ x, y, z })          -- ✅ 直接位置参数
 - ⛔ **`call:<guid>:<fn>` 对不存在的函数名也回 `ok=true`**（pcall 吞错）⇒ 写入只能"调用前后各读一次"判断。
 - ⛔ **`callx` 会把 TTS 弄失联**（实测两次，**从未修复**）⇒ 别用它驱动别的 mod；要执行 Lua 用 `tools\exec_script.ps1`（官方 `messageID 3`，**安全**，但它跑在**空环境**里：读不到物件私有变量，且**返回值不回**、只能靠 `print`/`sendExternalMessage` 观察）。
 - ⛔ **`spawn:type` 已被桥接显式拒绝**：`spawnObject` 造自定义件会让 TTS 弹模态「自定义板块」窗并挂住线程（三次尝试全失败 ⇒ `VALIDATION.md` F10）⇒ **要造物用 `spawn:copy`**（复制桌上现成件）。
-- ⚠️ `ERR listener busy on 39998`（后台 watcher 抢端口）会成批出现 ⇒ **逐条重试**（`exec_script.ps1` 已内置 3 次重试）。
+- ⚠️ `ERR listener busy on 39998` **不是随机的**：**39998 只有一个槽**，谁在跟 TTS 说话谁就占它 ⇒ 轮询器每 2.5 s 探一次也会占一片，
+  于是**交接**最容易撞上（实测一次交接失败就是这么来的，⇒ `VALIDATION.md` F14）。缓解 = 重试（`exec_script.ps1` 已 6 次/~10 s）；**根治 = 一个常驻进程独占 39998**（hub 方案 ⇒ `PRIOR_ART.md`）。
 - ⚠️ `ERR TTS unreachable` **未必是 TTS 没开**：先探 **39999** 端口；OPEN ⇒ 是沙箱掐了**嵌套子进程**的网络 ⇒ 改用**本进程内联发送**。
   ⛔ **别用 `Get-Process` 判 TTS 开没开**（沙箱只看得到十几个进程；`Get-CimInstance` 直接拒绝访问）⇒ 看 **`Player.log` 的最后写入时间**更可靠。
 - **`obj_index` 读存档、滞后 ~5 分钟**；`diff_index -Snapshot` 才是**实时**基线。
