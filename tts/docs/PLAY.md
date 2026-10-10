@@ -36,10 +36,13 @@
 
 ### 哨兵 / 叫醒（细节见 `TTS_RULES.md`；**不跨会话继承**）
 
-- 推进：**玩家点「结束回合」** ⇒ 我靠 file 哨兵盯 `cache\front.txt` 的 `TURN=P2` 被叫醒。
-  ⛔ **"我点不了那个按钮"的判定与理由只有一处**：`TTS_RULES.md` §四 —— **别处不要再复述**；哪天它能被按下去，只改那一处。
-- 新会话**必须重挂**（编号每会话不同，先 `sentinel_list`）：`sentinel_watch kind=file target=<绝对路径> pattern=<正则>`；另一条盯 `cache\chan.txt` 的 `^NEW`。
-- 判活 = 两个 txt 的 **mtime 秒级滚动**；**停了才**后台重启 `front_watch.ps1 -Minutes 600` / `channel_watch.ps1 -Minutes 600 -IntervalMs 12000`。
+- **回合交接（本仓库现行做法，2026-10-11 起）**：
+  - **玩家侧**：按桌上那枚 **Turn Tracker** 的按钮（⛔ 那按钮**本身已失效**：它用 `Player[color].getPlayerHand()`，本机无此方法 —— 玩家可用**拖动棋子**代替，效果一样）；
+  - **我这侧**：`tts\tools\turn_side.ps1` 判"轮到谁"（读坐标 ＋ `cache\<game>_turn.json`）；**交还**用 `tts\tr.ps1 -To player`（**按位置搬棋子**，不碰对方脚本）。
+  - **叫醒**：哨兵 `command` 每 **15 s** 探一次（`pattern=TURN-CHANGED`）⇒ **别轮询**；间隔为什么是这个数 ⇒ `BOOTSTRAP.md` §C。
+  - ⛔ **别再用 `callx`/`Object.call` 驱动别的 mod**（会把 TTS 弄失联）；跨 mod 的雷区全表 ⇒ `VALIDATION.md` F12。
+- ⛔ **"我点不了那个按钮"的判定与理由只有一处**：`TTS_RULES.md` §四 —— **别处不要再复述**；哪天它能被按下去，只改那一处。
+- 新会话**必须重挂**哨兵（编号每会话不同，先 `sentinel_list`）。
 - 收工：`sentinel_cancel` ＋ kill 后台作业。
 
 ### STATE 维护

@@ -112,16 +112,21 @@ TTS 有的操作**没有对等原语**（缺的都会被"教一款"直接踩到�
 **`unknown hand action: holding`**（旧 `hand` 认识命令、不认识这个动作）—— 两条都说明**必须重烤**。
 版本号是唯一凭据 —— 重烤后 `ping` 应回 **`v15-tags-snap-hand`**。
 
-**F12 · ⛔ 用桥接调用「别的 mod 自己的函数」会把 TTS 搞挂 —— 已复测两次，定案（2026-10-11）**
-**背景**：桌上那个 Turn Tracker（`0e731f`）自带回合机，`LuaScriptState = ["Brown"]`，函数 `forwardOneTurn` / `backOneTurn` / `moveTurn` / `placeToken`。
-为让"交出回合"不用玩家动手，发了 `{cmd="callx", guid="0e731f", fn="forwardOneTurn"}`（桥接的 `callx` = `o.call(fn, args)`）。
-**两次实测（同一现象）**：调用后 **25 s 无回执** ⇒ 紧接着 **`ping` = `TTS unreachable`**、端口 `39999` 不再 LISTEN。
-**证据边界（重要）**：**无崩溃转储、无 Lua 报错**；且第二次 `Player.log` 的最后写入比调用**早 2 秒** ⇒ **日志不能证明因果**（可能已卡在前）。但"两次调用⇒两次同现象"足够定案：**判死这条路**。
-**纪律（写死）**：
-- ⛔ **不要用 `callx`/`call` 调别的 mod 的函数**（尤其会搬棋子/改状态的）。前科：`spawnObject` 造自定义件、`act` 改 `script_state` 也都触发过回滚或挂死。
-- ✅ **只读**：坐标 · `script_state` · `LuaScript` 文本 —— 读是安全的（`probe`/`index`/`turn_tracker` 都在用）。
-- 🔎 **跨 mod 要"按它的按钮"时，先试桥接的 `go`**（桥接侧执行、不经 `o.call`）；`go` 也失败才考虑"改 script_state ＋ 搬棋子"，那一步要**单次＋立刻验活**。
-- 📌 排查时机：**`Player.log` 的最后写入时间**比进程列表可靠（本机 `Get-Process` **看不到** TTS，尽管它在跑）。
+**F12 · 跨 mod 驱动：`Object.call` 会弄死 TTS，官方 `messageID 3` 安全但看不见物件私有状态 —— ✅ 已定案（2026-10-11）**
+**目标**：让"交出回合"不用玩家动手（代按那枚 Turn Tracker 的 End Turn）。
+
+| 尝试 | 实测结果 | 结论 |
+|---|---|---|
+| 桥接 `callx`（= `Object.call`）调 `forwardOneTurn()` | **两次**都是 25 s 无回执 ⇒ 立刻 `TTS unreachable`、端口不再 LISTEN | ⛔ **判死**（`spawnObject`、写 `script_state` 也在这条机制的嫌疑名单上） |
+| 官方 **External Editor API `messageID 3`**（`{messageID:3,guid,script}`）执行同一函数 | **TTS 健康**，且把 mod 自己的 Lua 错误回执给我 | ✅ **安全通道**；新工具 `tts\tools\exec_script.ps1` |
+| 在 `messageID 3` 里读该物件状态 | `currentColor=nil`、`o.script_state='[]'`、`o.getVar=nil`、**`pairs(o)` 空**、`o.getName()=''`（而 `getDescription()` 正常 269 字） | ⛔ **物件私有状态对这条通道不可见** |
+| 重新定义它的 `moveTurn`/`placeToken`/`findNextPlayerColor` | 注入成功、TTS 健康，但**读不到状态 ⇒ 算不出下一个颜色**（`currentColor` 恒 nil） | ⛔ 补丁无法在外部环境自洽 |
+| 注入 `onExternalMessage` 让它**在物件环境**里执行 | 处理器注入成功，但 `{"cmd":"dshPing"}` 回的是**桥接**的 `no handler` ⇒ **自定义消息只送给 Global 脚本**，不触发物件的 `onExternalMessage` | ⛔ 没有"从外部触发物件回调"的口 |
+| `messageID 3` 的**返回值** | 官方文档说走 messageID 5，但**从未到达**本机监听器；只有 `print()`（messageID 2）与错误（messageID 3）回得来 | ⚠️ 验证只能靠**副作用 ＋ print** |
+
+**结论**：**跨 mod 的外部驱动做不到**（它的状态私有、且无对外触发口）。**交还回合由玩家按** —— 只要玩家自己按得动（待玩家实测确认），这是**唯一受支持**的路径。
+**两个可复用的坑**：① **脚本必须"直连 TCP 从文件发"** —— 经 `-Lua` 参数传会被吃掉**引号**（`print("A")` 到达时变成 `print(A)` ⇒ 打印 nil）；② **多行脚本经命令行会被改坏**（`unexpected symbol near '='`）。
+**排查时机**：`Player.log` 的**最后写入时间**比进程列表可靠（本机 `Get-Process`/`Get-CimInstance` **看不到** TTS，尽管它在跑；`netstat` 看 `CLOSE_WAIT`/`LISTENING` 才准）。
 
 **F7 · 桥接原语的"活体"部分**（`🟡` 部分完成，2026-10-09）
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ 每条都得**重烤后真跑一次**。

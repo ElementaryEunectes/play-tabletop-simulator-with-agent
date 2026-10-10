@@ -95,7 +95,9 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 - **唯一真源**：`cache\<game>_turn.json`（含 `tracker` guid · 两个落点 · 哪个 z 是"我" · **定这条的原始证据**）。
 - **回合流水**（第几回合）记在 **`local\games\<游戏>\STATE.md`** —— 那是这一局状态的唯一真源，**不另开计数器**。
-- **哨兵**：`tts\tools\turn_side.ps1` 输出翻转即唤醒我（`player -> mine` = 玩家交了回合、轮到我）。
+- **回合交接**：`tts\tools\turn_calib.ps1 -Discover` → `-Answer mine|player`（写 `cache\<game>_turn.json`，含证据）· 运行时判定 `tts\tools\turn_side.ps1`（哨兵用它）· **交还** `tts\tr.ps1 -To player`。
+  ⚠️ **不要驱动那件工具自己的回合机**：桌上那枚社区 Turn Tracker 用 `Player[color].getPlayerHand()`（**本机 v14.2.2 已无此方法**）⇒ **玩家手按它也不动**（已由玩家确认）⇒ 改用**位置写入**（`tr.ps1`）。跨 mod 驱动的雷区与全表 ⇒ `VALIDATION.md` F12。
+  ⚠️ **哨兵间隔**：本机实测 **15 s 可用（实际约 20 s/次）**，**5 s 会被饿死**（详见 `BOOTSTRAP.md` §C 的哨兵限制）。
 - ⛔ 判定错了 ⇒ **重跑 `-Discover` ＋ `-Answer`**，**不许**改代码里的数字或用坐标反推（脚本头部有这条）。
 
 

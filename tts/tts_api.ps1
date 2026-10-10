@@ -32,6 +32,14 @@ param(
 # param() must stay the first statement, so the default is resolved here, after config.ps1
 # has defined $DshCache (never reference config variables inside param() defaults).
 if ($Out -eq '') { $Out = (Join-Path $DshCache 'tts_scripts_raw.json') }
+# Guard: -Out must be a usable file path. Measured 2026-10-11: a multi-line script passed on the
+# command line got shifted into -Out by the outer shell, and the "save the reply" step then died with
+# "Illegal characters in path" - AFTER the message had already been sent, which reads like a send
+# failure. Fall back to the default instead of throwing.
+if ($Out -match '[\r\n:*?"<>|]') {
+    Write-Host '  WARN -Out looks like script text, not a path; using the default output file'
+    $Out = (Join-Path $DshCache 'tts_scripts_raw.json')
+}
 
 $ErrorActionPreference = 'Stop'
 $TtsPort    = 39999
