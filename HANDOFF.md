@@ -1,4 +1,4 @@
-# HANDOFF.md —— 交接简报（最近更新 **2026-10-10 夜** · 回合交接已校准 · 本轮实验已彻查删除）
+# HANDOFF.md —— 交接简报（最近更新 **2026-10-11 凌晨** · 回合交接已校准 · 文档已按"规则 / 代码"分家）
 
 > **怎么读**：本文件 = "现在到哪了 + 先干什么"（**按需读，不注入**）。
 > 长期规矩 ⇒ `AGENTS.md`（本项目）＋ `$DSH_HOME\AGENTS.md`（平台宪章）；改东西前 ⇒ `tts\docs\MAINTENANCE.md`；坑 ×17 ＋ 注入机制 ⇒ harness home 的 `platform\MAINTENANCE.md`。
@@ -121,6 +121,12 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
+- **2026-10-11 凌晨**（`fc9eba6`）：**文档按"规则 / 代码"分家**（用户拍的边界：**代码相关进 `MAINTENANCE.md`**、**接手新 mod 的流程进 `BOOTSTRAP.md`**）。
+  - `TTS_RULES.md` **只留现场规则**：跟人配合 · 一回合 · 按钮定案（**§三**）· 能力边界 §四（差分/Lua 沙箱/计数器/移动/落板）· 找物认牌 §五 · 截图 §六 · **TTS 行为坑 §七** · 换局 §八。
+  - 迁出：**§二 工具清单**（含目录 · 跨脚本引用 · ⭐**两层怎么分**）⇒ `MAINTENANCE.md` **§5** · **§八 改游戏内 Lua** ⇒ **§6** · **§九 的 sanity check ＋ PowerShell 陷阱表** ⇒ **§7** · **§九 的 8 步开局** ⇒ `BOOTSTRAP.md` **§2c**。
+  - 章号重排 ⇒ **同步改掉 8 处跨文档 §引用**（README ×2 · docs/README · CONTRIBUTING · PLAY ×2 · USER_GUIDE ×2）；顺带修掉一个**失效锚点**：`BOOTSTRAP.md` §C（那节**从来不存在**）⇒ §2 的「哨兵的周期限制」。
+  - 体积：`TTS_RULES.md` 31,727 → **20,291 B** · `MAINTENANCE.md` 13,853 → **24,480 B**（总量持平）。⚠️ 分家的理由不是省 token，是**读场合**：TTS_RULES 每个新局开工读一次，MAINTENANCE 只在动手改脚本/改 Lua 前读 —— 代码塞在前面等于每次开工都替它付钱。
+  - 门禁 **7/7 绿**（`run_all.ps1`）；`test_doc_refs.ps1` 那条路径引用也在门禁里过了一遍。
 - **2026-10-10 夜 → 10-11 凌晨**（`0158c43` … `f86bd65`，约 20 个提交）：**回合交接定稿 ＋ 一次全面体检**。
   - **回合交接（最终形态）**：玩家按/拖桌上那枚社区 **Turn Tracker** ⇒ 我读**棋子位置**判"轮到谁"（**每款 mod 一次校准** `tools\turn_calib.ps1` → `cache\<game>_turn.json`）⇒ 我 **`tts\tr.ps1 -To player`** 交还（~0.9 s）。
     **叫醒** = 常驻作业 `tools\turn_poller.ps1`（2.5 s，变化才写 `cache\turn_side.txt`）＋ **file 哨兵**（`^mine`，<1 s）⇒ 检测 **~0.5-3.3 s**；**平台投递另加 ~23 s（不在我们手里）**。
