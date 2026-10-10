@@ -206,7 +206,7 @@ tts_api.ps1 -Action exec -Guid <物件guid> -Lua "btnFn(getObjectFromGUID('<物�
 1. **先定位**：`find:规则` / `find:Rule` / `find:说明` / `find:手册`，或从 `count` 直方图里挑名字可疑的物件。
    （例：对局型 mod 桌上常有一本「规则书（中x.y英x.y版本）」，`0f4dfd` @ (190,−0.01)。）
 2. **先判形态，再决定怎么读**（省 token 的关键）：
-   - `Custom_Model`/`Custom_Tile` 贴图 ⇒ 用「附录A / TTS_WORKFLOW §2b」的图素↔世界换算**裁图读**，只裁要用的区域；
+   - `Custom_Model`/`Custom_Tile` 贴图 ⇒ 用「附录A / `TTS_RULES.md` §6.2」的图素↔世界换算**裁图读**，只裁要用的区域；
    - `Deck`/`Bag`（一叠卡）⇒ `act:<guid>:getQuantity` 看几张，再决定逐张 `draw` 或按 hash 认；
    - 有纯文本（`getGMNotes`/`getDescription` 非空）⇒ 直接 `read`。
 3. **只读"开局必需"的四件事**：① 起始 HP/CP（或等价资源）② 回合/阶段流程 ③ 胜负与终局条件 ④ 手牌/牌堆的初始设置。
