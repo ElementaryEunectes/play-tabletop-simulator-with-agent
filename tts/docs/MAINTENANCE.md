@@ -145,7 +145,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `crop_zoom.ps1` | 裁图 ＋ 放大转真 PNG（**读卡面/查图用**；`Mods\Images` 里扩展名常与真实格式不符） |
 | `tts_api.ps1` | TTS **External Editor API（39999）** 原始客户端；`tools\exec_script.ps1` = 走它的 **`messageID 3`** 执行 Lua（**安全**，见 `TTS_RULES.md` §七）。⚠️ **39998 只有一个槽**：轮询器每 2.5 s 占它一片 ⇒ 交接会撞 `listener busy`（`exec_script.ps1` 已把绑定重试提到 6 次/~10 s）；**根治 = 常驻进程独占 39998**（hub 方案 ⇒ `PRIOR_ART.md`；⇒ `VALIDATION.md` F14） |
 | **`tools\dump_lua.ps1`** | **把存档里物件的 `LuaScript` 抽成文件**（**离线，不碰 TTS**）：`-Guid <g> -OutFile <f>` 抽那**一件**（**改别人脚本前的备份**动作）· 默认把 ≥`-MinChars`（50）的**全部**导出到 `cache\scripts\` · `-List` 只报不写 ⇒ 取代了归档里那份 `dump_scripts.ps1`（后者写死两条机器路径） |
-| **`tools\tts_hub.ps1`** | ⭐ **独占 39998 的常驻 hub**（`PRIOR_ART.md` 指的那个方案）：它**一次性绑住回复端口**，其它工具把信封投到 **39997**（一行 JSON：`{envelope,want,timeoutSec}` → `{raw,skipped,ms}` 或 `{hubErr,…}`）。**`ttslib.ps1` 的 `Invoke-Tts` 优先走它**（没有 hub 时原样回落到自绑 39998）⇒ **`listener busy` 与"连发把 API 推垮"从根上消失**（⇒ `VALIDATION.md` F14/L19）。跑法：后台作业起它；出错日志 `cache\hub.log`。⛔ **同时只能有一个 owner**：hub 跑着时别的进程别去占 39998 |
+| **`tools\tts_hub.ps1`** | ⭐ **独占 39998 的常驻 hub**（`PRIOR_ART.md` 指的那个方案）：它**一次性绑住回复端口**，其它工具把信封投到 **39997**（一行 JSON：`{envelope,want,timeoutSec}` → `{raw,skipped,ms}` 或 `{hubErr,…}`）。**`ttslib.ps1` 的 `Invoke-Tts` 优先走它**（没有 hub 时原样回落到自绑 39998）⇒ **`listener busy` 与"连发把 API 推垮"从根上消失**（⇒ `VALIDATION.md` F14/L19）。跑法：后台作业起它；出错日志 `cache\hub.log`。⛔ **同时只能有一个 owner**：hub 跑着时别的进程别去占 39998。
+  ⛔ **别在任务管理器里按 PID 猜着杀**（2026-10-11 我真踩了）：**一个后台作业 = 包装进程 ＋ 子进程**，两行都叫 `powershell.exe` ⇒ 杀掉"另一个"会把**整对**带走（我按端口判出 hub 是 `5196`，顺手杀了另一行 `22272`，结果 hub 连同它的 job 一起没了）。判据要用**命令行**列（含 `tts_hub.ps1` / `turn_poller.ps1`）或直接 `job_kill <id>`；清理轮询器还有专闸 `cache\poller.stop` |
 
 ### 💤 休眠但别删（删了会踩坑）
 
