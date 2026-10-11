@@ -8,6 +8,19 @@
 > 🔌 **桥接版本**：盘上现在跑的是 **`v15-tags-snap-hand`**（`TS_Save_17.json`）；仓库源码已升 **`v16-tracker-guid`**（`turn_tracker` 可按调用方的 guid 读那件，见 `MAINTENANCE.md` §5）⇒ **要重烤 ＋ 请玩家重载**才生效；不重载则一切照旧可用。
 > ✅ **验证两件套**：门禁 `tts\tests\run_all.ps1`（7 条）· 活体 `tts\tests\live_smoke.ps1`（17 条**只读**，需要 TTS）。
 
+## 🔴 接手即做（2026-10-11 15:0x，本会话交接）
+
+> **盘上现在跑着什么**（⚠️ **都不跨会话**，本会话一结束就全没）：后台作业 **hub**（`tts\tools\tts_hub.ps1`）· 后台作业 **轮询器**（`tts\tools\turn_poller.ps1`，不限时长）· 哨兵 **`watch-4`**（file `cache\turn_side.txt`，`pattern=^mine`，`max_fires=500`）· 已撤：`watch-3`（端口开合，专用性已被轮询器覆盖）。
+>
+> **接手三步（照这个顺序）**：① 起 **hub**（**必须最先**，它独占 39998 ⇒ `MAINTENANCE.md` §5）；② 起 **轮询器**（`turn_poller.ps1`，玩家人回合期间让它跑着）；③ 挂 **file 哨兵**（`cache\turn_side.txt`，`^mine`，**`max_fires` 必须显式给**）。想停轮询器：放一个 **`cache\poller.stop`**（所有轮询器含孤儿一个周期内退出）。
+>
+> **每回合的操作策略（玩家 2026-10-11 定的）**：我把回合交还给他 ⇒ **轮询一直开着等他**；他按 End Turn ⇒ 哨兵叫醒我 ⇒ ⛔ **先 `tts\tools\turn_side.ps1` 复核**（**"错位时要点两次"会造出假边沿** —— 实测两次：一次复核时已回 `player`，一次是真 `mine`）⇒ 本局无对局动作时直接 `tts\tr.ps1 -To player` 交还 ⇒ 继续轮询。
+> ⛔ **两条硬纪律**：**一次工具调用只发一条 TTS 命令**；**JSON 只在进程内构造**（⛔ 绝不交给 `powershell -File`，它吃引号 ⇒ 畸形信封 ⇒ TTS 收下不回复 ⇒ 39999 掉线，7 次实测 ⇒ `VALIDATION.md` **F14**）。
+>
+> **下一步待办（有序）**：① **在"可牺牲副本"上补验 `cut`/`paste`/`drop` ＋ `spawn:json`**（`spawn:copy` 造副本 → 试 → `destroy` 掉；**需玩家点头**）⇒ `VALIDATION.md` F7；② `ds.ps1` 回显里 `action=` 空的**小瑕疵**（`hand:` 那条）；③ 门禁缺依赖时显示成 `FAIL … marker=False` 而非 `NOT RUN`（措辞）；④ **真机冷启动**（第三方、干净机器；沙箱里 `git clone` 做不了）· ⑤ **E：demo ＋ 30 秒录屏**。
+>
+> **台账指针**：hub/工具的用法与坑 ⇒ `MAINTENANCE.md` **§5**（含"别按 PID 猜杀后台作业"）· API 掉线根因与验收 ⇒ `VALIDATION.md` **F14 · L18 ✅ · L19 ✅** · 起链顺序 ⇒ `PLAY.md` 回合交接节 ＋ `BOOTSTRAP.md` §1 E · 本局状态 ⇒ `local\games\<游戏>\STATE.md`。
+
 ## §1 启动（必做，30 秒）
 
 ```powershell
