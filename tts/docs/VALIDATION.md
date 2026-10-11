@@ -216,7 +216,8 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 > ⇒ **结论：`cut`/`paste`/`drop` 在活体上"存在但什么都不做"** —— 两个返回 `false`、一个连方法都没有 ⇒ **原语白名单里这三条是死路**（⛔ 别再当可用能力用；要"撤回/交易"就得走别的载体）。
 > ⛔ **`spawn:json` 再次把 TTS 打挂（第二次，与 F10 同症状）**：完整信封 `{"cmd":"spawn","json":"{\"Name\":\"Custom_Tile\",…}"}` 之后 ⇒ hub `#64 cmd=? 25008ms NOREPLY` ⇒ 之后每一发都是 **`PORTCLOSED`**（TTS 的 39999 关掉）· `Player.log` **mtime 停在发之前**（16:42:41）。
 > ⇒ **`spawn:json` 与 `spawn:type` 同等对待：停止追查**（离线用例覆盖 ≠ 活体可用）。
-> ⏳ **等 TTS 重启后要补的一句**：查 `ping` 的 objs 是否**回到 117**（`spawn:copy` 的副本 `836428` 与 `spawn:json` 那次是否被回滚/是否留下残件）。
+> ✅ **续（16:49，TTS 由玩家重启后）**：**本次两个实验件都没留在桌上** —— 副本 `836428` ⇒ `no object with guid 836428`、`spawn:json` 的 `DSH-SPWN-CHK` ⇒ `find` 回 `count=0`（**重启前那次 `objs=118` 是它挂掉之前的 `spawn:copy` 增量，重启后被回滚**，现在唯一真值以重启后的 `ping` 为准）。
+> 🐞 **顺带抓到一条死原语（同一族）**：`player:Teal:turn` ⇒ `FAIL … Global:(5971,43-57): cannot access field turn of userdata<LuaPlayer>` ⇒ **白名单里 `turn`/`blind` 这两条在活体上同样不可达**（属于 `getPlayerFromColor` 返回的 userdata，不是 Player 实例）⇒ ⛔ 别再试。
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ 每条都得**重烤后真跑一次**。
 **已跑（载入 `TS_Save_11.json` 后逐条真跑）**：`ping` 版本对 · `players` 回 `ok count=2` ＋ 每座位一行 ·
 `take` 缺卡回 `no container with guid ...` · `destroy` 幽灵回 `no object with guid ...` ·

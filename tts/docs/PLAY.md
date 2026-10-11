@@ -53,7 +53,7 @@
     ② 检测到 ⇒ **我真正开始处理 ~23 s** ← ⚠️ **平台唤醒投递的固有延迟，我们改不了**；
     ③ 我开始 ⇒ 棋子回到玩家侧 **~1.2 s**（`tr.ps1`，曾因 `exec_script.ps1` 空等回执窗口而高达 **12.9 s**，已修）。
     ⇒ **总感知 ~25 s**，**其中 23 s 不在我们手里**。⇒ 结论：**真对局就用这个**（我的回合本来就要思考），**不要**改成"轮询器自动交还"——那等于**替我把回合跳过**。
-  - **判定**：`tts\tools\turn_side.ps1` 读棋子 `z`，与校准档比（`zMine`/`zPlayer` **每款 mod 都不同** ⇒ 唯一真源 = `cache\<game>_turn.json`；语义由玩家当面确认）。⛔ **别再用 `command` 哨兵做回合检测**（平台探测实际 ~20 s 一次，是当时延迟的主因）。
+  - **判定**：`tts\tools\turn_side.ps1` 读棋子 `z`，与校准档比（`zMine`/`zPlayer` **每款 mod 都不同** ⇒ 唯一真源 = `cache\<game>_turn.json`；语义由玩家当面确认）。⛔ **别再用 `command` 哨兵做回合检测**（平台探测实际 ~20 s 一次，是当时延迟的主因）。⛔ **也拿不到"谁在行动"的 API**：`player:<Color>:turn` 在活体上是死原语（`cannot access field turn of userdata<LuaPlayer>`，2026-10-11 实测 ⇒ `VALIDATION.md` F7）。
   - **体检**：`tts\tools\tracker_read.lua`（经 `exec_script.ps1`）一次读出 `POS / SAVED_STATE / LIVE_COLOR / LOCKED / NAME`。
   - ⛔ **别再用 `callx`/`Object.call` 驱动别的 mod**（会把 TTS 弄失联）；⛔ **别在 `messageID 3` 里改别人物件的函数**（⇒ `VALIDATION.md` F13）。
   - ⚠️ 那枚棋子的 **`Name` 必须写着颜色顺序**（空格分隔；**本局是哪几个颜色 ⇒ 校准档 `cache\<game>_turn.json`、该局 `STATE.md`**）—— 它**文档要求**的配置；清空会让它按 10 色表轮转、跑到 `Red` 这类**空座位**。
