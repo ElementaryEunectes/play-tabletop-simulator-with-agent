@@ -210,7 +210,7 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 **还没做**：TTS 回来后 ① 验版本号是否仍为 `v16`；② 用完整信封补做 `turn_tracker` 的 guid 验证（⇒ L18）；③ 重挂轮询器与 file 哨兵。
 
 **F7 · 桥接原语的"活体"部分**（`🟡` 部分完成，2026-10-09）
-> 🔬 **2026-10-11 14:4x 补验（② 号 mod，全部经 hub）**：`act:<g>:getTags` ⇒ **`ok act 0e731f getTags -> {}`**（tags 分支活体可用；`F6` 那条"TTS 的 tag 是哈希"仍适用）· `hand:Teal:holding` ⇒ **`ok hand player=Teal action= count=0`**（`holding` 分支可用）· **`action=` 空那个小瑕疵已修并活体验收**（2026-10-11 16:56：烤 `TS_Save_19.json` ＝ `七圣召唤-dsh-v16b` 后载入 ⇒ `hand:Teal:holding` 回 **`action=holding`**）· 两条之后**窗口仍 OPEN**。
+> 🔬 **2026-10-11 14:4x 补验（② 号 mod，全部经 hub）**：`act:<g>:getTags` ⇒ **`ok act 0e731f getTags -> {}`**（tags 分支活体可用；`F6` 那条"TTS 的 tag 是哈希"仍适用）· `hand:Teal:holding` ⇒ **`ok hand player=Teal action= count=0`**（`holding` 分支可用）· **`action=` 空那个小瑕疵已修并活体验收**（2026-10-11 16:56：烤 `TS_Save_19.json`（`<game>-dsh-v16b`）后载入 ⇒ `hand:Teal:holding` 回 **`action=holding`**）· 两条之后**窗口仍 OPEN**。
 > ✅ **2026-10-11 16:4x 补验收官（`v16-tracker-guid`，可牺牲副本 `1ee6dc` ⇒ 副本 `836428`，经 hub 一条一条发）**：
 > **`cut` ⇒ `ok act 836428 cut -> false`** · **`paste` ⇒ `FAIL cmd=act err=object has no method paste`** · **`drop` ⇒ `ok act 836428 drop -> false`**（三条之后 `ping` 都正常、objs **118 不变**）。
 > ⇒ **结论：`cut`/`paste`/`drop` 在活体上"存在但什么都不做"** —— 两个返回 `false`、一个连方法都没有 ⇒ **原语白名单里这三条是死路**（⛔ 别再当可用能力用；要"撤回/交易"就得走别的载体）。
