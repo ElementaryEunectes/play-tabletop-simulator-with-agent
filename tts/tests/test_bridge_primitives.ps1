@@ -1,4 +1,4 @@
-﻿# test_bridge_primitives.ps1 - the bridge's own commands must work, not just parse.
+# test_bridge_primitives.ps1 - the bridge's own commands must work, not just parse.
 #
 # WHY
 #   validate_lua.js proves dsh_global.lua PARSES. It cannot see wrong routing, wrong argument
@@ -45,7 +45,8 @@ foreach ($need in @($lua, $gen, $runner)) {
     if (-not (Test-Path -LiteralPath $need)) {
         Add-Line ("MISSING " + $need)
         [System.IO.File]::WriteAllLines($logFile, $lines, (New-Object System.Text.UTF8Encoding($false)))
-        Write-Host ("FAIL  missing input: " + $need)
+        Write-Host ("FAIL  missing input: " + $need)   # kept for humans; the marker below is what the runner keys on
+        Write-Host "MISSING DEP"
         exit 1
     }
 }

@@ -210,8 +210,13 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 **还没做**：TTS 回来后 ① 验版本号是否仍为 `v16`；② 用完整信封补做 `turn_tracker` 的 guid 验证（⇒ L18）；③ 重挂轮询器与 file 哨兵。
 
 **F7 · 桥接原语的"活体"部分**（`🟡` 部分完成，2026-10-09）
-> 🔬 **2026-10-11 14:4x 补验（② 号 mod，全部经 hub）**：`act:<g>:getTags` ⇒ **`ok act 0e731f getTags -> {}`**（tags 分支活体可用；`F6` 那条"TTS 的 tag 是哈希"仍适用）· `hand:Teal:holding` ⇒ **`ok hand player=Teal action= count=0`**（`holding` 分支可用；⚠️ 小瑕疵：ds.ps1 回显里 `action=` 是空的）· 两条之后**窗口仍 OPEN**。
-> ⛔ **仍未验**：`cut`/`paste`/`drop`（要动桌子，需玩家点头 ＋ 一个可牺牲的件）· `spawn:json`（离线用例覆盖，未单独活体跑过）。
+> 🔬 **2026-10-11 14:4x 补验（② 号 mod，全部经 hub）**：`act:<g>:getTags` ⇒ **`ok act 0e731f getTags -> {}`**（tags 分支活体可用；`F6` 那条"TTS 的 tag 是哈希"仍适用）· `hand:Teal:holding` ⇒ **`ok hand player=Teal action= count=0`**（`holding` 分支可用）· **`action=` 空那个小瑕疵已修**（2026-10-11：`dsh_global.lua` 的 `hand` 各分支补回 `action` 字段 ⇒ **待重载后补一条活体回执**）· 两条之后**窗口仍 OPEN**。
+> ✅ **2026-10-11 16:4x 补验收官（`v16-tracker-guid`，可牺牲副本 `1ee6dc` ⇒ 副本 `836428`，经 hub 一条一条发）**：
+> **`cut` ⇒ `ok act 836428 cut -> false`** · **`paste` ⇒ `FAIL cmd=act err=object has no method paste`** · **`drop` ⇒ `ok act 836428 drop -> false`**（三条之后 `ping` 都正常、objs **118 不变**）。
+> ⇒ **结论：`cut`/`paste`/`drop` 在活体上"存在但什么都不做"** —— 两个返回 `false`、一个连方法都没有 ⇒ **原语白名单里这三条是死路**（⛔ 别再当可用能力用；要"撤回/交易"就得走别的载体）。
+> ⛔ **`spawn:json` 再次把 TTS 打挂（第二次，与 F10 同症状）**：完整信封 `{"cmd":"spawn","json":"{\"Name\":\"Custom_Tile\",…}"}` 之后 ⇒ hub `#64 cmd=? 25008ms NOREPLY` ⇒ 之后每一发都是 **`PORTCLOSED`**（TTS 的 39999 关掉）· `Player.log` **mtime 停在发之前**（16:42:41）。
+> ⇒ **`spawn:json` 与 `spawn:type` 同等对待：停止追查**（离线用例覆盖 ≠ 活体可用）。
+> ⏳ **等 TTS 重启后要补的一句**：查 `ping` 的 objs 是否**回到 117**（`spawn:copy` 的副本 `836428` 与 `spawn:json` 那次是否被回滚/是否留下残件）。
 离线门禁用的是**文档形状的桩**，不是这台 TTS 的真实行为 ⇒ 每条都得**重烤后真跑一次**。
 **已跑（载入 `TS_Save_11.json` 后逐条真跑）**：`ping` 版本对 · `players` 回 `ok count=2` ＋ 每座位一行 ·
 `take` 缺卡回 `no container with guid ...` · `destroy` 幽灵回 `no object with guid ...` ·

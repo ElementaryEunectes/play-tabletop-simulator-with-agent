@@ -642,12 +642,12 @@ local function hand(m)
             pcall(function() e.nick = o.getNickname() end)
             out[#out + 1] = e
         end
-        return { ok = true, player = player, count = #out, items = out }
+        return { ok = true, player = player, action = action, count = #out, items = out }
     elseif action == "take" then
         local o = getObjectFromGUID(tostring(m.guid or ""))
         if not o then return { ok = false, err = "no object" } end
         local ok = pcall(function() pl.takeObject({ guid = o.getGUID(), smooth = false }) end)
-        return { ok = ok, player = player, guid = m.guid }
+        return { ok = ok, player = player, action = action, guid = m.guid }
     elseif action == "holding" then
         -- what this player is holding RIGHT NOW (distinct from their hand zone)
         local h = {}
@@ -660,7 +660,7 @@ local function hand(m)
             pcall(function() e.name = o.getName() end)
             ho[#ho + 1] = e
         end
-        return { ok = true, player = player, count = #ho, items = ho, cmd = "hand" }
+        return { ok = true, player = player, action = action, count = #ho, items = ho, cmd = "hand" }
     elseif action == "give" then
         -- hand a specific object to a colour: the object-side way, because the Player object has
         -- no takeObject. smooth=false on purpose - a smooth move would need Wait before the caller
@@ -671,7 +671,7 @@ local function hand(m)
         if not okg then return { ok = false, err = "hand give failed: " .. S(eg) } end
         local afterg = {}
         pcall(function() afterg = pl.getHandObjects() or {} end)
-        return { ok = true, player = player, guid = m.guid, hand = #afterg, cmd = "hand" }
+        return { ok = true, player = player, action = action, guid = m.guid, hand = #afterg, cmd = "hand" }
     elseif action == "draw" then
         -- move cards from a container INTO a hand:
         --   Deck.deal(n, colour)                            -> the normal "draw n cards"
@@ -683,7 +683,7 @@ local function hand(m)
         if dealt then
             local a1 = {}
             pcall(function() a1 = pl.getHandObjects() or {} end)
-            return { ok = true, player = player, guid = m.guid, n = n, hand = #a1, cmd = "hand" }
+            return { ok = true, player = player, action = action, guid = m.guid, n = n, hand = #a1, cmd = "hand" }
         end
         local off = m.offset
         if type(off) ~= "table" then off = { 0, 0, 0 } end
@@ -693,7 +693,7 @@ local function hand(m)
         end
         local a2 = {}
         pcall(function() a2 = pl.getHandObjects() or {} end)
-        return { ok = true, player = player, guid = m.guid, n = 1, via = "dealToColorWithOffset", hand = #a2, cmd = "hand" }
+        return { ok = true, player = player, action = action, guid = m.guid, n = 1, via = "dealToColorWithOffset", hand = #a2, cmd = "hand" }
     end
     return { ok = false, err = "unknown hand action: " .. action }
 end

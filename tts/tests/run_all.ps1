@@ -1,4 +1,4 @@
-﻿# run_all.ps1 - run every offline gate and refuse to be fooled by an empty exit code.
+# run_all.ps1 - run every offline gate and refuse to be fooled by an empty exit code.
 #
 # WHY THIS EXISTS (2026-10-09): while the workspace-write confinement was failing to launch child
 # processes, `& powershell -File tts\tests\test_x.ps1` returned NOTHING and left $LASTEXITCODE empty
@@ -72,6 +72,10 @@ foreach ($g in $gates) {
     $ran  = ($text.Trim().Length -gt 0)          # a child that never started returns NOTHING
     $hit  = ($text -match [regex]::Escape($g.marker))
     if (-not $ran) { Write-Host ("NOT RUN  {0}  <- no output at all (child process did not start?)" -f $g.name); $failed++; continue }
+    # A gate whose own INPUT is absent (e.g. fengari/node missing on a fresh machine) is NOT RUN, not
+    # FAIL: it proves nothing about the code, and calling it FAIL sends people hunting a bug that is
+    # really a missing dependency. The gate names its own dependency with the "MISSING DEP" marker.
+    if ($text -match 'MISSING DEP') { Write-Host ("NOT RUN  {0}  <- missing dependency (gate said so)" -f $g.name); continue }
     if ($code -eq 0 -and $hit) { Write-Host ("PASS     {0}" -f $g.name); continue }
     Say ("FAIL     {0}  exit={1} marker={2}" -f $g.name, $code, $hit)
     $out | Select-Object -Last 8 | ForEach-Object { Write-Host ("           " + $_) }
