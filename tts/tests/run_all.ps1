@@ -48,6 +48,14 @@ foreach ($g in $gates) {
     # captured through a PowerShell pipe (`& powershell ... 2>&1` returns nothing while
     # $LASTEXITCODE stays 0), and a numbered file handle works. Reading a file also keeps the
     # positive-evidence rule honest: an empty file means NOT RUN, never "passed".
+    # A FRESH CLONE HAS NO cache\ (gitignored), and without it every gate dies with a misleading
+    # "Could not find a part of the path ...\cache\dsh_gate_*.txt" - measured 2026-10-11 on a clean
+    # worktree: all seven gates failed for this one reason. Make the two product directories the
+    # gates write into before anything runs; this is what makes "new machine, first step" work.
+    foreach ($d in 'cache', 'out') {
+        $p = Join-Path $Root $d
+        if (-not (Test-Path -LiteralPath $p)) { [void](New-Item -ItemType Directory -Path $p -Force) }
+    }
     $tmp = Join-Path (Join-Path $Root 'cache') ('dsh_gate_' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.txt')
     # NO cmd.exe here: launching through cmd is the console-isolating shape that dies with
     # 0xC0000142 (Windows ACL backend, documented). Instead the CHILD redirects its own streams to
