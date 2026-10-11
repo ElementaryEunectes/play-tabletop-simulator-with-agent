@@ -82,7 +82,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
    （先 dot-source 再定义 `Fail`/`Err-Code` 两个桩，`Bridge` 的硬错误路径才不会撞空函数。）
 2. ⛔ **别"坐满回执窗口"**：`tools\exec_script.ps1` 原来等满 `ListenSec`（12 s）才收工 ⇒ **`tr.ps1` 要 12.9 s**。改成**收到第一条回执就退出** ⇒ 0.9 s。
    ⇒ 写"发一条、等回复"的工具时，**默认应当早退**，只在需要多条消息（如 print ＋ sendExternalMessage）时才多等一小会儿。
-3. 📌 一次要发**多条**命令时用 `dsbatch.ps1`（一条进程跑 N 条）。
+3. 📌 一次要发**多条**命令时用 `dsbatch.ps1`（一条进程跑 N 条）。⚠️ **但别在 1–2 秒内连发 3–5 条**：39998 只有一个槽，连发会把 TTS 的回复通道推垮 —— **四次实测"API 掉线"全是这么来的**（⇒ `VALIDATION.md` F14）。**一条一条来、中间留几秒**；一条超时后**先看端口**，别立刻补一条。
 
 ## 2. 三个指令槽（**上限写在门禁里，不在这里复述**）
 
