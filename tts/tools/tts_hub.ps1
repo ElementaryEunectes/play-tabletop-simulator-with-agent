@@ -1,4 +1,4 @@
-# tts_hub.ps1 - ONE resident process owns TTS's reply port (39998); every other tool asks it instead.
+﻿# tts_hub.ps1 - ONE resident process owns TTS's reply port (39998); every other tool asks it instead.
 #
 # WHY (2026-10-11)
 #   Port 39998 is a SINGLE slot: whoever talks to TTS must listen there to receive the reply, because

@@ -130,7 +130,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | **`setup.ps1`** | **首次上手向导**（默认只读）：打印"到第一回合"的 8 步 ＋ 转给 `doctor.ps1`。`-InitGame <slug>` 从 `tts\templates\` 建 `local\games\<slug>\` 并把 `GAME=` 指过去（先备份）· `-DryRun 1` 预览 |
 | **`tr.ps1`** | **交还回合**：`-To mine\|player` 搬那枚回合标记（`-State` 指定存档颜色）· 坐标取自 `cache\<game>_turn.json` |
 | `tools\turn_calib.ps1` · `tools\turn_side.ps1` | 每款 mod **一次校准**（`-Discover`/`-Answer`/`-Show`）· 运行时判定**轮到谁**（`mine\|player\|unknown\|uncalibrated`） |
-| `tools\turn_poller.ps1` | 后台作业：每 2.5 s 读位置、**变化才写** `cache\turn_side.txt` ⇒ 配 file 哨兵做**快速叫醒** |
+| `tools\turn_poller.ps1` | 后台作业：每 2.5 s 读位置、**变化才写** `cache\turn_side.txt` ⇒ 配 file 哨兵做**快速叫醒**。⚠️ **防孤儿（2026-10-11 加）**：`cache\poller.stop` **一存在，所有轮询器（含孤儿）在一个周期内退出**；`cache\poller.pid` 阻止重复启动（`-Force` 覆盖）—— 起因是一个**已归档会话留下的孤儿轮询器**，谁也杀不掉、还在每 2.5 s 吃掉一小片 TTS 的 API 窗口。⚠️ 因此**优先"按需轮询"**：轮到玩家时开 `-Minutes 3`，**别常驻**（⇒ `VALIDATION.md` F14） |
 | `tests\live_smoke.ps1` | **烤完桥接/重载后跑它**：17 条**只读**命令逐条 PASS/FAIL，一次看清哪个子集坏了（离线门禁测不出"命令在活体上到底能不能用"） |
 
 ### 🔧 常用（按需）
