@@ -125,6 +125,9 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
+- **2026-10-11 13:59 · ✅ hub 验收通过（干净窗口）**：`watch-3` 报窗口开 ⇒ `ping` = `v16-tracker-guid` → `turn_side` = **`mine`** → **`tr.ps1 -To player` 交还成功**（经 hub）→ **`live_smoke.ps1` 17/17** → 之后 `39999` **仍在 LISTENING**、再 ping 正常。hub 这一轮**连续服务 22 条**（含 17 条连发 ＋ messageID 3），**28–79 ms**，**零 `listener busy`** ⇒ **`VALIDATION.md` L19 从 ⚠️ 转 ✅**。
+  - ⚠️ **本轮有意不起常驻轮询器**（"轮询器烧窗口"那条线索要验；而且 `MAINTENANCE.md` §5 已改成**优先按需轮询** `-Minutes 3`）。⇒ 建议下一步就按"按需"重建链路（玩家轮到时开 3 分钟），别回到常驻 2.5 s。
+
 - **2026-10-11 13:45 · 对照实验：guid 与 v16 都无罪**（用户选了"做实验"）：**被动 120 s 无命令 ⇒ 端口全程 OPEN**（不会因闲置掉线）；随后经 hub 连做 **2 条对照**（`turn_tracker` ＋ **正确 guid**，与轮询器同一条）＋ 1 条处理（不同 guid）⇒ **第一条对照就掉**（`no reply 25s` ⇒ closed）⇒ **guid/真假/v16 的 `m.guid` 路全部排除**，"连发"也不是必要条件（那是窗口里第一条命令）。再被动 180 s ⇒ 一直 closed（这次 >3 min 没自己回来，上次 ~2.5 min 就回来了）⇒ **不是固定节拍**。
   - 🔎 **唯一幸存的线索（n=6）**：**每次掉线都紧跟一次 `ds.ps1 -Json … -Raw`**；同窗口里的 `-Do` 形式、桥接调用（含轮询器 4 条、`tr.ps1` 的 messageID 3）全都好 ⇒ **暂缓使用 `ds.ps1 -Json -Raw`**（改用 `-Do`／桥接），并在 `VALIDATION.md` F14 记下这条与"API 会随时消失 ⇒ 工具要能容忍"的处置。
   - ✅ **hub 反而被这次实验证了**：6 次掉线里它在岗的那几次都只是如实报 `hubErr=PORTCLOSED`，**从未** `listener busy`；换窗口后照常服务。
