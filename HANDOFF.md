@@ -5,6 +5,7 @@
 > **文档全索引 ⇒ `tts\docs\README.md`**；**本局状态 ⇒ `local\games\<游戏>\STATE.md`**（唯一真源：含"现在轮到谁"与续局步骤，本文件不复述游戏名与槽位）。
 > ⚠️ **先做 §1 的启动动作**，否则脚本会读写一个不存在的旧目录。
 > ⚠️ **每个新会话要重建两个活件**（它们**不跨会话**）：轮询器（后台作业 `tts\tools\turn_poller.ps1 -IntervalSec 2.5`）＋ **file 哨兵**（`cache\turn_side.txt`，`pattern=^mine`，**`max_fires` 必须显式给**）⇒ 步骤 ⇒ `tts\docs\PLAY.md` 回合交接节。
+> 🪙 **省 token 纪律**（2026-10-11 定，全文约束见 `AGENTS.md` 第 9 条）：**批量发命令**（不再"一次调用一条"）· **只 `grep` ＋ 切片读**大文档 · **文档搬运/审计交子代理** · **回复压到几行** ⇒ 短回复与合并轮次省的是**每一次后续请求**。
 > 🔌 **桥接版本**：盘上现在跑的是 **`v15-tags-snap-hand`**（`TS_Save_17.json`）；仓库源码已升 **`v16-tracker-guid`**（`turn_tracker` 可按调用方的 guid 读那件，见 `MAINTENANCE.md` §5）⇒ **要重烤 ＋ 请玩家重载**才生效；不重载则一切照旧可用。
 > ✅ **验证两件套**：门禁 `tts\tests\run_all.ps1`（7 条）· 活体 `tts\tests\live_smoke.ps1`（17 条**只读**，需要 TTS）。
 
