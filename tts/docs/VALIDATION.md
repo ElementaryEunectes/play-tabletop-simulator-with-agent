@@ -164,7 +164,16 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 🔧 **体检工具**：`tts\tools\tracker_read.lua`（配 `exec_script.ps1`）一次读出 `POS / SAVED_STATE / LIVE_COLOR / LOCKED / NAME` —— **`POS` 与 `LIVE_COLOR` 同侧才算对齐**。
 🧠 **同一类错我这一小时犯了三次**（"`getPlayerHand` 已删"、"写状态不生效"、"它的位置功能坏了"），**每次都被一次同刻读数推翻** ⇒ 规矩：**改别人物件的状态不能只改一半；谈"前后"必须用同一时刻的读数**。
 
-**F14 · 验到 `v16` 之后 20 秒，TTS 不再监听 39999 —— `⛔ 根因未定`（2026-10-11 03:45）**
+**F14 · TTS 的 editor API（39999）"窗口"会消失 —— `⛔ 根因未定`（2026-10-11，共 6 次）**
+
+> ⭐ **对照实验（13:45，用户拍板做的，设计 = 被动基线 ＋ 对照 ＋ 处理）**：
+> 1. **被动 120 s、零命令** ⇒ 端口**全程 OPEN**（只 1 条状态记录）⇒ **它不会因为闲置而掉**。
+> 2. 随后**经 hub** 连做 **2 条对照**（`turn_tracker` ＋ **正确的 tracker guid `0e731f`** —— 与轮询器一直在发的**同一条**）＋ 1 条处理（换成手牌计数板的 guid）：**第一条对照就掉**（`no reply in 25s` ⇒ 端口 closed；后两条自然 `ERR TTS unreachable`）。
+>    ⇒ **guid 无罪**（真/假、tracker/非 tracker 都一样）；**v16 新增的 `m.guid` 路也无罪**；"连发"同样不是必要条件（这次是**本条窗口里的第一条命令**）。
+> 3. 再**被动 180 s、零命令** ⇒ 端口**一直 closed**（这次 >3 min 没自己回来，而 13:40 那次掉线后 ~2.5 min 就回来了）⇒ **也不按固定节拍回来**。
+> 🔎 **唯一还站得住的线索（n=6，还不是结论）**：**6 次掉线全都紧跟一次 `ds.ps1 -Json … -Raw`**；同一窗口里的 `-Do` 形式与桥接调用（含轮询器 4 条、`tr.ps1` 那条 messageID 3）**一直是好的**。
+> ⇒ **处置**：⛔ **先别用 `ds.ps1 -Json -Raw` 发命令**（改用 `-Do …` 形式或桥接），直到有人查清它与 `-Do` 在线上到底差在哪；**API 会随时消失 ⇒ 每个工具都要能容忍"这一条没了、下一条窗口再发"**（轮询器本来就容忍：它只在读到 `mine/player` 时才写文件）。
+
 **时间线（都是实测）**：`03:44:34` `ping` 成功 ⇒ **`ok v=v16-tracker-guid objs=118 loads=1`**（玩家刚重载 `TS_Save_18.json`，新桥接确实生效）；
 随后我发了一个**缺 `customMessage` 的信封**（`ds.ps1 -Json '{"cmd":"turn_tracker","guid":"deadbeef"}'`，本意是验"桥接认调用方的 guid"）⇒ 无回执，`ERR no reply in 25s`；
 `03:45:05` 起 `Player.log` **不再增长**，`39999` **不再 LISTENING**（`netstat` 只剩 TIME_WAIT/CLOSE_WAIT），`ds.ps1 -Do ping` 变 **`ERR TTS unreachable`**。

@@ -125,6 +125,11 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
+- **2026-10-11 13:45 · 对照实验：guid 与 v16 都无罪**（用户选了"做实验"）：**被动 120 s 无命令 ⇒ 端口全程 OPEN**（不会因闲置掉线）；随后经 hub 连做 **2 条对照**（`turn_tracker` ＋ **正确 guid**，与轮询器同一条）＋ 1 条处理（不同 guid）⇒ **第一条对照就掉**（`no reply 25s` ⇒ closed）⇒ **guid/真假/v16 的 `m.guid` 路全部排除**，"连发"也不是必要条件（那是窗口里第一条命令）。再被动 180 s ⇒ 一直 closed（这次 >3 min 没自己回来，上次 ~2.5 min 就回来了）⇒ **不是固定节拍**。
+  - 🔎 **唯一幸存的线索（n=6）**：**每次掉线都紧跟一次 `ds.ps1 -Json … -Raw`**；同窗口里的 `-Do` 形式、桥接调用（含轮询器 4 条、`tr.ps1` 的 messageID 3）全都好 ⇒ **暂缓使用 `ds.ps1 -Json -Raw`**（改用 `-Do`／桥接），并在 `VALIDATION.md` F14 记下这条与"API 会随时消失 ⇒ 工具要能容忍"的处置。
+  - ✅ **hub 反而被这次实验证了**：6 次掉线里它在岗的那几次都只是如实报 `hubErr=PORTCLOSED`，**从未** `listener busy`；换窗口后照常服务。
+  - ⏭️ **欠**：`live_smoke.ps1` 的 17 条连发验收（本轮窗口太短没跑成）· L18 的正向验证（等一个稳定的窗口）。
+
 - **2026-10-11 13:40 · hub 上岗实测 ＋ 第 5 次掉线**（本会话）：TTS 的 API 回来后按 `STATE.md` 的顺序**一条一条**走完：
   - `ping` = **`v16-tracker-guid`**（13:40:18）→ `turn_side.ps1` = **`mine`** → **`tr.ps1 -To player` 交还成功**（`tr: z=-15 state=["Brown"]`，**`done; replies=1 (via hub)`** —— 那条正是过去撞 `listener busy` 的路）→ 起轮询器（`poller: start side=player`）＋ 挂 file 哨兵 `watch-4`（`^mine`，`max_fires=500`）。
   - ✅ **hub 这一段站得住**：在岗期间连续服务 **8 条**（含轮询器 4 条），**28–101 ms**，**零 `listener busy`**；客户端经它拿到 `raw` / `hubErr=PORTCLOSED` 都正常（⇒ `VALIDATION.md` **L19** 部分通过）。
