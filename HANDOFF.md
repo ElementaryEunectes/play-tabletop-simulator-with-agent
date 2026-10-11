@@ -25,6 +25,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 ## §4 待办（按优先级）
 
 > 🧭 **看这一行就够**：**现在真正待办只有两条** —— ① 第 **4** 条里的 **E（demo ＋ 30 秒录屏）**；② 同条的 **冷启动验证**（clone 到新目录 ＋ 独立 `$DSH_HOME`，照 README 走一遍）。
+> 🔬 **冷启动验证已做了一半（2026-10-11 14:2x，本会话）**：① 沙箱里 **`git clone` 根本做不成**（`sh.exe: couldn't create signal pipe, Win32 error 5` ⇒ 只能换 `git worktree add --detach <dir> HEAD` 做等价"干净检出"）；② 用 worktree 验证：检出干净（46 个 `.ps1`、**无 `local\`、无 `cache\`**）；③ ⛔ **在那里跑 `run_all.ps1` ⇒ 7 条全挂**，报 `Could not find a part of the path '…\cache\dsh_gate_<id>.txt'` —— 因为 `run_all.ps1` 把每条门禁的输出写进 **`cache\`**，而**新 clone 没有该目录**（gitignore）⇒ **README 的"新机器第一步"照做会失败**。
+> ✅ **一行修法（待做，然后重验）**：`tts\tests\run_all.ps1` 在写日志前 `New-Item -ItemType Directory -Force` 建好 `cache\`（`out\` 同理：个别测试写 `out\test_*.log`）；改完重做一次 worktree 验证，**预期 6 过 ＋ 1 条 `bridge primitives` NOT RUN**（缺 `fengari`，属已定案的预期，不是 PASS）。真机"第三方在一台干净机器上跑"仍未做。
+>
 > 其余各条的状态：**0 / 1 / 2 已结清** · **3 / 5 是口径与收尾**（按需）· **3b 是"每个新会话要做的动作"**（不是待办）· **6 / 7 环境事实** · **8 已归档**（见下）。
 
 0. ✅ **F8 已定案并修好（2026-10-09）**：`players` / `take` / `spawn` / `destroy` 在活体上**不是"名字是 nil"那么简单** ——
