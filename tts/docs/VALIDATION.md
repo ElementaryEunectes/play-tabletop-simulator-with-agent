@@ -164,7 +164,12 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 🔧 **体检工具**：`tts\tools\tracker_read.lua`（配 `exec_script.ps1`）一次读出 `POS / SAVED_STATE / LIVE_COLOR / LOCKED / NAME` —— **`POS` 与 `LIVE_COLOR` 同侧才算对齐**。
 🧠 **同一类错我这一小时犯了三次**（"`getPlayerHand` 已删"、"写状态不生效"、"它的位置功能坏了"），**每次都被一次同刻读数推翻** ⇒ 规矩：**改别人物件的状态不能只改一半；谈"前后"必须用同一时刻的读数**。
 
-**F14 · TTS 的 editor API（39999）"窗口"会消失 —— `⛔ 根因未定`（2026-10-11，共 6 次）**
+**F14 · TTS 的 editor API（39999）"窗口"会消失 —— `⛔ 根因未定`（2026-10-11，共 7 次）**
+
+> 🎯 **14:0x 定案：根因是"畸形信封"，不是 guid／v16／连发／`-Raw`**（我自己的操作错误）：那条 `ds.ps1 -Json '{…}'` 是**经 `powershell -File` 传的**，而坑就在 `ttslib.ps1` 的注释里 —— **`-File` 会吃掉内层双引号**（`'{"cmd":"ping"}'` 到达时成了 `{cmd:ping}`）⇒ 送进 TTS 的是**畸形 JSON** ⇒ 命令收下、永不回复（`no reply in 25s`），随后 `39999` 不再 LISTENING。
+> **对全部数据的检验**：**7 次掉线全部紧跟一次这种"经 `-File` 传 JSON"的调用**；`-Do`（无引号单 token）、桥接、以及**进程内构造**信封的调用（含 22 条连发）**一次都没事** ⇒ `-Raw` 只是**恰好同时出现**，被冤枉了。
+> ⛔ **纪律（最终版）**：**永远不要把 JSON 交给 `powershell -File` 的参数** —— 用 `-Do` 那种无引号单 token、或**同进程内构造**（`@{…} | ConvertTo-Json`）再交给 `Invoke-Tts`、或把完整信封**写进文件**再读。`Repair-BareJson` 只救得了"裸词"那一种形态。
+> ✅ **hub 至此完全洗清**：它只照实转发（畸形串也照转），所有正常调用经过它都安然无恙（22 条连发、28–79 ms、零 `listener busy`）。
 
 > ⭐ **对照实验（13:45，用户拍板做的，设计 = 被动基线 ＋ 对照 ＋ 处理）**：
 > 1. **被动 120 s、零命令** ⇒ 端口**全程 OPEN**（只 1 条状态记录）⇒ **它不会因为闲置而掉**。
