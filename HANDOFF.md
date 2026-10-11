@@ -125,6 +125,13 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
+- **2026-10-11 13:40 · hub 上岗实测 ＋ 第 5 次掉线**（本会话）：TTS 的 API 回来后按 `STATE.md` 的顺序**一条一条**走完：
+  - `ping` = **`v16-tracker-guid`**（13:40:18）→ `turn_side.ps1` = **`mine`** → **`tr.ps1 -To player` 交还成功**（`tr: z=-15 state=["Brown"]`，**`done; replies=1 (via hub)`** —— 那条正是过去撞 `listener busy` 的路）→ 起轮询器（`poller: start side=player`）＋ 挂 file 哨兵 `watch-4`（`^mine`，`max_fires=500`）。
+  - ✅ **hub 这一段站得住**：在岗期间连续服务 **8 条**（含轮询器 4 条），**28–101 ms**，**零 `listener busy`**；客户端经它拿到 `raw` / `hubErr=PORTCLOSED` 都正常（⇒ `VALIDATION.md` **L19** 部分通过）。
+  - ⛔ **然后第 5 次掉线**：我为补 **L18** 发了**一条**（经 hub、**没有连发**）`turn_tracker` ＋ **真实但不同**的 guid（手牌计数板）⇒ 25 s 无回执，随后 `39999` 不再 LISTENING（hub 日志接着是 `turn_tracker PORTCLOSED`、`index PORTCLOSED`）。
+    ⇒ **"连发"不是全部原因**：**5 次掉线**（3 次假 guid ＋ 2 次真实不同 guid）**全都**紧跟这种"给 `turn_tracker` 一个非 tracker 的 guid"的请求 ⇒ **嫌疑回到 v16 新增的 `m.guid` 这条路**（机制未查明；`getObjectFromGUID` 本来包着 `pcall`）。
+    ⛔ **已停手**：不再试这条；轮询器已停（API 不通时每 2.5 s 白起两个子进程）；**等用户决定**：**撤回 v16 的 guid 参数**（回到"只认烤进去的常量"，风险面消失、代价是校准档与常量两处定义）还是**做一次受控实验**。
+
 - **2026-10-11 13:3x · 🧩 hub 落地（本会话）**：把 `PRIOR_ART.md` 指的那个方案做出来了 —— **`tts\tools\tts_hub.ps1`**：常驻进程**一次性独占 39998**，其它工具把信封投到 **39997**（一行 JSON：`{envelope,want,timeoutSec}` → `{raw,skipped,ms}` 或 `{hubErr,…}`，hub 自己的错用 `hubErr`，**绝不与 TTS 回复里的 `err` 混**）。
   - `ttslib.ps1` 的 `Invoke-Tts` **优先走 hub**，没有 hub 就**原样回落**自绑 39998（行为不变）；`tools\exec_script.ps1` 也改成 **hub 优先**（`want=any`，它要的是 print/error 那种非 4 号包）—— **交接时那个 `listener busy on 39998` 正是从这条路上来的**。
   - **离线已验证**：hub 起停正常、两个端口都由它持有（PID 一个）；TTS 不在时客户端经 hub 得到 `hubErr=PORTCLOSED`（`ds.ps1` 显示为 `ERR TTS unreachable`），**不再有 listener busy**；停掉 hub 后客户端回落老路径同样正常；`cache\hub.log` 记 `cmd=…`（心跳/诊断）。
