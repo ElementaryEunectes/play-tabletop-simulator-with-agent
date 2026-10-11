@@ -125,6 +125,12 @@ tts\tools\turn_side.ps1                         # 运行时：mine | player | un
 
 ## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
 
+- **2026-10-11 13:3x · 🧩 hub 落地（本会话）**：把 `PRIOR_ART.md` 指的那个方案做出来了 —— **`tts\tools\tts_hub.ps1`**：常驻进程**一次性独占 39998**，其它工具把信封投到 **39997**（一行 JSON：`{envelope,want,timeoutSec}` → `{raw,skipped,ms}` 或 `{hubErr,…}`，hub 自己的错用 `hubErr`，**绝不与 TTS 回复里的 `err` 混**）。
+  - `ttslib.ps1` 的 `Invoke-Tts` **优先走 hub**，没有 hub 就**原样回落**自绑 39998（行为不变）；`tools\exec_script.ps1` 也改成 **hub 优先**（`want=any`，它要的是 print/error 那种非 4 号包）—— **交接时那个 `listener busy on 39998` 正是从这条路上来的**。
+  - **离线已验证**：hub 起停正常、两个端口都由它持有（PID 一个）；TTS 不在时客户端经 hub 得到 `hubErr=PORTCLOSED`（`ds.ps1` 显示为 `ERR TTS unreachable`），**不再有 listener busy**；停掉 hub 后客户端回落老路径同样正常；`cache\hub.log` 记 `cmd=…`（心跳/诊断）。
+  - ⛔ **待做**：TTS 回来后的**连发压力测试** —— `tests\live_smoke.ps1` 17 条 + 轮询器并存（⇒ `VALIDATION.md` **L19**）。这也是"四次掉线"的最终验收。
+  - 起链顺序已写进 `PLAY.md` / `BOOTSTRAP.md` §1 E：**先起 hub，再起轮询器**。
+
 - **2026-10-11 03:5x · 🔁 桌面交接**：**原会话（跑对局那个）上下文满了 ⇒ 本会话接管那台桌面**。
   接手时的状态：**TTS 的 API（39999）在反复开合**（`03:51:23` 还 `ping = v16-tracker-guid`，随后 `no reply in 25s` ⇒ `ERR TTS unreachable`；同一 TTS 进程，`Player.log` 里 `Curl error 56 … reset` 满 100 条 ⇒ `VALIDATION.md` **F14**）。
   ⇒ 已挂 **port 哨兵盯 `39999`**（`watch-2`，开了才动手，**不再连发探测**）；链路（轮询器 ＋ file 哨兵）**等 API 稳定后再重建**（步骤 ⇒ `tts\docs\PLAY.md` 回合交接节）。

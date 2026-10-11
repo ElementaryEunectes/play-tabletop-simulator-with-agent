@@ -82,7 +82,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
    （先 dot-source 再定义 `Fail`/`Err-Code` 两个桩，`Bridge` 的硬错误路径才不会撞空函数。）
 2. ⛔ **别"坐满回执窗口"**：`tools\exec_script.ps1` 原来等满 `ListenSec`（12 s）才收工 ⇒ **`tr.ps1` 要 12.9 s**。改成**收到第一条回执就退出** ⇒ 0.9 s。
    ⇒ 写"发一条、等回复"的工具时，**默认应当早退**，只在需要多条消息（如 print ＋ sendExternalMessage）时才多等一小会儿。
-3. 📌 一次要发**多条**命令时用 `dsbatch.ps1`（一条进程跑 N 条）。⚠️ **但别在 1–2 秒内连发 3–5 条**：39998 只有一个槽，连发会把 TTS 的回复通道推垮 —— **四次实测"API 掉线"全是这么来的**（⇒ `VALIDATION.md` F14）。**一条一条来、中间留几秒**；一条超时后**先看端口**，别立刻补一条。
+3. 📌 一次要发**多条**命令时用 `dsbatch.ps1`（一条进程跑 N 条）。⚠️ **但别在 1–2 秒内连发 3–5 条**：39998 只有一个槽，连发会把 TTS 的回复通道推垮 —— **四次实测"API 掉线"全是这么来的**（⇒ `VALIDATION.md` F14）。**一条一条来、中间留几秒**；一条超时后**先看端口**，别立刻补一条。✅ **根治 = 起 hub**（`tools\tts_hub.ps1` 独占 39998 ⇒ §5）：那时"连发"不再互相抢端口。
 
 ## 2. 三个指令槽（**上限写在门禁里，不在这里复述**）
 
@@ -145,6 +145,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `crop_zoom.ps1` | 裁图 ＋ 放大转真 PNG（**读卡面/查图用**；`Mods\Images` 里扩展名常与真实格式不符） |
 | `tts_api.ps1` | TTS **External Editor API（39999）** 原始客户端；`tools\exec_script.ps1` = 走它的 **`messageID 3`** 执行 Lua（**安全**，见 `TTS_RULES.md` §七）。⚠️ **39998 只有一个槽**：轮询器每 2.5 s 占它一片 ⇒ 交接会撞 `listener busy`（`exec_script.ps1` 已把绑定重试提到 6 次/~10 s）；**根治 = 常驻进程独占 39998**（hub 方案 ⇒ `PRIOR_ART.md`；⇒ `VALIDATION.md` F14） |
 | **`tools\dump_lua.ps1`** | **把存档里物件的 `LuaScript` 抽成文件**（**离线，不碰 TTS**）：`-Guid <g> -OutFile <f>` 抽那**一件**（**改别人脚本前的备份**动作）· 默认把 ≥`-MinChars`（50）的**全部**导出到 `cache\scripts\` · `-List` 只报不写 ⇒ 取代了归档里那份 `dump_scripts.ps1`（后者写死两条机器路径） |
+| **`tools\tts_hub.ps1`** | ⭐ **独占 39998 的常驻 hub**（`PRIOR_ART.md` 指的那个方案）：它**一次性绑住回复端口**，其它工具把信封投到 **39997**（一行 JSON：`{envelope,want,timeoutSec}` → `{raw,skipped,ms}` 或 `{hubErr,…}`）。**`ttslib.ps1` 的 `Invoke-Tts` 优先走它**（没有 hub 时原样回落到自绑 39998）⇒ **`listener busy` 与"连发把 API 推垮"从根上消失**（⇒ `VALIDATION.md` F14/L19）。跑法：后台作业起它；出错日志 `cache\hub.log`。⛔ **同时只能有一个 owner**：hub 跑着时别的进程别去占 39998 |
 
 ### 💤 休眠但别删（删了会踩坑）
 

@@ -37,13 +37,32 @@ $TtsPort = 39999
 $EditorPort = 39998
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
+$body = @{ messageID = 3; guid = $Guid; script = $lua } | ConvertTo-Json -Compress
+
+# HUB FIRST (2026-10-11): if the resident hub owns 39998 (tts\tools\tts_hub.ps1), post the envelope
+# there and bind nothing - that is exactly the case that used to fail with "listener busy" during a
+# hand-over, because the turn poller also needs the slot (VALIDATION.md F14). No hub -> unchanged
+# behaviour below.
+. (Join-Path $Root 'tts\ttslib.ps1')
+$hub = Send-ViaHub -Envelope $body -TimeoutSec $ListenSec -Want 'any'
+if ($null -ne $hub) {
+    if ($null -ne $hub.raw -and [string]$hub.raw -ne '') {
+        Write-Host '--- reply ---'
+        Write-Host ([string]$hub.raw)
+        Write-Host 'done; replies=1 (via hub)'
+    } else {
+        Write-Host ("hub carried it, TTS said nothing back (err={0} detail={1}); replies=0" -f $hub.err, $hub.detail)
+    }
+    exit 0
+}
+
 # reply listener first, so TTS can always reach us.
 #
 # RETRY THE BIND, PATIENTLY. Port 39998 has ONE slot (the editor reply channel), and everything that talks
 # to TTS needs it: this command, ds.ps1, and - measured 2026-10-11 - the turn poller, which probes every
 # 2.5 s and therefore holds the slot for a slice of every interval. Three short attempts were not enough and
 # a hand-over failed with "listener busy"; six attempts over ~10 s always wins against a <1 s holder.
-# (Root fix would be a shared daemon owning 39998 - the hub approach noted in PRIOR_ART.md - not tonight.)
+# (Root fix = the hub above owning 39998; this path is only for when the hub is not running.)
 $listener = $null
 $bindAttempts = 6
 for ($attempt = 1; $attempt -le $bindAttempts; $attempt++) {
@@ -60,7 +79,6 @@ for ($attempt = 1; $attempt -le $bindAttempts; $attempt++) {
 }
 Write-Host "listening on $EditorPort"
 
-$body = @{ messageID = 3; guid = $Guid; script = $lua } | ConvertTo-Json -Compress
 $client = [System.Net.Sockets.TcpClient]::new()
 $client.Connect('127.0.0.1', $TtsPort)
 $stream = $client.GetStream()

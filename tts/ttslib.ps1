@@ -12,17 +12,76 @@
 #   $r.err      -> $null, or 'PORTCLOSED' | 'LISTENERBUSY' | 'NOREPLY'
 #   $r.custom   -> the customMessage object (only for messageID 4 replies)
 #   $r.raw      -> the raw reply packet
+#   $r.via      -> 'hub' when the resident hub answered (tts\tools\tts_hub.ps1); absent when this
+#                  process bound 39998 itself. The hub is tried FIRST so that 39998 keeps a single
+#                  owner - see VALIDATION.md F14 for what burst-binding it used to cost.
 #
 # ASCII only, except comments. Chinese comments require the UTF-8 BOM: run check_ps1.ps1.
+
+# ------------------------------------------------------------------- hub client ---
+# Ask the resident hub (tts\tools\tts_hub.ps1) to carry one envelope. It owns 39998, so this process
+# never binds the reply port. Returns $null ONLY when there is no hub to talk to (connection refused);
+# every other outcome comes back as a hashtable, errors included, so the caller must NOT fall back to
+# binding 39998 in that case.
+function Send-ViaHub {
+    param(
+        [Parameter(Mandatory=$true)][string]$Envelope,
+        [int]$HubPort = 39997,
+        [int]$TimeoutSec = 8,
+        [string]$Want = 'custom'
+    )
+    $c = [System.Net.Sockets.TcpClient]::new()
+    try { $c.Connect('127.0.0.1', $HubPort) } catch { return $null }
+    try {
+        $req = (@{ envelope = $Envelope; want = $Want; timeoutSec = $TimeoutSec } | ConvertTo-Json -Compress -Depth 5) + "`n"
+        $b = [System.Text.Encoding]::UTF8.GetBytes($req)
+        $s = $c.GetStream()
+        $s.Write($b, 0, $b.Length); $s.Flush()
+        # The hub answers in one line; wait a little longer than the hub's own reply window.
+        $s.ReadTimeout = ([int](($TimeoutSec + 6) * 1000))
+        $ms = [System.IO.MemoryStream]::new()
+        $buf = New-Object byte[] 65536
+        try {
+            while ($true) {
+                $n = $s.Read($buf, 0, $buf.Length)
+                if ($n -le 0) { break }
+                $ms.Write($buf, 0, $n)
+            }
+        } catch { }
+        $txt = [System.Text.Encoding]::UTF8.GetString($ms.ToArray()).Trim()
+        if ($txt -eq '') { return @{ err = 'NOREPLY'; via = 'hub' } }
+        $r = $txt | ConvertFrom-Json
+        if ($null -ne $r.hubErr) { return @{ err = [string]$r.hubErr; via = 'hub'; detail = [string]$r.detail } }
+        $raw = [string]$r.raw
+        $custom = $null
+        try { $custom = ($raw | ConvertFrom-Json).customMessage } catch { }
+        return @{ err = $null; raw = $raw; custom = $custom; skipped = [int]$r.skipped; via = 'hub' }
+    } catch {
+        return @{ err = 'NOREPLY'; via = 'hub' }
+    } finally {
+        try { $c.Close() } catch { }
+    }
+}
 
 function Invoke-Tts {
     param(
         [Parameter(Mandatory=$true)][string]$Envelope,
         [int]$TimeoutSec = 8,
         [int]$Retries = 3,
-        [int]$TtsPort = 39999
+        [int]$TtsPort = 39999,
+        [int]$HubPort = 39997,
+        [switch]$NoHub
     )
     $ED = 39998
+
+    # HUB FIRST. One resident process owns 39998 (tts\tools\tts_hub.ps1); asking it means this call
+    # binds nothing at all, which is what removes "listener busy" and the burst of short-lived
+    # bindings that left half-open connections behind (VALIDATION.md F14). No hub -> fall through to
+    # the old behaviour unchanged.
+    if (-not $NoHub) {
+        $hub = Send-ViaHub -Envelope $Envelope -HubPort $HubPort -TimeoutSec $TimeoutSec
+        if ($null -ne $hub) { return $hub }
+    }
 
     # Bind the callback port. A background watcher may hold 39998 for a moment, so retry
     # briefly, then report LISTENERBUSY - which is a DIFFERENT fault from "TTS is closed"

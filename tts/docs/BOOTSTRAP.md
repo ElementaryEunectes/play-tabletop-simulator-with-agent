@@ -53,7 +53,7 @@ ds.ps1 -Do count       # 名称直方图
 
 **E. 唤醒机制（每个游戏都要重新确认）**
 
-- ⭐ **回合交接（换局必重挂）**：`tools\turn_calib.ps1 -Discover` → `-Answer mine|player`（写 `cache\<game>_turn.json`）⇒ 常驻作业 `tools\turn_poller.ps1`（每 2.5 s 读位置、**变化才写** `cache\turn_side.txt`）＋ **file 哨兵 `^mine`**；判定 `tools\turn_side.ps1` · 交还 `tts\tr.ps1 -To player`。
+- ⭐ **回合交接（换局必重挂）**：**先起常驻 hub**（`tts\tools\tts_hub.ps1`，它独占 39998 ⇒ `MAINTENANCE.md` §5）→ `tools\turn_calib.ps1 -Discover` → `-Answer mine|player`（写 `cache\<game>_turn.json`）⇒ 常驻作业 `tools\turn_poller.ps1`（每 2.5 s 读位置、**变化才写** `cache\turn_side.txt`）＋ **file 哨兵 `^mine`**；判定 `tools\turn_side.ps1` · 交还 `tts\tr.ps1 -To player`。
   ⚠️ file 哨兵**必须显式给 `max_fires`**（默认 1 次就没了；本仓库用 500），且**哨兵不跨会话** ⇒ 每次开工重挂；延迟拆解 ⇒ `PLAY.md` 回合交接节。
 - **通用（跨游戏都成立）**：`channel_watch.ps1 -IntervalMs 5000` 轮询**笔记本对话页**（`tabread`），
   把状态写进 `cache\chan.txt`，格式 `<TAG> <chars> <时间> | <尾部内容>`；**TAG 见下**。
