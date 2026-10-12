@@ -219,7 +219,7 @@ Steam 那两个高热度提问都只拿到「自己写脚本」类回答 ⇒ **�
 
 | 项目 | 是什么 | 对应我们的 | 备注 |
 |---|---|---|---|
-| [rolandostar/tts-editor](https://github.com/rolandostar/tts-editor) | **Node.js 实现**的 TTS External Editor API（39999） | `tts\tts_api.ps1` | ⭐ **重叠最大**：我们在这条路上付的代价（`VALIDATION.md` F12/F14 的"掉线"）它大概都碰过 ⇒ 值得逐条对照 |
+| [tts-editor](https://github.com/matanlurey/tts-editor)（[fork](https://github.com/rolandostar/tts-editor)） | TypeScript 版 External Editor API（39999） | `tts\tts_api.ps1` | ⚠️ **2026-10-12 查证：原版已 `archived`、最后推送 2023-02；fork 2022 年后停更、0 star** ⇒ **不要依赖它**（先前写成"最该看"是过头了）。**许可 = `null`（无许可证）** ⇒ **只能读思路、不能抄代码**。真收获 ⇒ §9.5 |
 | [@smirk1921/tts-toolkit](https://www.npmjs.com/package/@smirk1921/tts-toolkit) | 独占回复端口的 **hub / daemon** | `tts\tools\tts_hub.ps1` | 本仓 hub 就是照这个方案做的（⇒ §7）⇒ 不必换，跟它的更新即可 |
 | [tts-community/api](https://github.com/tts-community/api) | **社区维护**的 Lua API 文档 | 我们注释里引的官方站 | 查字段的第二来源 |
 | [TTS Tools (Community Fork)](https://open-vsx.org/extension/eunomiac/tts-tools) | VS Code 扩展 | — | 编辑 Lua / 管 mod 的候选 |
@@ -245,3 +245,13 @@ Steam 那两个高热度提问都只拿到「自己写脚本」类回答 ⇒ **�
 1. 用 `tts-editor` 交叉验证我们手写的客户端有没有漏坑；
 2. 把 `LibreTranslate ＋ cardocr ＋ tts-card-naming-tool` 串成"外文 mod → 中文"整链；
 3. 其余按需。
+
+### 9.5 读 `tts-editor` 的**实际收获**（2026-10-12 查证）
+
+1. ⛔ **它已经死了**：原版 `matanlurey/tts-editor` **`archived: true`**、`pushed_at` = **2023-02**；`rolandostar` 那个只是 2022 年的 fork（0 star / 0 issue）⇒ **不能当依赖**。（§9.1 那行已按此改正。）
+2. ⚠️ **没有许可证**（GitHub API `license: null`）⇒ 依许可**只能读思路、不能拿代码** —— 将来"贡献开源"时要守住这条。
+3. ✅ **出站消息面我们并不缺**：它列 4 种（GetScripts / SaveAndPlay / CustomMessage / ExecuteLua），而 `tts\tts_api.ps1` 的文件头写着**同一张表**（`0=GetScripts 1=SaveAndPlay 2=CustomMessage 3=ExecuteLua`），且 `messageID 1` 真用在"装 Global 脚本"上 ⇒ 我们与官方 API 面**对齐**。
+4. ⭐ **真正的收获在"入站"**：它把 8 种入站消息做成**事件**（`once('…')`）：`pushingNewObject` · **`loadingANewGame`** · `printDebugMessage` · `errorMessage` · `customMessage` · `returnMessage` · **`gameSaved`** · `objectCreated`。
+   我们只消费"命令回执"（messageID 2/3/4），**从没订阅 `loadingANewGame` / `gameSaved`** ⇒ 这正是 2026-10-12 那个坑的根：**载入存档会冲掉 tracker 位置，而我们只能事后从 `turn_side` 的异常里猜**。
+   ⇒ **可行动的改进**：桥接是 Global 脚本，**拿得到 `onLoad`/`onSave` 回调** ⇒ 在里面 `sendExternalMessage` 一条"刚被载入 / 刚被保存" ⇒ hub / 轮询器**立刻知道"回合归属已被重置、必须先校准"**，从"事后猜"变成"事前知道"。**已登记为 `HANDOFF.md` §4 第 10 条待办。**
+5. ✅ **它自带的 `TTSApiBackend`**（TTS 服务端桩）与我们自写的桩（`tests\gen_bridge_primitives.lua` ＋ `tools\verify_f8.js`）**同构** ⇒ 旁证这条离线测试路线没走偏；它的桩面还可当"TTS 接口清单"参考。
