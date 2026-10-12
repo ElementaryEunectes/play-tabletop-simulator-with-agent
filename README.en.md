@@ -1,5 +1,12 @@
 # tts-agent — an AI plays the board game, you make the decisions
 
+[![gates](https://github.com/ElementaryEunectes/tts-agent/actions/workflows/gates.yml/badge.svg)](https://github.com/ElementaryEunectes/tts-agent/actions/workflows/gates.yml)
+
+> 🤖 **The code and docs here were written mostly by an AI agent (DSH)** — the human made the decisions,
+> reviewed and signed off, and every commit carries the *why*. That is not a disclaimer, it is the thing
+> this project set out to test: **can an agent leave behind work that is hand-over-able, gate-able and
+> reproducible?** Discipline ⇒ `CONTRIBUTING.md` §5.4 (**new files say who wrote them, in a header comment**).
+
 A work area for having an AI play a board game **inside Tabletop Simulator**. The human only
 makes **decisions** and clicks **End Turn**; every other piece movement is done by the agent
 through a message bridge into the running game.

@@ -31,7 +31,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 ## §4 待办（按优先级）
 
 > 🧭 **看这一行就够**：**发布前真正待办只有两条** —— ① 第 **4** 条里的 **E（demo ＋ 30 秒录屏）**；② 同条的 **冷启动验证**（clone 到新目录 ＋ 独立 `$DSH_HOME`，照 README 走一遍）。**③ 新登记、不急**：第 **9** 条的**外文桌游模组机翻**。
-> 🔬 **冷启动验证：本沙箱内能做的部分已做完**：用 `git worktree add --detach` 做等价"干净检出"（沙箱里 `git clone` 报 `Win32 error 5`），**抓到真缺陷并已修（`e729152`）**：新检出里 `run_all.ps1` **7 条全挂**（门禁输出写 `cache\`，而该目录被 gitignore）⇒ 入口开跑前 `New-Item -Force` 建 `cache\` ＋ `out\`，复验 **6 PASS**（只剩 `bridge primitives (Lua)`，缺 `fengari`）⇒ 台账 ⇒ `tts\docs\VALIDATION.md`。⏳ **仍未做**：**真·第三方**在一台干净机器上跑一遍。
+> 🔬 **冷启动验证：本沙箱内能做的部分已做完**：用 `git worktree add --detach` 做等价"干净检出"（沙箱里 `git clone` 报 `Win32 error 5`），**抓到真缺陷并已修（`b36a574`）**：新检出里 `run_all.ps1` **7 条全挂**（门禁输出写 `cache\`，而该目录被 gitignore）⇒ 入口开跑前 `New-Item -Force` 建 `cache\` ＋ `out\`，复验 **6 PASS**（只剩 `bridge primitives (Lua)`，缺 `fengari`）⇒ 台账 ⇒ `tts\docs\VALIDATION.md`。⏳ **仍未做**：**真·第三方**在一台干净机器上跑一遍。
 > 其余各条：**0 / 1 / 2 已结清** · **3 / 5 口径与收尾** · **3b 是"每个新会话要做的动作"** · **6 / 7 环境事实** · **8 已归档**。
 
 0. ✅ **F8 已定案并修好（2026-10-09）**：四个原语活体上"名字是 nil"的根因 = **拼接进了 `setCount()` 函数体中间**（缺/多一个 `end` ⇒ 平衡 ⇒ 照编译照注册，名字却从没被赋值；**门禁全绿也看不见它**）⇒ 已修 `tts\lua\dsh_global.lua` ＋ 阴性对照 ＋ 门禁新增"整块加载"一步；活体验收（`TS_Save_11.json`）四种原语全好用。

@@ -2,6 +2,10 @@
 
 [![gates](https://github.com/ElementaryEunectes/tts-agent/actions/workflows/gates.yml/badge.svg)](https://github.com/ElementaryEunectes/tts-agent/actions/workflows/gates.yml)
 
+> 🤖 **本仓库的代码与文档主要由 AI（DSH agent）撰写** —— 人负责**决策、审阅与拍板**，每个提交记着"为什么改"。
+> 这不是免责声明，而是本项目要验证的东西：**agent 能不能留下可交接、可门禁、可复现的活**。
+> 落档纪律 ⇒ `CONTRIBUTING.md` §5.4（**新文件在头注释里写明由谁撰写**）。
+
 在 **Tabletop Simulator** 里由 AI 代打桌游的工作区：玩家（人类）只做**决策**和点「**结束回合**」，
 其余全部棋子操作由 agent 通过 TTS 的消息桥接完成。
 
