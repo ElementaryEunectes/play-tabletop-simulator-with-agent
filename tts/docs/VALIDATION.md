@@ -74,7 +74,7 @@
 它靠读 ① 那款 mod 自己画的横幅色块判轮到谁 ⇒ **换 mod 即失效**。
 ✅ **处置（2026-10-11，用户拍的）**：它和 `read_turn.ps1` **都移出了仓库** ⇒ `~\.dsh\archive\tts-legacy\`（字节一致，SHA256 对拍过）；`cache\front.txt` 从此**没有生产者**，别再把它当信号源。
 ⚠️ **2026-10-11 追加（别被"休眠保留"骗）**：`read_turn.ps1` 的**本体仍是那次批量替换的残骸**（`$hotsDir` 原 `$ShotsDir` · `$ilentlyContinue` · `$img.$Dispose()` · `$ist` · 参数 `$S` 被当成 y 坐标）；**`check_ps1.ps1` 报 0 错**（这些都是**合法的** PowerShell：未定义变量不是语法错），但一跑就错 —— 而 `front_watch.ps1` 每轮都会调它 ⇒ **这条链即使被重新启用也跑不起来**。
-⛔ **没有修**（链已停用）：要复用就得逐行还原（原始意图可从 `git show 3fbbde9:tts/read_turn.ps1` 与同事故后修好的 `index_images.ps1`/`tts_api.ps1` 头部描述推断），或者把两个文件一起移出仓库（"死脚本别留 `tts\`"）。
+⛔ **没有修**（链已停用）：要复用就得逐行还原（原始意图可从 `git show eec22ad:tts/read_turn.ps1` 与同事故后修好的 `index_images.ps1`/`tts_api.ps1` 头部描述推断），或者把两个文件一起移出仓库（"死脚本别留 `tts\`"）。
 
 **F5 · 桥接的 `exec`/`callx` 边界未验**（`⛔`，`BOOTSTRAP.md` §5 已列）
 已知对"带脚本的物件"有效；无脚本物件 / 反复调用 / 并发 ⇒ **未验**。
@@ -149,7 +149,7 @@ moveTurn: currentColor = nil ⇒ placeToken() 里 Player[nil] ⇒ 报 "cannot ac
 > ⚠️ **两条被削弱的线索（未定，别当结论）**：13:51「**轮询器把窗口烧掉**」（port 哨兵看到 OPEN、一条 ping 过去就已 closed；同时段 `cache\hub.log` 每 ~2 s 一对 `turn_tracker` ＋ `index`）；13:59 **反证**：**无轮询器**的干净窗口里 hub 连送 22 条**28–79 ms**、之后依然 OPEN ⇒ **"用过就很快关"与"轮询器烧窗口"都不足以解释**；数据只支持更窄的说法：**危险的是"每条命令各自去绑/解 39998"的旧客户端路径**（六次掉线都在它上面）。
 
 **时间线（都是实测）**：`03:44:34` `ping` ⇒ **`ok v=v16-tracker-guid objs=118 loads=1`**；随后一个**缺 `customMessage` 的信封**（`ds.ps1 -Json '{"cmd":"turn_tracker","guid":"deadbeef"}'`）⇒ 无回执 `ERR no reply in 25s`；`03:45:05` 起 `Player.log` **不再增长**、`39999` **不再 LISTENING**，`ds.ps1 -Do ping` ⇒ **`ERR TTS unreachable`**；日志尾部 `Curl error 56: Recv failure: Connection was reset` ＋ 一次 Unity 资源卸载（`Unloaded 38 unused Assets`）。
-⚠️ **03:49 补正（别把结论写重了）**：`Player.log` **仍在增长**（最后写入 `03:48:05`，**没有崩溃/退出痕迹**）⇒ 准确说法是 **「TTS 进程活着，但 39999 这个 API 端口关了」**，不是"进程崩了"；最可能**存档被卸载/退回菜单** ⇒ 修法：**在 TTS 里确认 External Editor 开着**，或**重启 TTS 并重载存档**；回来先 `ds.ps1 -Do ping`。📌 **同刻的第二个会话独立看到同一件事**（`d04f452`，03:45:51，交接失败在 `listener busy on 39998`）⇒ 它**停轮询器、取消 file 哨兵、删掉 `cache\turn_side.txt`**，所以那次延迟投递的哨兵触发**没有可交还的回合**。⛔ 沙箱里 `Get-Process`/`tasklist` **看不到** TTS 与占端口的 PID ⇒ 只能靠 `netstat` ＋ `Player.log` 的 mtime。
+⚠️ **03:49 补正（别把结论写重了）**：`Player.log` **仍在增长**（最后写入 `03:48:05`，**没有崩溃/退出痕迹**）⇒ 准确说法是 **「TTS 进程活着，但 39999 这个 API 端口关了」**，不是"进程崩了"；最可能**存档被卸载/退回菜单** ⇒ 修法：**在 TTS 里确认 External Editor 开着**，或**重启 TTS 并重载存档**；回来先 `ds.ps1 -Do ping`。📌 **同刻的第二个会话独立看到同一件事**（`ab9e0a2`，03:45:51，交接失败在 `listener busy on 39998`）⇒ 它**停轮询器、取消 file 哨兵、删掉 `cache\turn_side.txt`**，所以那次延迟投递的哨兵触发**没有可交还的回合**。⛔ 沙箱里 `Get-Process`/`tasklist` **看不到** TTS 与占端口的 PID ⇒ 只能靠 `netstat` ＋ `Player.log` 的 mtime。
 🔁 **已推翻的解释（都写下来，别重走）**：⛔ ~~"不存在的 guid 是元凶"~~ —— `13:28` 改用**真实存在但不同**的件发同样的 `turn_tracker`，**照样掉线**；⛔ ~~"该 mod 素材下载被重置（`Curl error 56`）"~~ —— 那是**另一件事**，时间线也对不上；⛔ ~~"连发是根因"~~ —— **经 hub、单独一条、真实但不同的 guid 照样掉**（13:40，第 5 次）⇒ 统一解释见本节开头的畸形信封定案。
 ⛔ **纪律（修正版）**：**别把多条命令塞进同一次调用**（一条一条、中间留几秒；一条失败/超时后**先看端口**，别立刻补一条 —— 那正是把 API 推下去的动作）。⛔ **`ds.ps1 -Json` 只发完整信封**（`{"messageID":2,"customMessage":{…}}`）。⛔ **先别用 `ds.ps1 -Json -Raw` 发命令**（用 `-Do …` 或桥接），直到有人查清它与 `-Do` 差在哪。**API 会随时消失 ⇒ 每个工具都要能容忍"这一条没了、下一条窗口再发"**（轮询器本来就容忍：只在读到 `mine/player` 时才写文件）⇒ **port 哨兵盯 `39999`**（开了才动手）；再哑就**重启 TTS 并重载存档**。
 ⚠️ **它同时定案了快链引入的一个真缺陷**：**39998 只有一个槽**，轮询器每 2.5 s 探一次 ⇒ 每轮都占这个槽一小片，于是**交接**（`tr.ps1`/`exec_script.ps1`）会撞 `listener busy`；缓解 = 绑定重试从 3 次提到 **6 次/~10 s**（已提交），**真正的修法**是"**一个常驻进程独占 39998、其它人走它**"（⇒ `PRIOR_ART.md` 的 hub 方案），不是继续加 retry。✅ **hub 已落地并部分验证**：常驻 **`tts\tools\tts_hub.ps1`** 独占 39998，`ttslib.ps1` 优先走它（没有 hub 才回落自绑）—— 13:40 在岗期间连续服务 8 条、28–101 ms、**零 `listener busy`**（⇒ L19）。
