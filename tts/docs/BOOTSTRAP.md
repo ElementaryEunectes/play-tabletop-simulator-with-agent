@@ -276,7 +276,7 @@ local\games\<游戏>\
 7. 写状态：setGMNotes / setScriptState     → 回读确认（两种计数器 ⇒ TTS_RULES.md §4.3）
 8. say.ps1 汇报 + 请玩家确认                → 只问一次，别反复
 ```
-（完整换 mod 流程 ⇒ §2 ＋ §2b"教出控制层"。）
+（完整换 mod 流程 ⇒ §2 ＋ §2b"教出控制层"；**无名状态/标记件**（`getName`/`GMNotes` 全空、美术是哈希 URL）**怎么认、怎么建档 ⇒ `TTS_RULES.md` §5.4**。）
 
 ---
 
