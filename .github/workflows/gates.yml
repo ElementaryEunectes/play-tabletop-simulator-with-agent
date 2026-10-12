@@ -1,0 +1,62 @@
+# .github/workflows/gates.yml - run this repository's 7 offline gates on every push and pull request.
+#
+# WHY WINDOWS: the gates are PowerShell, and `tts\config.ps1` resolves the TTS save folder through the
+# Windows documents folder. A Linux runner would exercise a different code path and prove less.
+#
+# WHY THE FENGARI STEP: gate 6 (`bridge primitives (Lua)`) runs the bridge under fengari - a Lua VM in
+# JavaScript that is deliberately NOT vendored into this repository (it lives under local\ on the dev
+# machine, which is gitignored). Without it the gate prints MISSING DEP, and `run_all.ps1` reports
+# NOT RUN **without failing the build** - so a fresh clone honestly reports "6 ran, 1 could not". This
+# step installs it and points FENGARI_DIR at it, turning that into all 7. If the install ever fails the
+# run is still meaningful: it will say NOT RUN rather than pretend to be green (see CONTRIBUTING.md §3).
+#
+# WHAT THIS DOES NOT COVER: the live half (`tts\tests\live_smoke.ps1` needs a running Tabletop Simulator)
+# and anything that needs a real game mod - those stay manual.
+name: gates
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gates:
+    runs-on: windows-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Gate 6's dependency. Installed outside the workspace on purpose: `local/` is gitignored and a
+      # runner has no reason to look like a developer's machine.
+      - name: install fengari (offline Lua VM for gate 6)
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'fengari'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Push-Location $dir
+          npm init -y | Out-Null
+          npm install fengari
+          Pop-Location
+          "FENGARI_DIR=$dir\node_modules\fengari" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # The single entry point. It creates cache\ and out\ itself (that was a real clone-everything-fails
+      # bug, fixed in the commit whose message says "create cache\ and out\ before running"), and it exits
+      # non-zero if any gate did not both exit 0 AND print its own success marker.
+      - name: run the 7 offline gates
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1
+
+      # Always: when a gate fails, its per-gate log is the first thing anyone wants.
+      - name: upload gate logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-logs
+          path: out/*.log
+          if-no-files-found: ignore
+          retention-days: 7

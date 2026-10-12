@@ -77,6 +77,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfil
 
 ⚠️ 本仓库用 `.gitattributes`（`* -text`）**锁住行尾与编码**：clone 出来的字节与提交的完全一致。**别改成 `text=auto`** —— 那会一次性重写所有文件的 blob，还可能碰坏 `.ps1` 必须保留的 UTF-8 BOM。
 
+⭐ **这七条门禁在 CI 上也跑**（`.github\workflows\gates.yml`，**Windows** runner —— 门禁是 PowerShell ＋ Windows 路径）：CI 会替你装上第 6 条需要的 `fengari`，所以那边是 **7/7**；万一装不上，那条会如实报 **`NOT RUN`（不算失败）**而不是假装绿。这就是"新 clone 第一步"应该看到的结果。
+
 ## 路径配置（**不要再把用户名写进脚本**）
 
 所有机器相关的路径由 **`tts\config.ps1`** 解析一次，其余脚本只引用它的变量：
