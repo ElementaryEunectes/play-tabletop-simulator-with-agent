@@ -1,5 +1,7 @@
 # TTS 代玩工作区（DSH × Tabletop Simulator）
 
+[![gates](https://github.com/ElementaryEunectes/tts-agent/actions/workflows/gates.yml/badge.svg)](https://github.com/ElementaryEunectes/tts-agent/actions/workflows/gates.yml)
+
 在 **Tabletop Simulator** 里由 AI 代打桌游的工作区：玩家（人类）只做**决策**和点「**结束回合**」，
 其余全部棋子操作由 agent 通过 TTS 的消息桥接完成。
 
