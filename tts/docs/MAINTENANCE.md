@@ -142,6 +142,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `bags_dump.ps1` · `bag_list.ps1` | 展开容器（牌堆/袋）内容 → `cache\bag_contents.txt` |
 | `bootstrap.ps1` | **换局/新存档**重新认物：默认只打座位表+摘要，全表写 `cache\session_map.md`（`-Full` 打全表）；认物规则**不在代码里** ⇒ 读 `local\games\<游戏>\objects.json`（schema ⇒ `BOOTSTRAP.md` §1b）。`-Inventory` ⇒ `cache\obj_inventory.md`（教新 mod 用） |
 | `install_save2.ps1` | **写存档的唯一通道**（灌 `lua\dsh_global.lua` ＋ 修 notebook tab id；需一次提权）；日志写 `cache\install2_log.txt` |
+| **`tools\cards_from_save.js`** | **离线从存档建卡库** `cache\<游戏>_cards.md`：`node tts\tools\cards_from_save.js <save.json> <out.md>`（**本局那份 171 张卡库就是它生成的**，生成物头部自证）。**与 `tools\build_cards.js` 的分工（两条路都在，别当谁取代谁）**：`build_cards.js` 吃**活体** `container:<guid>:full` 回包（要 TTS 在跑，且取不到**牌堆内部**的卡）；`cards_from_save.js` 吃**存档** ⇒ 文本**完整**（活体回包会被 TTS 截断 —— 实测 2026-10-09）且能取到牌堆里的卡 ⇒ **建卡库优先它**。两者产出同一种表（列固定，`card.ps1` 读） |
 | `crop_zoom.ps1` | 裁图 ＋ 放大转真 PNG（**读卡面/查图用**；`Mods\Images` 里扩展名常与真实格式不符） |
 | `tts_api.ps1` | TTS **External Editor API（39999）** 原始客户端；`tools\exec_script.ps1` = 走它的 **`messageID 3`** 执行 Lua（**安全**，见 `TTS_RULES.md` §七）。⚠️ **39998 只有一个槽**：轮询器每 2.5 s 占它一片 ⇒ 交接会撞 `listener busy`（`exec_script.ps1` 已把绑定重试提到 6 次/~10 s）；**根治 = 常驻进程独占 39998**（hub 方案 ⇒ `PRIOR_ART.md`；⇒ `VALIDATION.md` F14） |
 | **`tools\dump_lua.ps1`** | **把存档里物件的 `LuaScript` 抽成文件**（**离线，不碰 TTS**）：`-Guid <g> -OutFile <f>` 抽那**一件**（**改别人脚本前的备份**动作）· 默认把 ≥`-MinChars`（50）的**全部**导出到 `cache\scripts\` · `-List` 只报不写 ⇒ 取代了归档里那份 `dump_scripts.ps1`（后者写死两条机器路径） |
@@ -155,14 +156,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `card_index.ps1` · `index_images.ps1` | 把**卡片映射到本地图缓存**（建卡库、认新牌面）—— 卡库已建好，平时不用 |
 | `grab_window.ps1` | 抓 TTS 窗口像素（Unity 下 `PrintWindow` 无效，靠 BitBlt）；"没有 Lua 通道只能看画面"时的兜底 |
 | `tts_click.ps1` | 合成鼠标输入。⚠️ **已定案：合成点击点不到「结束回合」**（玩家那块是桌上的**社区件 Turn Tracker**；TTS 自带那块在屏幕**顶部正中** ⇒ 详见 `TTS_RULES.md` §三） |
-| ⛔ **已归档（2026-10-11）**：`front_watch.ps1` · `read_turn.ps1` | **旧叫醒链**（前台横幅 → `cache\front.txt` → `TURN=Pn`）—— 已被 `turn_poller.ps1` ＋ file 哨兵取代，而且 `read_turn.ps1` 本体是**批量替换事故的残骸**（运行期错，解析器查不出来）⇒ 两个文件都**移出了仓库**（归档目录 `~\.dsh\archive\tts-legacy\` ⇒ `VALIDATION.md` F4）。别再在 `tts\` 里找它们 |
+| ⛔ **已归档**：`front_watch.ps1` · `read_turn.ps1`（2026-10-11）· `find_moved.js`（2026-10-12） | **旧叫醒链**（前台横幅 → `cache\front.txt` → `TURN=Pn`）—— 已被 `turn_poller.ps1` ＋ file 哨兵取代，而且 `read_turn.ps1` 本体是**批量替换事故的残骸**（运行期错，解析器查不出来）。**`find_moved.js`** = 一次性调试件（全仓 0 引用，读 10-10 的 `cache\et_*.json` dump）。三个都**移出了仓库**（归档目录 `~\.dsh\archive\tts-legacy\`，移出前逐件 SHA256 对拍 ⇒ `VALIDATION.md` F4）。别再在 `tts\` 里找它们 |
 | `validate_lua.js` | **改 `lua\dsh_global.lua` 之前**必跑（并同时改 `DSH_VERSION`） |
 
 ### 🧪 离线测试（**不开 TTS 也能跑**）
 
 7 条、唯一入口 `tts\tests\run_all.ps1`；判据/清单/限制 ⇒ **§1** ＋ `CONTRIBUTING.md` §3（**不复述**）。
 📌 **活体那半**：`tests\live_smoke.ps1`（需要 TTS）。
-⚠️ **第 6 条（`bridge primitives`）额外依赖 `fengari`**（JS 版 Lua VM，**不在仓库里**）：缺它时门禁报 **`NOT RUN`（不算失败）**、其余 6 条照跑；装法与 `FENGARI_DIR` ⇒ **`README.md` 的"四条前置"第 4 条**（⛔ 别在这儿复述）。
+⚠️ **第 6 条（`bridge primitives`）额外依赖 `fengari`**（JS 版 Lua VM，**不在仓库里**）：缺它时门禁报 **`NOT RUN`（不算失败）**、其余 6 条照跑；**装法（含本机沙箱要求的 `--cache`/`--prefix` 写法）⇒ 本文件 §1 那条**，面向陌生人的简版 ⇒ `README.md` 的"四条前置"第 4 条。
 
 ### 目录与跨脚本引用（改名/清理前先看）
 
