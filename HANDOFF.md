@@ -51,7 +51,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
    - **先找现成**（候选已登记 ⇒ `tts\docs\PRIOR_ART.md` **§9**）：`tts-editor`（Node 版 External Editor API，与我们 `tts_api.ps1` 重叠最大）· `tts-toolkit` · **`tts-card-naming-tool`**（批量改存档卡名）· `ge_tts` · **`LibreTranslate`**（可自托管/离线 ⇒ "0 token"的关键件）· `cardocr` · `playwright-image-translator` · digiKam OCR。
    - **两条落地路，都挂在存档层（⛔ 不碰活体 TTS）**：① **改文本**（卡名／`GMNotes`／`Description` —— 存档能批量改、不动图，最省）；② **改图**（`CustomDeck.FaceURL` 换成本地生成的译图 ⇒ 要重烤存档；本仓 `install_save2.ps1` 就是**写存档的唯一通道**）。
    - **接口**：`obj_index.ps1`／`dump_lua.ps1`（读存档）＋ `install_save2.ps1`（写存档）⇒ 整链可离线跑。
-   - ⏸ **实测不急**（主人 2026-10-12）：先用 `tts-editor` 交叉验证我们手写的客户端，再把 `LibreTranslate ＋ cardocr ＋ tts-card-naming-tool` 串成整链。
+   - ⏸ **实测顺序**（主人 2026-10-12：不急）：先用 `tts-editor` 交叉验证我们手写的客户端，再把 `LibreTranslate ＋ cardocr ＋ tts-card-naming-tool` 串成整链。
+   - ✅ **离线地基已验通（2026-10-12，探针 `cache\i18n_probe.ps1`）**：机翻要写回存档，"**改文本**"这条路先在**自动存档的副本**上跑通 —— `JavaScriptSerializer` 解析 728 KB 存档 OK（26 个顶层键）· 文本字段 **Nickname 470 / Description 470 / GMNotes 470**（⚠️ **绝大多数是空串**，非空的只有 8 个）· 对**原文做字符串级替换**（⛔ **绝不**重新序列化整个解析对象：`JavaScriptSerializer` 会丢字段/乱序 ⇒ 静默毁存档）⇒ 产物仍是**合法存档 JSON**（re-parse OK）、字节增量可预测（+7/处）。⚠️ **仍未验**：改过的存档**能不能被 TTS 载入**（要 TTS ＋ 人）。
+   - 📋 **出网机器上的实测清单**（本沙箱 `pwsh` 出网被挡，只能这样交接）：① `tts-editor` 对着 39999 跑一轮，与 `tts_api.ps1` 逐条对照（重点：它怎么处理"回复丢失/端口占用"）；② 起 `LibreTranslate` 翻一段卡面文本，量**耗时与内存**（判据 = 这台机器能否离线跑）；③ 用 `cardocr` 或 digiKam OCR 认**一张**卡面图，看排版认不认；④ 用 `tts-card-naming-tool` 打开**本局存档的副本**试批量改名，确认不破坏结构；⑤ 全链通了再决定"自己写"还是"站在它们上面"。
 
 ## §6 环境与坑 ⇒ 两处（本文件不复述）
 
