@@ -43,14 +43,23 @@ CLAUDE.local.md
 # ---- 本机启动脚本（路径/环境相关）----
 start-dsh.cmd
 start-dsh.ps1
-package.json
-package-lock.json
+# ⚠️ 只忽略**根目录**的那两个：子目录里的 package.json 是合法的
+#    （例：门禁若要声明它自己的依赖 `fengari`，就得提交 `tts\tests\package.json`）
+/package.json
+/package-lock.json
 
-# ---- 系统垃圾 ----
+# ---- 依赖与机器专属编辑器配置 ----
+node_modules/
+.vscode/
+
+# ---- 系统垃圾与补丁残留 ----
 Thumbs.db
 desktop.ini
 *.tmp
 *.swp
+*.orig
+*.rej
+*.bak
 
 # ---- 不进开源的私有/归档/scratch（统一到 local\）----
 local/
