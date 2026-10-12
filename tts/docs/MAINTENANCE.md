@@ -51,7 +51,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 `run_lua.js` = fengari 跑一个 `.lua`（门禁用）· `gen_bridge_alone_test.js` = 从**运行中脚本**或本地文件生成桩环境。
 
 - `run_and_capture.js <lua> <outFile>` —— **抓子进程输出的唯一可靠姿势**（见 §0）。⛔ `execFileSync` 在本沙箱会**抛出且 stdout/stderr 都是空的**，那读起来和"子进程什么都没打印"一模一样 —— F8 排查时为这个假信号白花了一轮。
-- `scan_exec.js [from] [to]` —— 逐条**行首语句**打标记，报告 `IN` / `NOT-IN`（**两个都打印**，因为"没打印"太容易被读成"没执行"）。
+- ⛔ **（2026-10-12 已归档）`scan_exec.js [from] [to]`** —— 逐条**行首语句**打标记，报告 `IN` / `NOT-IN`（**两个都打印**，因为"没打印"太容易被读成"没执行"）。它随 `gen_bridge_alone.lua`（98 KB，无法从受跟踪输入重建）**一起移出了仓库** ⇒ 见 §5「已归档」；要复跑先从 `~\.dsh\archive\tts-legacy\` 取回。
 - `check_block_depth.js <file>` —— 打印每一条行首语句的**块深度**、末尾是否平衡。F8 的根因就是一处错位：少一个 `end` ⇒ **250 行变成了某个函数的函数体**，而总数恰好还是平衡的 ⇒ **能编译、能加载、名字全是 nil**。深度表一眼就能看出"从哪一行起进了不该进的层"。
 - `verify_f8.js`（回归检查，**已进门禁流程之外、手动跑**）—— 加载仓库里的桥接，核对**每一条行首定义的函数**在加载后是否真的存在（阴性对照：把 `setCount` 的收尾删掉 ⇒ 立刻报 `LOAD ERROR`）。
 - ⚠️ **工具自己先归一 `\r\n`**：这些文件是 CRLF ⇒ `readFileSync(...).split('\n')` 会让每行**末尾带 `\r`**，于是
@@ -156,7 +156,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `card_index.ps1` · `index_images.ps1` | 把**卡片映射到本地图缓存**（建卡库、认新牌面）—— 卡库已建好，平时不用 |
 | `grab_window.ps1` | 抓 TTS 窗口像素（Unity 下 `PrintWindow` 无效，靠 BitBlt）；"没有 Lua 通道只能看画面"时的兜底 |
 | `tts_click.ps1` | 合成鼠标输入。⚠️ **已定案：合成点击点不到「结束回合」**（玩家那块是桌上的**社区件 Turn Tracker**；TTS 自带那块在屏幕**顶部正中** ⇒ 详见 `TTS_RULES.md` §三） |
-| ⛔ **已归档**：`front_watch.ps1` · `read_turn.ps1`（2026-10-11）· `find_moved.js`（2026-10-12） | **旧叫醒链**（前台横幅 → `cache\front.txt` → `TURN=Pn`）—— 已被 `turn_poller.ps1` ＋ file 哨兵取代，而且 `read_turn.ps1` 本体是**批量替换事故的残骸**（运行期错，解析器查不出来）。**`find_moved.js`** = 一次性调试件（全仓 0 引用，读 10-10 的 `cache\et_*.json` dump）。三个都**移出了仓库**（归档目录 `~\.dsh\archive\tts-legacy\`，移出前逐件 SHA256 对拍 ⇒ `VALIDATION.md` F4）。别再在 `tts\` 里找它们 |
+| ⛔ **已归档**：`front_watch.ps1` · `read_turn.ps1`（2026-10-11）· `find_moved.js` · `tests\gen_bridge_alone.lua` ＋ `scan_exec.js`（2026-10-12） | **旧叫醒链**（前台横幅 → `cache\front.txt` → `TURN=Pn`）—— 已被 `turn_poller.ps1` ＋ file 哨兵取代，而且 `read_turn.ps1` 本体是**批量替换事故的残骸**（运行期错，解析器查不出来）。**`find_moved.js`** = 一次性调试件（0 引用，读 10-10 的 `cache\et_*.json` dump）。**`gen_bridge_alone.lua`（98 KB）＋ `scan_exec.js`** = F8 的一次性夹具与行级执行扫描器（它的输入 `local\scratch\running_global.lua` 是 gitignored、本机已不存在 ⇒ **无法从受跟踪输入重建**，且**没有**像 `gen_bridge_primitives.lua` 那样的陈旧性对拍 ⇒ 留着只会是可能过期的字节）；**生成器 `gen_bridge_alone_test.js` 保留在树里**（工具，逻辑仍有参考价值，但输入已不在本机）。全部**移出仓库**（归档目录 `~\.dsh\archive\tts-legacy\`，移出前逐件 SHA256 对拍 ⇒ `VALIDATION.md` F4/F8）。别再在 `tts\` 里找它们 |
 | `validate_lua.js` | **改 `lua\dsh_global.lua` 之前**必跑（并同时改 `DSH_VERSION`） |
 
 ### 🧪 离线测试（**不开 TTS 也能跑**）

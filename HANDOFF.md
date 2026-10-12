@@ -1,119 +1,66 @@
-# HANDOFF.md —— 交接简报（最近更新 **2026-10-11 凌晨** · 回合交接已校准 · 文档已按"规则 / 代码"分家）
+# HANDOFF.md —— 交接简报（最近更新 **2026-10-11** · 回合交接已校准 · 文档已按"规则 / 代码"分家）
 
-> **怎么读（按这个顺序）**：**§1 启动** → **§4 待办**（**现在真正剩的只有两条**：E（demo ＋ 30 秒录屏）与**冷启动验证**）→ **§7.9 回合交接** → **§9 本轮纪要**。
-> 长期规矩 ⇒ `AGENTS.md`（本项目）＋ `$DSH_HOME\AGENTS.md`（平台宪章）；改东西前 ⇒ `tts\docs\MAINTENANCE.md`；坑 ×17 ＋ 注入机制 ⇒ harness home 的 `platform\MAINTENANCE.md`。
-> **文档全索引 ⇒ `tts\docs\README.md`**；**本局状态 ⇒ `local\games\<游戏>\STATE.md`**（唯一真源：含"现在轮到谁"与续局步骤，本文件不复述游戏名与槽位）。
-> ⚠️ **先做 §1 的启动动作**，否则脚本会读写一个不存在的旧目录。
-> ⚠️ **每个新会话要重建两个活件**（它们**不跨会话**）：轮询器（后台作业 `tts\tools\turn_poller.ps1 -IntervalSec 2.5`）＋ **file 哨兵**（`cache\turn_side.txt`，`pattern=^mine`，**`max_fires` 必须显式给**）⇒ 步骤 ⇒ `tts\docs\PLAY.md` 回合交接节。
-> 🪙 **省 token 纪律**（2026-10-11 定，全文约束见 `AGENTS.md` 第 9 条）：**批量发命令**（不再"一次调用一条"）· **只 `grep` ＋ 切片读**大文档 · **文档搬运/审计交子代理** · **回复压到几行** ⇒ 短回复与合并轮次省的是**每一次后续请求**。
-> 🔌 **桥接版本**：盘上现在跑的是 **`v15-tags-snap-hand`**（`TS_Save_17.json`）；仓库源码已升 **`v16-tracker-guid`**（`turn_tracker` 可按调用方的 guid 读那件，见 `MAINTENANCE.md` §5）⇒ **要重烤 ＋ 请玩家重载**才生效；不重载则一切照旧可用。
-> ✅ **验证两件套**：门禁 `tts\tests\run_all.ps1`（7 条）· 活体 `tts\tests\live_smoke.ps1`（17 条**只读**，需要 TTS）。
+> **怎么读（按这个顺序）**：**§1 启动** → **§4 待办**（**发布前真正剩两条**：E（demo ＋ 30 秒录屏）与**冷启动验证**；**新登记一条**：第 9 条**外文 mod 机翻**）→ **§7.9 回合交接** → **§9 纪要**。
+> 长期规矩 ⇒ `AGENTS.md`（本项目）＋ `$DSH_HOME\AGENTS.md`（平台宪章）；改东西前 ⇒ `tts\docs\MAINTENANCE.md`；坑 ×17 ＋ 注入 ⇒ harness home 的 `platform\MAINTENANCE.md`。
+> **文档全索引 ⇒ `tts\docs\README.md`**；**本局状态 ⇒ `local\games\<游戏>\STATE.md`**（唯一真源：含"现在轮到谁"与续局步骤）。
+> ⚠️ **先做 §1 的启动动作**（否则脚本会读写一个不存在的旧目录）＋ **每个新会话重建两个活件**（轮询器 ＋ file 哨兵，⇒ §4 第 3b 条）；**验证两件套** = 门禁 `tts\tests\run_all.ps1`（7 条）· 活体 `tts\tests\live_smoke.ps1`（17 条**只读**，需要 TTS）。
+> 🪙 **省 token 纪律**（全文 ⇒ `AGENTS.md` 第 9 条）：**批量发命令**（⚠️ **例外：TTS 命令仍一条一发**）· **只 `grep` ＋ 切片读** · **搬运/审计交子代理** · **回复压到几行**。
+> 🔌 **桥接**：**烤在存档里** ⇒ 换版本要重烤 ＋ 请玩家重载。盘上已成 **`v16-tracker-guid`**（`TS_Save_18.json`，显示名 = 该局游戏名 ＋ `-v16`）；**`TS_Save_17.json` 是上一档 `v15-tags-snap-hand`**（objs 都是 118）⇒ 判定**以 `tts\play.ps1 status` 返回为准**；版本史 ＋ v16 的 guid 参数（**尚有未结的掉线嫌疑**）⇒ §9 / `VALIDATION.md` F14。
 
 ## 🔴 接手即做（2026-10-11 15:0x，本会话交接）
 
-> **盘上现在跑着什么**（⚠️ **都不跨会话**，本会话一结束就全没）：后台作业 **hub**（`tts\tools\tts_hub.ps1`）· 后台作业 **轮询器**（`tts\tools\turn_poller.ps1`，不限时长）· 哨兵 **`watch-4`**（file `cache\turn_side.txt`，`pattern=^mine`，`max_fires=500`）· 已撤：`watch-3`（端口开合，专用性已被轮询器覆盖）。
->
-> **接手三步（照这个顺序）**：① 起 **hub**（**必须最先**，它独占 39998 ⇒ `MAINTENANCE.md` §5）；② 起 **轮询器**（`turn_poller.ps1`，玩家人回合期间让它跑着）；③ 挂 **file 哨兵**（`cache\turn_side.txt`，`^mine`，**`max_fires` 必须显式给**）。想停轮询器：放一个 **`cache\poller.stop`**（所有轮询器含孤儿一个周期内退出）。
->
-> **每回合的操作策略（玩家 2026-10-11 定的）**：我把回合交还给他 ⇒ **轮询一直开着等他**；他按 End Turn ⇒ 哨兵叫醒我 ⇒ ⛔ **先 `tts\tools\turn_side.ps1` 复核**（**"错位时要点两次"会造出假边沿** —— 实测两次：一次复核时已回 `player`，一次是真 `mine`）⇒ 本局无对局动作时直接 `tts\tr.ps1 -To player` 交还 ⇒ 继续轮询。
+> **接手三步（照这个顺序）**：① 起 **hub**（`tts\tools\tts_hub.ps1`，**必须最先**，它独占 39998 ⇒ `MAINTENANCE.md` §5）；② 起 **轮询器**（`tts\tools\turn_poller.ps1`）；③ 挂 **file 哨兵**（`cache\turn_side.txt`，`^mine`，**`max_fires` 必须显式给**）。停轮询器：放 `cache\poller.stop`。⚠️ **三件都不跨会话**。
+> **每回合的策略**：交还给他后 ⇒ **轮询一直开着等他**；他按 End Turn ⇒ 哨兵叫醒我 ⇒ ⛔ **先 `tts\tools\turn_side.ps1` 复核**（**"错位时要点两次"会造出假边沿**）⇒ 无对局动作时 `tts\tr.ps1 -To player` 交还 ⇒ 继续轮询。
 > ⛔ **两条硬纪律**：**一次工具调用只发一条 TTS 命令**；**JSON 只在进程内构造**（⛔ 绝不交给 `powershell -File`，它吃引号 ⇒ 畸形信封 ⇒ TTS 收下不回复 ⇒ 39999 掉线，7 次实测 ⇒ `VALIDATION.md` **F14**）。
->
-> **下一步待办（有序）**：① ✅ **已补验完（2026-10-11 16:4x）**：`cut`/`drop` 回 `false`、`paste` 无此方法 ⇒ **三条都是死路**；⛔ `spawn:json` **再次打挂 TTS**（`NOREPLY` ⇒ `PORTCLOSED`，与 F10 同症状）⇒ **一并停止追查**；重启后只需查 objs 是否回 117 ⇒ `VALIDATION.md` F7；② **`ds.ps1` 回显里 `action=` 空的**小瑕疵（`hand:` 那条）⇒ ✅ **已修（2026-10-11）**：`dsh_global.lua` 的 `hand` 各分支补回 `action` 字段（**需重烤 ＋ 玩家重载后补一条活体**）；③ 门禁缺依赖时显示成 `FAIL … marker=False` 而非 `NOT RUN`（措辞）⇒ ✅ **已修（2026-10-11）**：门禁自带 `MISSING DEP` 标记，`run_all.ps1` 见它即报 **NOT RUN**；④ **真机冷启动**（第三方、干净机器；沙箱里 `git clone` 做不了）· ⑤ **E：demo ＋ 30 秒录屏**。
->
-> **台账指针**：hub/工具的用法与坑 ⇒ `MAINTENANCE.md` **§5**（含"别按 PID 猜杀后台作业"）· API 掉线根因与验收 ⇒ `VALIDATION.md` **F14 · L18 ✅ · L19 ✅** · 起链顺序 ⇒ `PLAY.md` 回合交接节 ＋ `BOOTSTRAP.md` §1 E · 本局状态 ⇒ `local\games\<游戏>\STATE.md`。
+> **待办指针**：`cut`/`drop`/`paste`/`spawn:json` **四条都是死路**（后两条**会打挂 TTS**）⇒ 停止追查（⇒ `VALIDATION.md` F7/F10）· `hand:` 回显缺 `action` 已修（**要重烤 ＋ 重载**）· 门禁缺依赖已改报 **NOT RUN** · 冷启动与 **E（demo ＋ 录屏）** ⇒ §4。
+> **台账指针**：hub 用法与坑 ⇒ `MAINTENANCE.md` **§5** · API 掉线根因与验收 ⇒ `VALIDATION.md` **F14 · L18 ✅ · L19 ✅** · 起链顺序 ⇒ `PLAY.md` 回合交接节 ＋ `BOOTSTRAP.md` §1 E。
 
 ## §1 启动（必做，30 秒）
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1   # 只做 Set-Location 到本仓库
 ```
-- 它**只切 cwd**（= 项目链注入的前提；不动 `$DSH_HOME`、不建 profile）。本机直接 `dsh web` 也行，只要会话工作区 = 本仓库。
-- ⚠️ `$DSH_HOME` **双重含义**（harness home ＋ 本工作区根）：环境里残留旧值 `<用户目录>\.dsh` ⇒ `tts\config.ps1` 解析到**已搬空的旧目录**（产物写丢、`live_index` 报 `ds.ps1 not found`）。它的解析顺序写在文件头。
-- 验证：`tts\play.ps1 status`（**版本号以实际返回为准**）· 门禁 `tts\tests\run_all.ps1`。
+- 它**只切 cwd**（= 项目链注入的前提；不动 `$DSH_HOME`、不建 profile）；只要会话工作区 = 本仓库，直接 `dsh web` 也行。
+- ⚠️ `$DSH_HOME` **双重含义**（harness home ＋ 本工作区根）：残留旧值 `<用户目录>\.dsh` ⇒ `tts\config.ps1` 解析到**已搬空的旧目录**（产物写丢、`live_index` 报 `ds.ps1 not found`）。
+- 验证：`tts\play.ps1 status`（**版本号以实际返回为准**）· `tts\tests\run_all.ps1`。
 
 ## §2 对局状态 ⇒ **不在仓库里**
 
-对局现状 · 续局步骤 · 已结清的规则 · 原始 guid · **待玩家拍板的规则冲突** · **卡面待补** ⇒ 全在 **`local\games\<游戏>\`**（`local\games\_current.md` 指向具体文件；`local\` 被 gitignore）。
-**为什么**：本仓库只放**对任何 TTS mod 都成立**的通用工具链（判据 ⇒ `AGENTS.md`）。
+对局现状 · 续局步骤 · 已结清的规则 · 原始 guid · **待玩家拍板的规则冲突** · **卡面待补** ⇒ 全在 **`local\games\<游戏>\`**（`_current.md` 指向具体文件；`local\` 被 gitignore）。本仓库只放**对任何 TTS mod 都成立**的通用工具链（判据 ⇒ `AGENTS.md`）。
 
 ## §4 待办（按优先级）
 
-> 🧭 **看这一行就够**：**现在真正待办只有两条** —— ① 第 **4** 条里的 **E（demo ＋ 30 秒录屏）**；② 同条的 **冷启动验证**（clone 到新目录 ＋ 独立 `$DSH_HOME`，照 README 走一遍）。
-> 🔬 **冷启动验证：本沙箱内能做的部分已做完（2026-10-11 14:2x）**：① 沙箱里 **`git clone` 做不成**（`sh.exe: couldn't create signal pipe, Win32 error 5`）⇒ 改用 **`git worktree add --detach <dir> HEAD`** 做等价"干净检出"（46 个 `.ps1`、**无 `local\`、无 `cache\`**）。
-> ② **它抓到真缺陷**：新检出里 `run_all.ps1` **7 条全挂**，报 `Could not find a part of the path '…\cache\dsh_gate_<id>.txt'` —— 入口把门禁输出写进 **`cache\`**，而新 clone 没有该目录（gitignore）⇒ **README 的"新机器第一步"照做会失败**。
-> ③ ✅ **已修（`bada9e2`）**：`run_all.ps1` 开跑前 `New-Item -Force` 建好 **`cache\` 与 `out\`**；**并在新 HEAD 的干净检出里复验** ⇒ **6 PASS ＋ 只剩 `bridge primitives (Lua)` 挂**（缺 `fengari`，属预期；⚠️ 注意它在这种缺依赖的情形下显示为 `FAIL … marker=False` 而不是 `NOT RUN` —— 措辞小瑕疵，可下次顺手统一）。
-> ⏳ **仍未做**：**真·第三方在一台干净机器上**跑一遍（沙箱里造不出真 clone；换机器照 README 走一遍即可）。
->
-> 其余各条的状态：**0 / 1 / 2 已结清** · **3 / 5 是口径与收尾**（按需）· **3b 是"每个新会话要做的动作"**（不是待办）· **6 / 7 环境事实** · **8 已归档**（见下）。
+> 🧭 **看这一行就够**：**发布前真正待办只有两条** —— ① 第 **4** 条里的 **E（demo ＋ 30 秒录屏）**；② 同条的 **冷启动验证**（clone 到新目录 ＋ 独立 `$DSH_HOME`，照 README 走一遍）。**③ 新登记、不急**：第 **9** 条的**外文桌游模组机翻**。
+> 🔬 **冷启动验证：本沙箱内能做的部分已做完**：用 `git worktree add --detach` 做等价"干净检出"（沙箱里 `git clone` 报 `Win32 error 5`），**抓到真缺陷并已修（`bada9e2`）**：新检出里 `run_all.ps1` **7 条全挂**（门禁输出写 `cache\`，而该目录被 gitignore）⇒ 入口开跑前 `New-Item -Force` 建 `cache\` ＋ `out\`，复验 **6 PASS**（只剩 `bridge primitives (Lua)`，缺 `fengari`）⇒ 台账 ⇒ `tts\docs\VALIDATION.md`。⏳ **仍未做**：**真·第三方**在一台干净机器上跑一遍。
+> 其余各条：**0 / 1 / 2 已结清** · **3 / 5 口径与收尾** · **3b 是"每个新会话要做的动作"** · **6 / 7 环境事实** · **8 已归档**。
 
-0. ✅ **F8 已定案并修好（2026-10-09）**：`players` / `take` / `spawn` / `destroy` 在活体上**不是"名字是 nil"那么简单** ——
-   v14 那段原语被**拼接进了 `setCount()` 的中间**（插在它最后一条语句和它自己的 `return out` / `end` 之间）⇒
-   `setCount` 的收尾被甩到 `DSH_destroy` 之后，而**从拼接点起的一切都变成了 `setCount` 的函数体**，加载时从不执行。
-   少一个 `end`、尾巴多一个 ⇒ **总数平衡 ⇒ 照样编译、命令照样注册**，只是引用的名字从没被赋值。
-   ⇒ 根因/证据链/为什么 7 条门禁全绿也看不见它 ⇒ **`tts\docs\VALIDATION.md` F8**；工具 ⇒ `tts\docs\MAINTENANCE.md` §1a。
-   ✅ 仓库侧已修（`tts\lua\dsh_global.lua`）＋ `verify_f8.js` 阴性对照通过 ＋ **门禁新增"整块加载"一步**。
-   📊 **活体验收（载入 `TS_Save_11.json` 后逐条真跑）**：
-      ✅ `ping` = `v15-tags-snap-hand`（重烤生效）· ✅ `players` ⇒ `ok count=2` ＋ 每座位一行 ·
-      ✅ `take` 缺卡 ⇒ `no container with guid ...`（**不再 nil 崩溃**）· ✅ `destroy` 幽灵 ⇒ `no object with guid ...`
-      ✅ **`spawn:copy`** ⇒ `ok mode=copy guid=...`（`clone`，主用途可用）
-      ⛔ **`spawn:type`（通用造物）已在代码里显式拒绝**：调 `spawnObject` 会**卡死桥接线程**、随后被 TTS **回滚**（连造物一起撤销）
-   🐞 **活体抓出的缺陷（都已修）**：① `spawn:type` 把 **Lua 表**塞给 `spawnObjectJSON`（文档：`spawnObject({type=…})`
-      与 `spawnObjectJSON(jsonString)` 是**两个调用**）⇒ 回 nil 却报成"需要 TTS v13.2+"；② **`S(v)` 对 nil 返回 nil**
-      ⇒ 所有 `"..." .. S(x)` 在**要报错的那种值**上当场崩（报错路径自己死了比没有报错路径更糟）；
-      ③ `read()` 里引用了不存在的 `m`（**早于本次会话**的旧 bug，一直被误诊成"读不到名字"）⇒ 已删那两行死代码。
-   ⛔ **`spawn:type` 已停止追查，三次尝试的代码全部删除**（请求入队 / `spawn_step` / 诊断埋点都不在了）
-      ⇒ 现象 · 三次尝试 · 为什么值得停止 ⇒ **`tts\docs\VALIDATION.md` F10**（按"未解＋未验证"如实记账，别重走）。
-   ⚠️ **那次 `spawn` 探测把 TTS 打挂了**（探测前 ping 正常，之后 API 直接不可达、进程还占着 `Player.log`）
-      ⇒ **以后一条一条探**，别连着发。
-   ▶ **下一步**：✅ **已完成（2026-10-11）**——17 号已重载，`ping` 回 `v15-tags-snap-hand`（objs=118）、`turn_tracker` 可用；回合交接按 `PLAY.md` 的**快链**走。
-   🧹 **2026-10-10 彻查删除**（本轮实验的产物，一律不留在代码里）：`turn_token` · `token_plain` · `spawn_step` ·
-      `turn_end` · `turn_get` · `turn_state` · `DSH_TURN_N`/`DSH_STATE` · `__spawn_trace`/`__spawn_last`；
-   ⚠️ **但桌上的"件"还在**（2026-10-11 用 `tts\tools\dump_lua.ps1 -List` 抓到）：`DSH-TURN`（`guid a7bf2e`，2,053 B，`state {"n":0}`）**没有任何引用 ⇒ 可删**（⇒ `VALIDATION.md` F11）。
-      另删工具 `bake_token.js` / `insert_token.js` / `compare_index.js` / `script_anatomy.js` /
-      `bisect_run.js` / `peek_obj.js` / `peek_custom.js`，以及 `install_save2.ps1` 的 `-BakeToken` 参数与那段代码。
-   📌 已顺带修好并活体验过的：`container:<guid>` ⇒ 列出容器内物件的 `guid|名称|昵称|数量|牌面文本(截60字)`。
-   ⚠️ 根因是 **`getObjects()` 返回纯 Lua 表、没有方法**（字段直接读 `x.guid/x.name/x.description`）。
-   ⇒ 这也是**卡库的来源**（`description` 就是整张牌面），不必再手抄。
-
-1. ✅ **D2 已完成（2026-10-09）**：**对局型 mod** 的 `local\games\<游戏>\objects.json` 写好（8 个区块）⇒ `bootstrap.ps1` 恢复可用（`cache\session_map.md` = 92 行 / 3.9 KB；HP·CP 4 行 · 牌堆 2 · 骰子 5+5 · 英雄板 2 · 规则书 1）。
-   📌 关键：**索引里同一物件常有两行**（容器副本 1523/1659）⇒ 每个区块都要 `topLevel: true`；这条已写进 `BOOTSTRAP.md` §1b 与数据文件自身的 `_note`。换英雄/换局：`bootstrap.ps1 -Inventory` 取新 hash 加一行。
-   ⚠️ **"任何 mod 都成立"：第二款 mod 实测 = 半过（2026-10-09 晚，详情见 `tts\docs\VALIDATION.md`）**：**非对局型** mod（自带 116 KB Global 脚本 ＋ 12 页笔记本）⇒ `install_save2.ps1 -KeepLua -KeepTabs` 烤进存档、模组自带脚本**原样保留** ⇒ 玩家重载后 **`ping` 回 `v13-turntoken`（**当时**的版本号；现在应回 `v15-tags-snap-hand`）** ⇒ `obj_index.ps1 -File <绝对路径>`（625 行）⇒ `bootstrap.ps1 -Inventory`（190 nicks / 41 hashes）⇒ 写 `objects.json`（7 区块）⇒ **115 行地图**。
-   🟢 这一路**全过**（传话 · 存档侧索引 · 认物 · 地图）。🔴 但 **`play.ps1` 在这款上 FAIL**（`NO PART`：它要 `cache\<game>_rules.json` 且 `status` 也走 `$Rules.dice/seats`）⇒ **这条缺陷已写进 `MAINTENANCE.md` §5 的「两层是怎么分开的」**；"通用"目前**只是这一路证据，不是全链证据**。
-   📌 学到的两条：① **`obj_index.ps1 -File` 要绝对路径**（相对 cwd 解析，给裸文件名会报 not found）；② 这类 mod 把教学写在 **Notecard** 上（地图有专门一节 ⇒ 开局先读它，再写 `FLOW.md`）。
-   ⛔ 仍然**不要**为了验证去造假的第二款游戏（fixture 只验"数据不在代码里"这条契约）。
-2. ✅ **重烤 ＋ 活体验收已完成（2026-10-11）**：载入 `TS_Save_17.json` 后逐条真跑 —— `ping` = `v15-tags-snap-hand`
-   （objs=118）· `players` ⇒ `ok count=2`（`Brown|Player 1`、`Teal|Player 2`）· `take`/`destroy` 失败路径正常 ·
-   `spawn:copy` 正常 · `turn_tracker` 可用 · `container:` 可列牌。⇒ 详见 §4 第 0 条与本文件 §7.9。
-3. 🟡 **游戏侧**：本局（第二款 mod）的目的是**验证工具链** ⇒ 规则/座位/图卡标着**不必做**。
-   ✅ **卡库已建成**（`cache\<游戏>_cards.md`，**171 张**，`tts\card.ps1 -Q <牌名>` 可查；生成器 `tts\tools\build_cards.js`）。
-   ⇒ 这一局**已无真待办**；哪天真要打，按 `local\games\<游戏>\FLOW.md` §5 逐条问玩家。
-3b. 🔴 **每个新会话要重建"活件"（最容易漏）**：② **轮询器**（后台作业 `tts\tools\turn_poller.ps1 -IntervalSec 2.5`，
-   不跨会话）③ **file 哨兵**（`cache\turn_side.txt`，`pattern=^mine`，**必须显式 `max_fires`**，默认 1 次就没了）。
-   ⇒ 步骤与理由 ⇒ `tts\docs\PLAY.md` 回合交接节。
-4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后一块**：**E** demo ＋ 30 秒录屏（需 TTS）。
-   ✅ **A** `STATE`/`FLOW`/`MYHAND` 模板 ＋ **C** `tts\setup.ps1` 向导 **已完成（2026-10-11）**。
-   判据：陌生人只有**公开仓库 ＋ Windows ＋ TTS ＋ 一个 workshop mod**，能否在**一小时内**打完一回合？
-   ⇒ 时间/成本期望已写进 `README.md` / `README.en.md`（~1–1.5 h，其中教一款 mod 占一半）。
-   🔴 **仍未做**：**冷启动验证**（把仓库 clone 到新目录 ＋ 独立 `$DSH_HOME`，照 README 走一遍）—— 这是把"应该能用"变成"验过能用"的唯一办法。
+0. ✅ **F8 已定案并修好（2026-10-09）**：四个原语活体上"名字是 nil"的根因 = **拼接进了 `setCount()` 函数体中间**（缺/多一个 `end` ⇒ 平衡 ⇒ 照编译照注册，名字却从没被赋值；**门禁全绿也看不见它**）⇒ 已修 `tts\lua\dsh_global.lua` ＋ 阴性对照 ＋ 门禁新增"整块加载"一步；活体验收（`TS_Save_11.json`）四种原语全好用。
+   ⛔ **`spawn:type` 停止追查**（`spawnObject` 会卡死桥接线程、被 TTS 回滚）⇒ `tts\docs\VALIDATION.md` F10；⚠️ 那次探测**把 TTS 打挂了** ⇒ **一条一条探**。📌 桌上仍有**无引用的** `DSH-TURN`（`guid a7bf2e`）⇒ **可删**（⇒ F11）；顺带修好 `container:<guid>`（根因 = **`getObjects()` 返回纯 Lua 表、没有方法**，也是**卡库的来源**）。
+1. ✅ **D2 已完成（2026-10-09）**：**对局型 mod** 的 `local\games\<游戏>\objects.json` 写好（8 个区块）⇒ `bootstrap.ps1` 可用（`cache\session_map.md` 92 行）。📌 **索引里同一物件常有两行** ⇒ 每块都要 `topLevel: true`；换局用 `bootstrap.ps1 -Inventory`（⇒ `BOOTSTRAP.md` §1b）；**`obj_index.ps1 -File` 要绝对路径**、教学写在 **Notecard** 上。
+2. ✅ **重烤 ＋ 活体验收已完成（2026-10-11）**：`TS_Save_17.json` 上逐条真跑 —— `ping` = `v15-tags-snap-hand`（objs=118）· `players` ⇒ `ok count=2` · `take`/`destroy` 失败路径正常 · `spawn:copy` 正常 · `turn_tracker` 可用 · `container:` 可列牌（详见 §4 第 0 条）。
+3. 🟡 **游戏侧**：本局（第二款 mod）的目的是**验证工具链** ⇒ 规则/座位/图卡**不必做**；✅ **卡库已建成**（`cache\<游戏>_cards.md`，**171 张**，`tts\card.ps1 -Q <牌名>`；生成器 **`tts\tools\cards_from_save.js`**（吃**存档**、文本完整；⛔ `build_cards.js` 是**活体**那条路、取不到牌堆内部的卡 ⇒ `MAINTENANCE.md` §5））⇒ 这一局**已无真待办**；真打时按 `local\games\<游戏>\FLOW.md` §5 问玩家。
+3b. 🔴 **每个新会话要重建"活件"（最容易漏）**：**轮询器**（`tts\tools\turn_poller.ps1`，后台作业、不跨会话）＋ **file 哨兵**（`cache\turn_side.txt`，`pattern=^mine`，**必须显式 `max_fires`**）⇒ `tts\docs\PLAY.md` 回合交接节。
+4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后一块**：**E** demo ＋ 30 秒录屏（需 TTS）；✅ **A** `STATE`/`FLOW`/`MYHAND` 模板 ＋ **C** `tts\setup.ps1` 向导 **已完成**。判据：陌生人只有**公开仓库 ＋ Windows ＋ TTS ＋ 一个 workshop mod**，能否**一小时内**打完一回合（成本期望已写进 `README.md` / `README.en.md`）。🔴 **仍未做**：**冷启动验证**（clone 到新目录 ＋ 独立 `$DSH_HOME`，照 README 走一遍）；已做的部分与它抓到的真缺陷 ⇒ 本节顶部的 🔬。
 5. 🟡 **开源收尾**：`LICENSE`(MIT) ✅ · `README.en.md` ✅ · 路径/隐私 ✅（树里 0 处 `C:\Users\<名字>`）· 离线门禁 **7 条** ✅ ⇒ 剩下"首次上手的时间/成本期望"写进 README 顶部。
-6. ⚪ **平台层不随仓库走**（十几条坑只在 harness home）⇒ 开源用户只有 `tts\docs\MAINTENANCE.md` §0；**"等玩家点结束回合"依赖 DSH 的 sentinel**，换 agent 平台会退化成轮询。
-7. ⚪ **火绒**（环境事实，不是待办）⇒ §9。
-8. ✅ **已归档（2026-10-11，用户拍的）**：`read_turn.ps1`（批量替换事故的残骸 —— 运行期错，`check_ps1` 查不出来）与 `front_watch.ps1`（某一局专用）**都移出了仓库** ⇒ 归档目录 `~\.dsh\archive\tts-legacy\`（**字节一致，已用 SHA256 对拍**）；顺带 `cache\front.txt` 从此没有生产者。台账 ⇒ `tts\docs\VALIDATION.md` F4。
+6. ⚪ **平台层不随仓库走**（坑只在 harness home）⇒ 开源用户只有 `tts\docs\MAINTENANCE.md` §0；**"等玩家点结束回合"依赖 DSH 的 sentinel**，换 agent 平台会退化成轮询。
+7. ⚪ **火绒**（环境事实，不是待办）⇒ `tts\docs\MAINTENANCE.md` §0。
+8. ✅ **已归档（用户拍板）**：`read_turn.ps1`（批量替换事故的残骸 —— 运行期错，`check_ps1` 查不出来）· `front_watch.ps1`（某一局专用）· **`find_moved.js`（2026-10-12，0 引用的一次性调试件）** · **`tests\gen_bridge_alone.lua`（98 KB，F8 的一次性夹具；输入是 gitignored 且已不存在的 `local\scratch\running_global.lua` ⇒ **无法从受跟踪输入重建**、也没有陈旧性对拍）＋ `tools\scan_exec.js`（它唯一的读者）** —— 全部**移出仓库** ⇒ `~\.dsh\archive\tts-legacy\`（**逐件 SHA256 对拍一致**）；`cache\front.txt` 从此没有生产者；`gen_bridge_alone_test.js` **保留在树里**（工具，逻辑仍有参考价值）。台账 ⇒ `tts\docs\VALIDATION.md` F4/F8 · 清单 ⇒ `MAINTENANCE.md` §5「已归档」。
+
+9. 🆕 **外文桌游模组的机翻 —— 省 token 优先（仓库主人 2026-10-12 登记）**：目标 = 把工坊里**英文/日文**桌游 mod 的**卡面文本或图**变成中文，让中文玩家直接能玩。
+   - ⛔ **硬要求**：**不用大模型逐张翻**（那是 token 爆炸的正解反例）⇒ 判据写成可测的：**一副 30 张牌，翻译环节的 token ≈ 0**。
+   - **先找现成**（候选已登记 ⇒ `tts\docs\PRIOR_ART.md` **§9**）：`tts-editor`（Node 版 External Editor API，与我们 `tts_api.ps1` 重叠最大）· `tts-toolkit` · **`tts-card-naming-tool`**（批量改存档卡名）· `ge_tts` · **`LibreTranslate`**（可自托管/离线 ⇒ "0 token"的关键件）· `cardocr` · `playwright-image-translator` · digiKam OCR。
+   - **两条落地路，都挂在存档层（⛔ 不碰活体 TTS）**：① **改文本**（卡名／`GMNotes`／`Description` —— 存档能批量改、不动图，最省）；② **改图**（`CustomDeck.FaceURL` 换成本地生成的译图 ⇒ 要重烤存档；本仓 `install_save2.ps1` 就是**写存档的唯一通道**）。
+   - **接口**：`obj_index.ps1`／`dump_lua.ps1`（读存档）＋ `install_save2.ps1`（写存档）⇒ 整链可离线跑。
+   - ⏸ **实测不急**（主人 2026-10-12）：先用 `tts-editor` 交叉验证我们手写的客户端，再把 `LibreTranslate ＋ cardocr ＋ tts-card-naming-tool` 串成整链。
 
 ## §6 环境与坑 ⇒ 两处（本文件不复述）
 
-- 本仓库要点（沙箱/HIPS/编码/门禁姿势）⇒ **`tts\docs\MAINTENANCE.md` §0**。
-- 平台 ×17 条坑 ＋ 上下文注入与隔离 ⇒ **`platform\MAINTENANCE.md`**（旧编号 §6.8/§6.9 = 那里"校验器阳性对照"两条）。
-- **TTS 桌子本身的开销**（2026-10-09 实测）：重桌子在**后台**仍烧 GPU（647 物件 ≈**73%** vs 空桌 ≈10%）⇒ 拖慢**整机输入**（连记事本都卡，而 CPU 只 10–20%）。修法 = 驱动「**后台应用程序最大帧速率**」20 fps，⚠️ **要重启 TTS 才套用**（不重启 73→73；重启后 73→**11%**）。**用嘴代替手**：DSH **自带**实验性语音输入 `@deepseek-ai/dsh-experimental-voice-input-bundle`（客户端麦克风按钮 ＋ SenseVoice STT）。两条都写在 **`tts\docs\USER_GUIDE.md` §5 常见问题**（面向人，本文件不复述步骤）。
+- 本仓库要点（沙箱/HIPS/编码/门禁姿势）⇒ **`tts\docs\MAINTENANCE.md` §0**；平台 ×17 条坑 ＋ 上下文注入与隔离 ⇒ **`platform\MAINTENANCE.md`**（旧编号 §6.8/§6.9 = 那里的阳性对照两条）。
+- **TTS 桌子本身的开销**（实测）：重桌子在**后台**仍烧 GPU（647 物件 ≈**73%** vs 空桌 ≈10%）⇒ 拖慢**整机输入**；修法 = 驱动「**后台应用程序最大帧速率**」20 fps，⚠️ **要重启 TTS 才套用**（73% → **11%**）。**用嘴代替手**：DSH 自带实验性语音输入 `@deepseek-ai/dsh-experimental-voice-input-bundle` ⇒ **`tts\docs\USER_GUIDE.md` §5**。
 
 ## §7.9 回合交接（**用桌上现成的 Turn Tracker ＋ 一次校准**）
 
-**⭐ 最终结论（2026-10-10）**：回合信号**用玩家自己按的那个 Tracker**（社区件，**`Locked`、在存档里**），**不自己造任何物件**。
-❌ 已全部删除（本轮实验的产物）：`turn_token` / `token_plain` / `spawn_step` / `turn_end` / `turn_get` / `turn_state` 与桥接里的记账变量
-（`DSH_TURN_N`/`DSH_STATE`）—— 它们要么被 TTS 撤销、要么与 `STATE.md` 重复记账（第 4 条：一处定义）。
-完整踩坑（四条硬事实）⇒ **`tts\docs\VALIDATION.md` F11**。
-
-**每款 mod 校准一次**（座位坐标每款都不同，**这一步必须做，别推理**）：
+**⭐ 最终结论（2026-10-10）**：回合信号**用玩家自己按的那个 Tracker**（社区件，**`Locked`、在存档里**），**不自己造任何物件**（⇒ `tts\docs\VALIDATION.md` F11）。
 
 ```powershell
 tts\tools\turn_calib.ps1 -Discover              # 拍快照 → 请玩家按一次 End Turn → 唯一移动的那件 = 信号源
@@ -122,138 +69,27 @@ tts\tools\turn_calib.ps1 -Show                  # 看校准档、证据、当前
 tts\tools\turn_side.ps1                         # 运行时：mine | player | unknown | uncalibrated（哨兵用它）
 ```
 
-- **唯一真源**：`cache\<game>_turn.json`（含 `tracker` guid · 两个落点 · 哪个 z 是"我" · **定这条的原始证据**）。
-- **回合流水**（第几回合）记在 **`local\games\<游戏>\STATE.md`** —— 那是这一局状态的唯一真源，**不另开计数器**。
-- **回合交接**：`tts\tools\turn_calib.ps1 -Discover` → `-Answer mine|player`（写 `cache\<game>_turn.json`，含证据）· 运行时判定 `tts\tools\turn_side.ps1` · **交还** `tts\tr.ps1 -To player`（~0.9 s）。
-  ✅ **那枚 Tracker 自己是好的**（2026-10-11 玩家实测）：按一下 ⇒ 颜色前进 ＋ 棋子挪到那位的手牌位置。
-  ⛔ 我先前写"它用已删除的 `getPlayerHand()` ⇒ 玩家手按也不动" —— **错**（那个方法**存在**）；真因是它 **`Name` 字段为空**（⇒ `currentColor` 为空 ⇒ 找不到下一个颜色）。
-  ⚠️ **我们改不了它的颜色**（四条路试尽：`callx` 弄挂 TTS · `messageID 3` 空环境 · 写 `script_state` 被 `onSave` 覆盖 · 改 `Name` 只管轮转范围）⇒ **位置是唯一判据，可能要点两次才换边**（玩家已接受）。全表 ⇒ `VALIDATION.md` F13。
-  ⚡ **检测用 file 快链**（`turn_poller.ps1` 2.5 s ＋ file 哨兵 inotify ⇒ **~0.5-3.3 s**）；⛔ 旧的 `command` 哨兵实际 **~20 s** 一次，别再用（⇒ `BOOTSTRAP.md` §2 的「哨兵的周期限制」）。
-- ⛔ 判定错了 ⇒ **重跑 `-Discover` ＋ `-Answer`**，**不许**改代码里的数字或用坐标反推（脚本头部有这条）。
+- **唯一真源**：`cache\<game>_turn.json`（`tracker` guid · 两个落点 · 哪个 z 是"我" · **原始证据**）；**回合流水**记在 `local\games\<游戏>\STATE.md`，不另开计数器。
+- **交还**：`tts\tr.ps1 -To player`（~0.9 s）。✅ **Tracker 自己是好的**（玩家实测）：按一下 ⇒ 颜色前进 ＋ 棋子挪到那位的手牌位置；⛔ 我早先"它用已删除的 `getPlayerHand()`"**是错的**（真因 = `Name` 字段为空）。
+- ⛔ **我们改不了它的颜色**（四条路都不行：`callx` 弄挂 TTS · `messageID 3` 空环境 · 写 `script_state` 被 `onSave` 覆盖 · 改 `Name` 只管轮转范围）⇒ **位置是唯一判据，可能要点两次才换边**（玩家已接受）。全表 ⇒ `VALIDATION.md` F12/F13。
+- ⚡ **快链**：`turn_poller.ps1` 2.5 s 一采 ＋ file 哨兵 inotify ⇒ **~0.5-3.3 s** 叫醒我（**平台投递另加 ~23 s，不在我们手里**）；⛔ 旧的 `command` 哨兵 **~20 s**，别用（⇒ `BOOTSTRAP.md` §2「哨兵的周期限制」）。
+- ⛔ 判定错了 ⇒ **重跑 `-Discover` ＋ `-Answer`**，**不许**改代码里的数字或用坐标反推。
 
+## §8 每请求注入（机制/预算/安装 ⇒ `tts\docs\INJECTION.md`）
 
+平台宪章 **2,217** ＋ 项目 `AGENTS.md` **1,982** ＋ 本机 `AGENTS.local.md` **848** ＝ **5,047 B ≈ 4.93 KB/请求**（硬指标：**<5 KB**；此前 11.4 KB）。
+瘦身原则：**只留"触发条件 ＋ 结论"**（例子与机制转指针 ⇒ `MAINTENANCE.md` §0 · `INJECTION.md` §4 · `USER_GUIDE.md`）；**凡"门禁已经守着"的判定，注入里不再复述**。
+⚠️ 三条硬约束：`instruction hygiene` 会抓"**承载性指针被删**"（`start-agent.ps1`/`PLAY.md`/`local\games`/`tts\config.ps1`/`check_ps1.ps1` **必须留在项目层**）＋ 项目层 ≤3840 B ＋ 本机层 ≤4096 B；⚠️ 平台层**处处都注入** ⇒ 加条目前先问"它能不能落在项目文档里"，**加完重新量三份合计**。
+发布时**先填那一行**（`start-agent.ps1` 里现在还是 `''`）：`$ProjectDshProfile`（或 `-DshProfile tts-agent`；⚠️ **不是** `dsh tts-agent web`）⇒ 全局槽清零后 ＝ 项目 ＋ overlay（**实测 = 2,830 B**）⇒ **`tts\docs\INJECTION.md` §4 方案 A′**。
 
-## §8 每请求注入（摘要；机制/预算/安装 ⇒ `tts\docs\INJECTION.md`）
+## §9 会话纪要（理由在 git 提交信息里，只留结论）
 
-平台宪章 **2,217** ＋ 项目 `AGENTS.md` **1,982** ＋ 本机 `AGENTS.local.md` **848** ＝ **5,047 B ≈ 4.93 KB/请求**
-（用户 2026-10-10 定的硬指标：**注入总量 <5 KB，超了思考时间过长**；此前是 11.4 KB ⇒ 本轮省 **6.5 KB/请求**）。
-瘦身原则：**只留"触发条件 ＋ 结论"，例子与机制说明全部转指针**（`MAINTENANCE.md` §0 · `INJECTION.md` §4 · `USER_GUIDE.md`）；**凡"门禁已经守着"的判定，注入里不再复述**。
-⚠️ 三条硬约束：**`instruction hygiene` 会抓**"承载性指针被删"（`start-agent.ps1`/`PLAY.md`/`local\games`/`tts\config.ps1`/`check_ps1.ps1` **必须留在项目层**）＋ 项目层 ≤3840 B ＋ 本机层 ≤4096 B。
-⚠️ 平台层**处处都注入** ⇒ 往那里加条目前先问"它能不能落在项目文档里"（项目层只在有 `.git` 的工作区注入）。**加完必须重新量三份合计**。
-发布时**要先填那一行**（`start-agent.ps1` 里现在还是 `''` ⇒ 默认照旧注入全局那份）：`$ProjectDshProfile`（或 `-DshProfile tts-agent`；⚠️ **不是** `dsh tts-agent web`）⇒ 全局槽清零后 ＝ 项目 ＋ overlay（**2026-10-11 实测两项相加 = 2,830 B**；当前含全局 = **5,047 B**）。机制/目录结构/装法 ⇒ **`tts\docs\INJECTION.md` §4 方案 A′**。
-
-## §9 会话纪要（**理由全在 git 提交信息里**，这里只留结论）
-
-- **2026-10-11 13:59 · ✅ hub 验收通过（干净窗口）**：`watch-3` 报窗口开 ⇒ `ping` = `v16-tracker-guid` → `turn_side` = **`mine`** → **`tr.ps1 -To player` 交还成功**（经 hub）→ **`live_smoke.ps1` 17/17** → 之后 `39999` **仍在 LISTENING**、再 ping 正常。hub 这一轮**连续服务 22 条**（含 17 条连发 ＋ messageID 3），**28–79 ms**，**零 `listener busy`** ⇒ **`VALIDATION.md` L19 从 ⚠️ 转 ✅**。
-  - ⚠️ **本轮有意不起常驻轮询器**（"轮询器烧窗口"那条线索要验；而且 `MAINTENANCE.md` §5 已改成**优先按需轮询** `-Minutes 3`）。⇒ 建议下一步就按"按需"重建链路（玩家轮到时开 3 分钟），别回到常驻 2.5 s。
-
-- **2026-10-11 13:45 · 对照实验：guid 与 v16 都无罪**（用户选了"做实验"）：**被动 120 s 无命令 ⇒ 端口全程 OPEN**（不会因闲置掉线）；随后经 hub 连做 **2 条对照**（`turn_tracker` ＋ **正确 guid**，与轮询器同一条）＋ 1 条处理（不同 guid）⇒ **第一条对照就掉**（`no reply 25s` ⇒ closed）⇒ **guid/真假/v16 的 `m.guid` 路全部排除**，"连发"也不是必要条件（那是窗口里第一条命令）。再被动 180 s ⇒ 一直 closed（这次 >3 min 没自己回来，上次 ~2.5 min 就回来了）⇒ **不是固定节拍**。
-  - 🔎 **唯一幸存的线索（n=6）**：**每次掉线都紧跟一次 `ds.ps1 -Json … -Raw`**；同窗口里的 `-Do` 形式、桥接调用（含轮询器 4 条、`tr.ps1` 的 messageID 3）全都好 ⇒ **暂缓使用 `ds.ps1 -Json -Raw`**（改用 `-Do`／桥接），并在 `VALIDATION.md` F14 记下这条与"API 会随时消失 ⇒ 工具要能容忍"的处置。
-  - ✅ **hub 反而被这次实验证了**：6 次掉线里它在岗的那几次都只是如实报 `hubErr=PORTCLOSED`，**从未** `listener busy`；换窗口后照常服务。
-  - ⏭️ **欠**：`live_smoke.ps1` 的 17 条连发验收（本轮窗口太短没跑成）· L18 的正向验证（等一个稳定的窗口）。
-
-- **2026-10-11 13:40 · hub 上岗实测 ＋ 第 5 次掉线**（本会话）：TTS 的 API 回来后按 `STATE.md` 的顺序**一条一条**走完：
-  - `ping` = **`v16-tracker-guid`**（13:40:18）→ `turn_side.ps1` = **`mine`** → **`tr.ps1 -To player` 交还成功**（`tr: z=-15 state=["Brown"]`，**`done; replies=1 (via hub)`** —— 那条正是过去撞 `listener busy` 的路）→ 起轮询器（`poller: start side=player`）＋ 挂 file 哨兵 `watch-4`（`^mine`，`max_fires=500`）。
-  - ✅ **hub 这一段站得住**：在岗期间连续服务 **8 条**（含轮询器 4 条），**28–101 ms**，**零 `listener busy`**；客户端经它拿到 `raw` / `hubErr=PORTCLOSED` 都正常（⇒ `VALIDATION.md` **L19** 部分通过）。
-  - ⛔ **然后第 5 次掉线**：我为补 **L18** 发了**一条**（经 hub、**没有连发**）`turn_tracker` ＋ **真实但不同**的 guid（手牌计数板）⇒ 25 s 无回执，随后 `39999` 不再 LISTENING（hub 日志接着是 `turn_tracker PORTCLOSED`、`index PORTCLOSED`）。
-    ⇒ **"连发"不是全部原因**：**5 次掉线**（3 次假 guid ＋ 2 次真实不同 guid）**全都**紧跟这种"给 `turn_tracker` 一个非 tracker 的 guid"的请求 ⇒ **嫌疑回到 v16 新增的 `m.guid` 这条路**（机制未查明；`getObjectFromGUID` 本来包着 `pcall`）。
-    ⛔ **已停手**：不再试这条；轮询器已停（API 不通时每 2.5 s 白起两个子进程）；**等用户决定**：**撤回 v16 的 guid 参数**（回到"只认烤进去的常量"，风险面消失、代价是校准档与常量两处定义）还是**做一次受控实验**。
-
-- **2026-10-11 13:3x · 🧩 hub 落地（本会话）**：把 `PRIOR_ART.md` 指的那个方案做出来了 —— **`tts\tools\tts_hub.ps1`**：常驻进程**一次性独占 39998**，其它工具把信封投到 **39997**（一行 JSON：`{envelope,want,timeoutSec}` → `{raw,skipped,ms}` 或 `{hubErr,…}`，hub 自己的错用 `hubErr`，**绝不与 TTS 回复里的 `err` 混**）。
-  - `ttslib.ps1` 的 `Invoke-Tts` **优先走 hub**，没有 hub 就**原样回落**自绑 39998（行为不变）；`tools\exec_script.ps1` 也改成 **hub 优先**（`want=any`，它要的是 print/error 那种非 4 号包）—— **交接时那个 `listener busy on 39998` 正是从这条路上来的**。
-  - **离线已验证**：hub 起停正常、两个端口都由它持有（PID 一个）；TTS 不在时客户端经 hub 得到 `hubErr=PORTCLOSED`（`ds.ps1` 显示为 `ERR TTS unreachable`），**不再有 listener busy**；停掉 hub 后客户端回落老路径同样正常；`cache\hub.log` 记 `cmd=…`（心跳/诊断）。
-  - ⛔ **待做**：TTS 回来后的**连发压力测试** —— `tests\live_smoke.ps1` 17 条 + 轮询器并存（⇒ `VALIDATION.md` **L19**）。这也是"四次掉线"的最终验收。
-  - 起链顺序已写进 `PLAY.md` / `BOOTSTRAP.md` §1 E：**先起 hub，再起轮询器**。
-
-- **2026-10-11 03:5x · 🔁 桌面交接**：**原会话（跑对局那个）上下文满了 ⇒ 本会话接管那台桌面**。
-  接手时的状态：**TTS 的 API（39999）在反复开合**（`03:51:23` 还 `ping = v16-tracker-guid`，随后 `no reply in 25s` ⇒ `ERR TTS unreachable`；同一 TTS 进程，`Player.log` 里 `Curl error 56 … reset` 满 100 条 ⇒ `VALIDATION.md` **F14**）。
-  ⇒ 已挂 **port 哨兵盯 `39999`**（`watch-2`，开了才动手，**不再连发探测**）；链路（轮询器 ＋ file 哨兵）**等 API 稳定后再重建**（步骤 ⇒ `tts\docs\PLAY.md` 回合交接节）。
-  ⚠️ 两条硬规矩继续有效：**同一时刻只有一个会话驱动桌面**；**动手前先 `git log`／`sentinel_list`**（上一轮两个会话就撞过同一个回合）。
-  - 🧹 **删掉遗留件 `DSH-TURN`（`a7bf2e`）**：`destroy:a7bf2e` ⇒ `ok`，复核 `read:a7bf2e` 回 `no object`、`objs 120→119`（F11 那批实验的"物"清掉了）。
-  - ⛔ **随后为了验 L18 发了一条 `turn_tracker` ＋ 假 guid `deadbeef` ⇒ 第三次把 TTS 的 API 打哑**（前两次 03:44/03:51）⇒ 规矩写进 `VALIDATION.md` **F14**：**永不用不存在的 guid 测桥接**；L18 改用**正向验证**（拿一枚真实存在但不是 tracker 的件，应回**它的**位置）。
-
-- **2026-10-11 凌晨（第三轮 · 归档 ＋ 重烤 v16）**：
-  - 📦 **归档**（用户拍板）：`read_turn.ps1`（批量替换事故的残骸；**运行期**坏、`check_ps1` 查不出来）与 `front_watch.ps1`（某一局专用的前台横幅链）**移进 `~\.dsh\archive\tts-legacy\`**（SHA256 对拍一致）＋ `git rm`；`cache\front.txt` 从此没有生产者。指针同步 6 处：`MAINTENANCE` §5 那行 ＋ 跨脚本引用图 · `VALIDATION` L13/F4 · `BOOTSTRAP` §1 E · `TTS_RULES` §三 · `docs\README` 的 `cache\` 行 · 本文件 §4 第 8 条。
-  - 🔌 **重烤出 `TS_Save_18.json`**（显示名 = **该局游戏名 ＋ `-v16`**，具体值 ⇒ 该局 `STATE.md`；源 = 最新自动存档；`-KeepLua -KeepTabs`，13 页笔记本原样、DSH 频道页已在）：桥接升到 **`v16-tracker-guid`** —— `turn_tracker` 现在接受调用方给的 `guid`（`turn_side.ps1` / `play.ps1 status` 传 `cache\<game>_turn.json` 的 `tracker`），烤进去的常量只兜底 ⇒ **读的那件 = `tr.ps1` 写的那件**。产物校验：`v16-tracker-guid` 命中、旧 `v15-tags-snap-hand` **0 处**、tracker guid 仍在。
-  - ✅ **玩家已重载（03:44）**：`ds.ps1 -Do ping` ⇒ **`ok v=v16-tracker-guid objs=118 loads=1`** —— 桥接确实换成了 v16，`turn_tracker` 的 guid 参数已在盘上。⛔ 但**活体验证没做完**：20 秒后 TTS 就不再监听 39999（⇒ `VALIDATION.md` **F14**，根因未定）⇒ "`guid=deadbeef` 应回 `no object with guid deadbeef`"那一步还欠着。
-  - ⚠️ **同一时段还有另一个 DSH 会话在这个仓库里干活**（提交 `d04f452`，03:45:51 "fix(turn): survive the 39998 contention the fast chain introduced"）：它那一次**交接**撞上 `listener busy on 39998` ⇒ 把 `exec_script.ps1` 的绑定重试提到 **6 次/~10 s**，并把根因写进文件头（**39998 只有一个槽**，轮询器每 2.5 s 占一片；**根治 = 常驻进程独占 39998**，即 `PRIOR_ART.md` 的 hub 方案）；随后它也发现 **TTS 已关闭**，于是**停轮询器、取消它那个 file 哨兵、删掉还在写 `mine` 的 `cache\turn_side.txt`**。
-    ⇒ 两条纪律：**同一仓库别让两个会话同时驱动桌面**（谁在跑对局谁负责重建活件）；**先 `git log` 看一眼**再动共享文件（本轮我的提交就叠在它的提交之上，没冲突）。
-  - 🧰 **新现役工具 `tts\tools\dump_lua.ps1`**（把存档里物件的 `LuaScript` 抽成文件；`-Guid` 单件 / 默认全部 / `-List` 只报不写）—— 修的是归档里那份 `dump_scripts.ps1`（曾写死两条机器路径）。**已验**：`-Guid 0e731f` 抽出的 tracker 脚本与先前那份备份 **SHA256 一致**（5,578 B / 170 行）。
-  - 🔎 **它顺带抓出一个遗留**：桌上还有一枚我们造的 `DSH-TURN`（`guid a7bf2e`，2,053 B，`state {"n":0}`）—— F11 那批实验的**件**（代码删了，件没删）；没有任何引用 ⇒ **可删**（⇒ `VALIDATION.md` F11）。
-  - ⛔ **03:45 TTS 失联**（不再监听 39999、`Player.log` 停在 03:45:05）：候选 ① 我发的**缺 `customMessage` 的信封**、② TTS 自己在大量 `Curl error 56` 之后卡住 —— **根因未定**，按"未解＋未验证"记进 `VALIDATION.md` **F14**；教训两条：**`-Json` 只发完整信封**、**一条一条探**（F10 的老规矩）。⚠️ 轮询器为了诊断**已停** ⇒ TTS 回来后重挂（本文件 §4 第 3b 条 ＋ `PLAY.md`）。
-
-- **2026-10-11 凌晨（第二轮 · 事实核对）**（`ec971b8` ＋ 随后一次）：**拿台账把文档逐条对了一遍**，改掉一批"文档在说谎"的地方。
-  - **结束回合**：`getPlayerHand()` 那条**旧结论全删**（实测那个方法**存在**；真因是它的 `Name` 字段为空）；补上"按的是**存档颜色的下一位**"、"`Locked=true` ⇒ **玩家也拖不动**"、"颜色与位置可能错位 ⇒ **可能要点两次**"、"**平台投递另加 ~23 s**（总感知 ~25 s）"。涉及 `TTS_RULES` §三 · `PLAY` · `USER_GUIDE` · `tr.ps1` 头。
-  - **数字全部重量过**：门禁 **7** 条（en 版写 6，已改）· `tts\` 下 **45** 个 `.ps1`（README 写 40）· 注入 **5,047 B**（`tts\doctor.ps1` 实测；README 把项目那份写成 2.9 KB）· 平台坑 **×17**（docs/README 写 ×16）· 桥接用例 **30**（两处写 16 / 31）· 进程启动 **~0.27 s**（两份 README 写 0.35 s）。
-  - **`$DSH_HOME` 的说法原来反了**：启动器**默认不动**它 ⇒ harness home 那份 `AGENTS.md` **照旧注入**（两份 README 原文写"机器上不放、全局槽零注入"）。发布配置要**先填** `$ProjectDshProfile`（代码里现在是 `''`）。
-  - **`PLAY.md` 的"通用"动词表其实是一款游戏的控制层**（且 `status` 一行与同文件自相矛盾）⇒ 换成通用形状＋指针；骰子/结算顺序那几条改指该局 `FLOW.md`。
-  - **`BOOTSTRAP` 结构性重排**：§1 的**两个 `D.`** 拆成 D/E 并补上**现行回合交接链**（校准 ＋ `turn_poller` ＋ `^mine` file 哨兵 ＋ **`max_fires` 必须显式**）；`front_watch → front.txt → TURN=` 标为**已停用**；§2 的 `A·C·B·C` 理成 A/B/C（校准改成不带字母的"每款一次"）；§1 里那段**夹在两步中间的排障块**挪成 §1c；删掉与 `setup.ps1 -InitGame` 打架的**手抄骨架**；§6 的 `v12-callx`/`init.ps1`/`front_watch` 实例更新。
-  - **代码侧（都活体验过）**：`tracker_read.lua` 里那枚**写死的本局 guid** 换成 `__GUID__`（由 `exec_script.ps1 -Guid` 替换）⇒ 实测读回 `LOCKED/LIVE_COLOR/LIVE_NAME`；`tr.ps1` 删掉**猜坐标的兜底**（校准档没有落点就报错退出，实测 dry-run 走校准档）；`live_smoke.ps1` 不再写死某局颜色，改用校准档的 `stateMine`（**只读我方手牌**，符合隐藏信息纪律）⇒ 活体 **17/17**。
-  - **新发现（当时未修；2026-10-11 已归档，见上一轮）**：`read_turn.ps1` **本体是批量替换事故的残骸**（`$hotsDir`/`$ilentlyContinue`/`$img.$Dispose()`/`$ist`）：`check_ps1.ps1` 报 **0 错**（这些都是"合法的" PowerShell，未定义变量不是语法错），但一跑就错，而 `front_watch.ps1` 每轮都调它 ⇒ 那条已停用的链**即使重启也跑不起来**（⇒ `VALIDATION.md` F4）。
-- **2026-10-11 凌晨**（`fc9eba6`）：**文档按"规则 / 代码"分家**（用户拍的边界：**代码相关进 `MAINTENANCE.md`**、**接手新 mod 的流程进 `BOOTSTRAP.md`**）。
-  - `TTS_RULES.md` **只留现场规则**：跟人配合 · 一回合 · 按钮定案（**§三**）· 能力边界 §四（差分/Lua 沙箱/计数器/移动/落板）· 找物认牌 §五 · 截图 §六 · **TTS 行为坑 §七** · 换局 §八。
-  - 迁出：**§二 工具清单**（含目录 · 跨脚本引用 · ⭐**两层怎么分**）⇒ `MAINTENANCE.md` **§5** · **§八 改游戏内 Lua** ⇒ **§6** · **§九 的 sanity check ＋ PowerShell 陷阱表** ⇒ **§7** · **§九 的 8 步开局** ⇒ `BOOTSTRAP.md` **§2c**。
-  - 章号重排 ⇒ **同步改掉 8 处跨文档 §引用**（README ×2 · docs/README · CONTRIBUTING · PLAY ×2 · USER_GUIDE ×2）；顺带修掉一个**失效锚点**：`BOOTSTRAP.md` §C（那节**从来不存在**）⇒ §2 的「哨兵的周期限制」。
-  - 体积：`TTS_RULES.md` 31,727 → **20,291 B** · `MAINTENANCE.md` 13,853 → **24,480 B**（总量持平）。⚠️ 分家的理由不是省 token，是**读场合**：TTS_RULES 每个新局开工读一次，MAINTENANCE 只在动手改脚本/改 Lua 前读 —— 代码塞在前面等于每次开工都替它付钱。
-  - 门禁 **7/7 绿**（`run_all.ps1`）；`test_doc_refs.ps1` 那条路径引用也在门禁里过了一遍。
-- **2026-10-10 夜 → 10-11 凌晨**（`0158c43` … `f86bd65`，约 20 个提交）：**回合交接定稿 ＋ 一次全面体检**。
-  - **回合交接（最终形态）**：玩家**按**桌上那枚社区 **Turn Tracker**（`Locked`，**拖不动**）⇒ 我读**棋子位置**判"轮到谁"（**每款 mod 一次校准** `tools\turn_calib.ps1` → `cache\<game>_turn.json`）⇒ 我 **`tts\tr.ps1 -To player`** 交还（~0.9 s）。
-    **叫醒** = 常驻作业 `tools\turn_poller.ps1`（2.5 s，变化才写 `cache\turn_side.txt`）＋ **file 哨兵**（`^mine`，<1 s）⇒ 检测 **~0.5-3.3 s**；**平台投递另加 ~23 s（不在我们手里）**。
-    ⚠️ **每个新会话要重建这两个活件**（轮询器是后台作业、哨兵 `max_fires` 必须显式给）⇒ `PLAY.md` 回合交接节。
-  - **四条死路（都实测，别再试）**：① `callx`/`Object.call` 驱动别的 mod ⇒ **TTS 失联两次，从未修复**；② `messageID 3`（官方 External Editor API）**安全但跑在空环境**（读不到物件私有变量、返回值不回）；③ 外部写 `o.script_state` **只生效一瞬、被它的 `onSave` 覆盖**；④ 改它的 `Name` 只影响**轮转范围**。⇒ 结论：**位置是唯一判据**；玩家可能要**按两次**才换边（玩家已接受）。全表 ⇒ `VALIDATION.md` **F12/F13**。
-  - **上下文瘦身**：每请求注入 **11.4 KB → 5,047 B**（平台宪章 3,950→2,217 B，三份合计硬指标 **<5 KB**）⇒ 平台宪章新增三条纪律（有现成答案就别蛮干 · "社区"含生态/插件市场 · 先质疑载体 ＋ 事实来源优先级）。
-  - **开源就绪**：`play.ps1` 在**没有控制层**时也能给通用 `status`（桥接版本/物件数/在位玩家/轮到谁）· `setup.ps1` ＋ `tts\templates\` 建新游戏骨架 · README 写清首次上手成本 · **`local\` 321 MB → 3 MB**（删废弃插件评估副本与 npm 缓存）· 仓库顶层两个垃圾文件已删。
-  - **速度**（实测基线：**一个 PowerShell 进程 = 271 ms**）：`turn_side.ps1` 1028→**620 ms**（改**同进程**调桥接；轮询器占空比 40%→25%）· `tr.ps1` 12.9 s→**0.9 s**（原在**空等回执窗口**）。
-  - **活体检验**：新增 `tts\tests\live_smoke.ps1`（17 条**只读**命令逐条 PASS/FAIL）⇒ **17/17**。离线门禁证明不了"命令在活体上能不能用"。
-  - **文档合并**：`TTS_WORKFLOW.md` 并入 **`TTS_RULES.md`**（42,480 → **31,727 B**）⇒ 修掉 3 个**已不存在**的脚本引用（`overview`/`alt_activate`/`star_find`）＋ 3 处过时说法（STATE 路径 · `play.ps1 turn` 的适用条件）。⚠️ 实测只省 **~3.4k tok**，**不是**我先估的 20k。
-- **2026-10-08**：脚本全修（BOM ＋ 真解析器 ×28）· 效率（`play.ps1 turn` 1.5s · `say.ps1` 单进程 · `AGENTS.md` 瘦身）· 官方规则书落地（`Custom_PDF` → Node 下载 → 抽页 → 索引）· 门禁与离线自测入库 · 平台层迁出仓库。
-- **2026-10-09 场 1**（`d2971a8` … `adfc650`）：`nick` 纳入差分 · **回合令牌 Lua（`v13-turntoken`）** · `INJECTION.md` · 三槽去重 · 门禁改"文件输出 ＋ 成功标志" · 记下"六个门禁要在受限模式下跑"的目标。
-- **2026-10-09 场 2**（`6e643c1` · `e22911d` · `2f7e5cd` · `1664441` · `ba6135d` · `98dfab2`）：
-  - **D0**：diff 链去掉顶层 `exit`（改 `return`）＋ 门禁**同进程调用** ⇒ **6 条门禁在受限模式下全绿**，「需要完全权限」作废。
-  - **D**：**认物数据离开代码** —— `cache\<game>_alias.json` ＋ `local\games\<游戏>\objects.json`（新增 **`-Inventory`** 半自动产出）＋ 第 6 个门禁 `test_game_data.ps1`（**否定用例**才证明"数据不在代码里"）。
-- **两条实测纠正**（细节见 `tts\docs\MAINTENANCE.md` §0 / 平台宪章）：
-  - **`exit`**：在**脚本文件**里被该文件自己的边界接住（`&`/`.` 调用者不死，码只进 `$LASTEXITCODE`）；只有**没有脚本边界**的 `exit`（`iex`、手贴代码）才当场结束进程 ⇒ 宪章那句**已改准确**。
-  - **火绒**：命中规则 `rp_name_execcreate_powershell_hidden`，**触发者永远是 harness 自己**（`node.exe` ＋ `-NonInteractive` 隐藏起 PowerShell）；**触发条件未查明**（"叠加惯用法才触发"这条我自己的结论**已被重复实验推翻**）；**用户 20:14:04 改配置后 20+ 次调用零匹配**（时间吻合、因果未证）；已知被掐的调用带 `treatment=3`。**查法 ⇒ `MAINTENANCE.md` §0**。
-
-- **2026-10-09 场 3**（**验证转向**：目标从"打游戏"改成"验项目"）：
-  - **通用性首次有了反例**：第二款真 mod（**非对局型**）⇒ 传话/存档/索引/认物/地图**全过**，`play.ps1` **FAIL**。
-    ⇒ 逐层台账（断言 · 证据 · **未验就写未验**）＝ **`tts\docs\VALIDATION.md`**；`play.ps1` 的边界写进 `MAINTENANCE.md` §5 的「两层是怎么分开的」。
-  - **硬线落地**：受跟踪文件里 **0 处真游戏名**（唯一例外 = 两个 README 的授权声明）⇒ 门禁 `test_agents_hygiene.ps1` 新增扫描 ＋ **4 条自检**（看见植入名 / 分支数 / 条目数 / 除 BOM 外纯 ASCII）。上线即抓出 **14 个文件**的违规。
-  - ⚠️ **这次"假绿"抓了两回**：① 淘汰名单写成 `@('a' + 'b', 'c' + 'd')` ⇒ 数组只有 1 个元素、正则**没有 `|`**、扫描器全瞎，而阳性对照因为**用同一个坏串**照样 PASS；② 后来一次合并编辑**吃掉一行** ⇒ 某个名字悄悄不再被扫（分支数检查 7/7 也照样 PASS）⇒ 补"条目数必须等于 N"。
-  - ⚠️ **真事故两条**（⇒ `MAINTENANCE.md` §0/§4）：**丢 BOM → 工具壳按 ANSI 读 → 语法错 → `check_ps1` 把乱码固化**；**编辑工具把 `dsh_global.lua` 行尾归一**（2 行注释变 95 增 95 删，靠 `git diff --numstat` 抓出并重做）。
-- **2026-10-09 场 4**（**目标重定义 + 分层落地**）：
-  - ⭐ **责任边界改了**：我们**不做**"能照着打任何一款的控制层"（那东西不存在）；我们交付 **①TTS 原语的通用层** ＋ **②用户低成本"教出"某一款控制层的规程**。
-    ⇒ 判据随之变成两问：**原语覆盖够不够** · **教一款快不快**。`play.ps1` 不可通用**不再是缺陷**（`VALIDATION.md` F1 已重新定性）。
-  - **分层落到目录**：`tts\` = 通用层（＋ `tts\lib\bridge.ps1` 传输包装）；`tts\play.ps1` = **分发器**（纯 ASCII、无游戏知识）；
-    某款的控制层（`play`/`dice`/`rules`/`verbs`）**移出仓库** ⇒ `local\games\<游戏>\control\`（`local\` 被 gitignore ⇒ 公开树里真的没有了）。
-    新路径由 `config.ps1` 提供：`$DshGameControl` · `$DshLibTtslib` · `$DshLibBridge`。**教法 ⇒ `BOOTSTRAP.md` §2b**（新增）。
-  - **待办重心转移**：`VALIDATION.md` **F6** ＝ 原语缺口清单（`takeObject` 点名取牌 · `spawnObject` 造物 · `getPlayers` 座位权威 —— 这三条是"教得动"的硬前提）；**F2**（翻牌朝向只在一张桌标定过）仍需复验。
-  - 📌 两条"设计坑"记下来了：`ValueFromRemainingArguments` 会**吞掉位置动词**（改用 `$args`）；dot-source 会**改写 `$PSCommandPath`**（控制层的 BOM 自检必须在 dot-source **之前**捕获自己的路径，否则误报）。
-- **2026-10-09 场 5**（**补 F6 原语缺口**）：
-  - **桥接升到 `v14-primitives`**：新增 `players`（座位权威：谁/什么颜色/手牌数/**轮到谁**）· `take`（取**指定** CardID 那张，非顶张）· `spawn`（`json` ／ `copyguid` 复制 ／ 纯 `type`）· `destroy` · `player`（TTS 自带回合标记 / 盲挡）。
-    入口也接上了：`ds.ps1 -Do 'players' | 'take:<堆>:<CardID>:<x>:<y>:<z>' | 'destroy:<g>' | 'spawn:copy:<g>:<x>:<y>:<z>' | 'spawn:type:<类型>:<x>:<y>:<z>' | 'player:<Color>:<turn|blind>'`（spawn 的完整 JSON 走 `-Json`）。
-  - ⚠️ **要生效必须先重烤存档**：桥接烤在存档里 ⇒ 现在跑着的 TTS 是 v13，新命令回 **`no handler for cmd=players`**（实测）。
-  - **第 7 条门禁 `bridge primitives (Lua)`**：本机没有 lua 二进制 ⇒ 装 **fengari**（JS 里的 Lua VM），把**从真文件抽取**的代码块放进桩 TTS 环境真跑 —— **16 条用例**，含"缺卡/幽灵容器必须报错而不是静默"。⚠️ 已装依赖在 `local\scratch\luatest`（不进仓库）⇒ 新机器要按 `MAINTENANCE.md` §1 装一次；**缺它 = NOT RUN，不是 PASS**。
-  - ⛔ **仍缺**：`cut`/`paste`/`drop`（已进 `act` 白名单但**未验**）· `copy`/交易（**无文档 API**）；**活体验证（F7）**要在重烤后把 v14/v15 各跑一次。
-- **2026-10-09 场 6**（**把 F6 剩下的补齐**）：
-  - 桥接升到 **`v15-tags-snap-hand`**：`container`（列出 Bag/Deck 内容＋数量＋tags）· `hand` 的新动作 `holding`/`give`/`draw`（**摸牌进手**：`Deck.deal`，非牌堆回落 `dealToColorWithOffset`）· `act` 新增 `setTags`/`addTag`/`removeTag`/`hasTag`/`hasAnyTag`/`hasMatchingTag`（**数组参数**，`value=标签1+标签2` 或 `list`）· `setSnapPoints`（`value=x,y,z;x,y,z`）· 成员变量 `use_snap_points`/`locked`/`memo`/`tooltip` ＋ **`act` 现在可用 `player="Teal"` 把 Player 当作用对象**（`getHandCount`/`getHandTransform`/`getHoldingObjects`）。
-  - 📌 **查了官方 API 才写的**（`api.tabletopsimulator.com`）：⚠️ **`Player.takeObject` 根本不存在** —— Player 只能 `getHandObjects(hand_index)`/`getHandTransform`/`getHoldingObjects`，所以"摸牌进手"的正路是**物件侧**的 `deal`/`dealToColorWithOffset`（我上一轮的设想是错的）。TTS = v14.2.2。
-  - 测试从 **16 条扩到 25 条**（新增 9 条 hand 动作；`act` 的深层分支**离线抽不出来** ⇒ 只能源码级断言，真行为留给活体）。
-  - ⚠️ 三个**新坑**（都当场抓到）：① 拼接脚本自己的 Lua 文本里有**反引号** ⇒ 把 JS 模板字符串提前闭合（改成数组 join）；② 单行锚点**不许假设行尾**（同一函数里两种行尾都有）；③ `hand` 的 if 链在 `take` 分支后就 `end` 了 ⇒ 新 `elseif` 插在**链内**才对（插到 `end` 之后 Lua 直接报语法错，已验证）。
-- **2026-10-09 场 7**（**F8 定案：拼接进函数体内**）：
-  - 🔍 **根因**：v14 那段原语被拼接进了 `setCount()` 中间 ⇒ 少一个 `end`、尾巴多一个 ⇒ **平衡 ⇒ 能编译、能注册、名字全 nil**。
-    `hand` 活着是因为它在**拼接点之前**；那四个死在**之后**。台账里那条"矛盾证据"**根本不矛盾**（推论/证据 ⇒ `VALIDATION.md` F8）。
-  - 🧰 **新工具 4 个**（`tts\tools\`，用法 ⇒ `MAINTENANCE.md` §1a）：`run_and_capture.js`（**抓子进程输出的唯一可靠姿势**）·
-    `scan_exec.js`（逐行首语句报 `IN`/`NOT-IN`）· `check_block_depth.js`（每行块深度 ＋ 是否平衡）· `verify_f8.js`（每个行首定义的函数加载后是否真的存在）。
-  - ⚠️ **两个假信号，各花掉一轮**（最值钱的一课）：
-    ① `execFileSync` 在本沙箱**抛异常且 stdout/stderr 都是空** ⇒ 读起来就是"子进程什么都没打印"；
-    ② 这些 Lua 文件是 **CRLF** ⇒ `split('\n')` 后每行**尾带 `\r`** ⇒ 行首判定全失配、**往行尾追加的标记永远不到达** ⇒
-       看起来像"这一大片代码根本没执行"。⛔ **按行处理必须先 `.replace(/\r\n/g,"\n")`**。
-  - 📌 **"门禁全绿"只证明它检查了的东西**：第 7 条门禁的抽取块**起点在拼接点下方** ⇒ 整段跳过死区 ⇒ 7 条全绿也看不见它。
-    所以要单独问一句：**"这块 chunk 装得上、名字都在吗"** —— 现在 `test_bridge_primitives.ps1` 里加了第 2b 步
-    （`verify_f8.js`：**每条行首定义的函数**加载后是否真的存在，判定看子进程写的 `VERDICT=` 状态文件）。
-    **阴性对照已验**：装回"平衡但错位"的坏版本 ⇒ 门禁**立刻转红**（以前它是全绿的）。
+- **⭐ 桥接版本史（只在换版本时读）**：v13 `turntoken`（已废）→ v14 `primitives`（`players` 座位权威 / `take` 点名取牌 / `spawn` copy / `destroy` / `player`）→ v15 `tags-snap-hand`（`container` ＋ `hand` 的 `holding`/`give`/`draw` ＋ `act` 的 tags/`setSnapPoints`/成员变量）→ **v16 `tracker-guid`（当前）**。⛔ **烤在存档里** ⇒ 不重烤＋不重载，新命令回 `no handler for cmd=…`；原语缺口 ⇒ **`VALIDATION.md` F6 · F2**。
+- **⭐ 责任边界（2026-10-09 定，仍有效）**：我们**不做**"能照着打任何一款的控制层"（不存在）；交付 = **① TTS 原语的通用层** ＋ **② 用户低成本"教出"某一款控制层的规程**，判据 = **原语覆盖够不够 · 教一款快不快** ⇒ `play.ps1` 不可通用**不再是缺陷**（⇒ `VALIDATION.md` F1）；分层 ⇒ `tts\` 通用层 / `tts\play.ps1` 分发器 / `local\games\<游戏>\control\`（⇒ `BOOTSTRAP.md` §2b）。
+- **⚠️ 开发坑（都踩过）**：`Player.takeObject` **不存在** ⇒ 摸牌走**物件侧** `deal`/`dealToColorWithOffset`；`ValueFromRemainingArguments` **吞掉位置动词**；dot-source **改写 `$PSCommandPath`**；Lua 是 **CRLF** ⇒ 按行处理**先 `.replace(/\r\n/g,"\n")`**；**"门禁全绿"只证明它检查了的东西**（⇒ `verify_f8.js` 第 2b 步 ＋ 阴性对照）。
+- **⚠️ 两条硬规矩**：**同一时刻只有一个会话驱动桌面**；**动手前先 `git log`**（两个会话撞过同一个回合）。
+- **归档 ＋ 历史（已结清）**：`read_turn.ps1` / `front_watch.ps1` ⇒ `~\.dsh\archive\tts-legacy\`（⇒ §4 第 8 条 ＋ `VALIDATION.md` F4）；新工具 `tts\tools\dump_lua.ps1`。更早各轮（脚本全修/BOM、认物数据离开代码、`TTS_WORKFLOW` 并入 `TTS_RULES`）⇒ git ＋ `tts\docs\`。
 
 ## §10 关键数字（2026-10-11 复测）
 
-`tts\` 下 **45** 个 `.ps1` · 门禁 **7** 条（入口 `tts\tests\run_all.ps1`，要证据加 `-OutFile`）· 注入 **5,047 B/请求**（`tts\doctor.ps1` 实测：项目 1,982 ＋ 全局 2,217 ＋ overlay 848；发布配置 ≈2,830 B）。
+`tts\` 下 **45** 个 `.ps1` · 门禁 **7** 条（入口 `tts\tests\run_all.ps1`）· 注入 **5,047 B/请求**（`tts\doctor.ps1` 实测：项目 1,982 ＋ 全局 2,217 ＋ overlay 848；发布配置 ≈2,830 B）。
