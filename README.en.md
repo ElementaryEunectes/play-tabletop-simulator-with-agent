@@ -44,7 +44,7 @@ the bridge, the sentinel and every script run **locally**; no service fees beyon
 | Every later session | **~5 min** | re-bake, reload, re-arm the watcher (`PLAY.md`) |
 | **Total to a first completed round** | **≈1–1.5 h** | that is the bar: can a stranger finish a round within an hour |
 
-⚠️ **Three honest prerequisites**:
+⚠️ **Four honest prerequisites**:
 1. **DSH is required** (this agent harness) — it provides the sentinel and the tool calls; without it
    these scripts are just scripts and the turn hand-over degrades to manual polling.
 2. **Game-specific verbs need a "control layer"** (`local\games\<game>\control\play.ps1`, see
@@ -52,6 +52,10 @@ the bridge, the sentinel and every script run **locally**; no service fees beyon
    seated players, whose turn), but `play.ps1 <game verb>` replies `NO PART` and points at that section.
 3. **Changing mods means redoing the turn calibration** (seating coordinates differ per mod):
    `tts\tools\turn_calib.ps1 -Discover` + `-Answer`, about 5 minutes.
+4. **One of the 7 offline gates needs an extra dependency**: `bridge primitives (Lua)` runs the bridge
+   under `fengari`, a Lua VM in JavaScript (kept locally in `local\scratch\luatest`). Without it that
+   gate prints **`NOT RUN` — which is not a failure** — and the other 6 still run. To run all 7:
+   `npm i fengari` into that directory, or point `FENGARI_DIR` at it.
 
 ## How to read this repo (never read it all — read by role)
 

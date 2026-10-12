@@ -51,6 +51,21 @@ foreach ($need in @($lua, $gen, $runner)) {
     }
 }
 
+# fengari is a DEPENDENCY, and this gate is the only one that needs it. It is a JS Lua VM that we do NOT
+# ship: run_lua.js looks for it under local\scratch\luatest\node_modules (gitignored) or at FENGARI_DIR.
+# Measured 2026-10-12 on a clean worktree: without this check node dies on the missing require, the gate
+# reports "FAIL ... marker=False", and a stranger reasonably concludes the repository is broken - while
+# the truth is a package that was never installed. Name the dependency here so run_all.ps1 can print
+# NOT RUN instead (it keys on the "MISSING DEP" marker, and does not count that as a failure).
+$fengariDir = if ($env:FENGARI_DIR) { $env:FENGARI_DIR } else { Join-Path $Root 'local\scratch\luatest\node_modules\fengari' }
+if (-not (Test-Path -LiteralPath $fengariDir)) {
+    Add-Line ("MISSING fengari at " + $fengariDir)
+    [System.IO.File]::WriteAllLines($logFile, $lines, (New-Object System.Text.UTF8Encoding($false)))
+    Write-Host ("SKIP  needs fengari (Lua VM in JS): install with 'npm i fengari' under local\scratch\luatest, or set FENGARI_DIR")
+    Write-Host "MISSING DEP"
+    exit 1
+}
+
 function Run-Node([string]$script, [string]$arg) {
     $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ('bp_' + [guid]::NewGuid().ToString('N').Substring(0, 8) + '.txt')
     # The argument is optional, and an empty one must NOT be passed on: `node script "" > file` made
