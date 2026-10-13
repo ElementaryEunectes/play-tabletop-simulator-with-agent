@@ -1,4 +1,4 @@
-﻿# test_agents_hygiene.ps1 - the three instruction slots must stay in their lanes.
+# test_agents_hygiene.ps1 - the three instruction slots must stay in their lanes.
 #
 # WHY
 #   Isolation is a discipline, not a feature. Nothing in the harness stops the project charter
@@ -110,7 +110,8 @@ if ($tracked.Count -gt 0) {
 #     rights holder be identified, so a blanket ban there would be wrong rather than strict. Keep
 #     this list short - anywhere else write <game> or a description instead.
 $script:gameCp = @(
-    @(0x64, 0x69, 0x63, 0x65, 0x74, 0x68, 0x72, 0x6F, 0x6E, 0x65),                  # a match-shaped board game
+    @(0x64, 0x69, 0x63, 0x65, 0x74, 0x68, 0x72, 0x6F, 0x6E, 0x65),                  # a match-shaped board game (run-together)
+    @(0x64, 0x69, 0x63, 0x65, 0x20, 0x74, 0x68, 0x72, 0x6F, 0x6E, 0x65),            # ... and its SPACED form (0x20) - the run-together entry alone missed it
     @(0x71, 0x69, 0x73, 0x68, 0x65, 0x6E, 0x67),                                      # this machine's GAME= slug
     @(0x4E03, 0x5723),                                                                # that mod's name (one word)
     @(0x738B, 0x6743, 0x9AB0, 0x94F8),                                                # the first game taught
@@ -156,7 +157,7 @@ Check ("game-name pattern has one branch per name (alt={0} of {1})" -f $altCount
 # caught the 2026-10-09 slip where a later edit silently ate one line of the array: the alternation
 # check still passed (7 of 7 agreed), the licence control still passed, and one real name had
 # quietly stopped being scanned. ADD A NAME HERE AND BUMP THE NUMBER - a deliberate act, not a typo.
-$expectedNames = 8
+$expectedNames = 9
 Check ("game-name list is complete ({0} entries, expected {1})" -f $script:gameWord.Count, $expectedNames) `
     ($script:gameWord.Count -eq $expectedNames) 'the list and $expectedNames disagree - add/bump deliberately'
 # Self-check: this file must stay ASCII apart from the UTF-8 BOM. A non-BOM byte above 0x7F here

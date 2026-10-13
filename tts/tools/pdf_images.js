@@ -1,5 +1,5 @@
 // pdf_images.js - carve the embedded JPEGs out of an image-only PDF, one file per page.
-// ASCII only. WHY: the Dice Throne rulebook in the TTS save has NO text layer (15 pages, 351
+// ASCII only. WHY: one image-only board-game mod's rulebook in the TTS save has NO text layer (15 pages, 351
 // characters total), so text extraction is a dead end and OCR/VLM is the expensive last resort.
 // But an image-only PDF is just a container of full-page JPEGs: SOI (FFD8FF) to EOI (FFD9)
 // carving gets them out losslessly, and then the agent's own image reader can look at any page.
