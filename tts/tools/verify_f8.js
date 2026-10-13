@@ -86,10 +86,19 @@ const footer = [
     'os.exit(#missing == 0 and 0 or 1)',
 ].join('\n');
 
-const tmp = path.join(__dirname, '..', 'tests', '_verify_f8.lua');
+// WHY cache\, NOT local\scratch\ AND NOT tts\tests\ (measured 2026-10-13, on this repository's very first
+// CI run): `local/` is gitignored, so a fresh clone has no `local\scratch` - this reachable-definitions
+// check died with ENOENT and the gate dutifully reported FAIL, which reads as "the bridge is broken".
+// It is the same class of defect as gate 6's missing fengari: a gate whose own scratch space lives
+// outside the repository cannot run for anybody else. And a scratch file written INTO the tracked tree
+// (`tts\tests\`) is only cleaned up if nothing crashes on the way. So both live in `cache\`, which this
+// creates if absent - the same directory `run_all.ps1` puts its per-gate logs in.
+const cacheDir = path.join(__dirname, '..', '..', 'cache');
+fs.mkdirSync(cacheDir, { recursive: true });
+const tmp = path.join(cacheDir, '_verify_f8.lua');
 fs.writeFileSync(tmp, header + '\n' + looked + '\n' + footer + '\n', 'utf8');
 
-const outFile = path.join(__dirname, '..', '..', 'local', 'scratch', 'verify_f8_out.txt');
+const outFile = path.join(cacheDir, 'verify_f8_out.txt');
 spawnSync(process.execPath, [path.join(__dirname, 'run_and_capture.js'), tmp, outFile], { stdio: 'ignore' });
 const out = fs.readFileSync(outFile, 'utf8').trim();
 fs.unlinkSync(tmp);
