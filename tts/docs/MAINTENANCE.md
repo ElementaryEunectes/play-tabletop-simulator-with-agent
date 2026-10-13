@@ -169,7 +169,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 
 8 条、唯一入口 `tts\tests\run_all.ps1`；判据/清单/限制 ⇒ **§1** ＋ `CONTRIBUTING.md` §3（**不复述**）。
 📌 **活体那半**：`tests\live_smoke.ps1`（需要 TTS）。
-⚠️ **第 6 条（`bridge primitives`）额外依赖 `fengari`**（JS 版 Lua VM，**不在仓库里**）：缺它时门禁报 **`NOT RUN`（不算失败）**、其余 6 条照跑；**装法（含本机沙箱要求的 `--cache`/`--prefix` 写法）⇒ 本文件 §1 那条**，面向陌生人的简版 ⇒ `README.md` 的"四条前置"第 4 条。
+⚠️ **第 6 条（`bridge primitives`）额外依赖 `fengari`**（JS 版 Lua VM，**不在仓库里**）：缺它时门禁报 **`NOT RUN`（不算失败）**、其余 **7** 条照跑；**装法（含本机沙箱要求的 `--cache`/`--prefix` 写法）⇒ 本文件 §1 那条**，面向陌生人的简版 ⇒ `README.md` 的"四条前置"第 4 条。
 
 ### 目录与跨脚本引用（改名/清理前先看）
 

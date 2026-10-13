@@ -45,7 +45,7 @@
 1. **需要 DSH**（这个 agent harness）—— 它提供哨兵与工具调用；没有它，这套脚本只是一堆脚本，回合交接会退化成手动轮询。
 2. **游戏专属动词需要一个"控制层"**（`local\games\<游戏>\control\play.ps1`，按 `BOOTSTRAP.md` §2 写）。**没有它时 `play.ps1 status` 仍可用**（桥接版本 · 物件数 · 在位玩家 · 轮到谁），但 `play.ps1 <游戏动词>` 会明确报 `NO PART` 并指向那节。
 3. **换 mod 要重做"回合校准"**（座位坐标每款都不同）：`tts\tools\turn_calib.ps1 -Discover` ＋ `-Answer`，约 5 分钟。
-4. **离线门禁 8 条里有 1 条要额外依赖**：`bridge primitives (Lua)` 需要一个 JavaScript 版 Lua VM（`fengari`，本机放在 `local\scratch\luatest`）。**没装它时那条显示 `NOT RUN`（不算失败）**，其余 6 条照跑；要跑全 7 条 ⇒ `npm i fengari` 装到那个目录，或用环境变量 `FENGARI_DIR` 指过去。
+4. **离线门禁 8 条里有 1 条要额外依赖**：`bridge primitives (Lua)` 需要一个 JavaScript 版 Lua VM（`fengari`，本机放在 `local\scratch\luatest`）。**没装它时那条显示 `NOT RUN`（不算失败）**，其余 **7** 条照跑；要跑全 **8** 条 ⇒ `npm i fengari` 装到那个目录，或用环境变量 `FENGARI_DIR` 指过去。
 
 
 ## 怎么读（**别整份读，按角色取**）
