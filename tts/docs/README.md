@@ -25,6 +25,7 @@
 | 按需（维护） | **`MAINTENANCE.md`** | **本仓库**要点（门禁 · 两个指令槽 · 路径纪律 · **§5 工具清单** · §6 改 Lua · §7 写入前检查＋PowerShell 陷阱）；坑 ×17 与注入机制已迁出 ⇒ harness home 的 `platform\MAINTENANCE.md` | 学到新坑时 |
 | 按需（给人） | `USER_GUIDE.md` | **人怎么用**：开局 · 你只做两件事 · AI 何时请你帮忙 · 在哪说话 · 常见问题 | 低 |
 | 按需（先例） | `PRIOR_ART.md` | 二手调研与先例（**冻结，别重搜**；含可搬/不可搬结论） | 冻结 |
+| 按需（**做本地化时**） | **`I18N.md`** | 给**外文 mod** 做机翻/本地化：**接口契约（TSV）** · 引擎部署矩阵（按本机可行性排序）· 为什么引擎不进仓库 | 低 |
 | 按需（**验证**） | **`VALIDATION.md`** | **"对任何 TTS mod 都成立"这句验到哪了**：逐层断言 · 实测证据 · 已知缺陷（F1…）· 下一款 mod 怎么续验。**要写"通用"二字之前先读我** | 每验一款 mod |
 | 不读（**已迁出仓库** ⇒ harness home 的 `platform\HARNESS_HOME_AGENTS.template.md`） | ~~HARNESS_HOME_AGENTS.template.md~~ | `$DSH_HOME\AGENTS.md` 的**源**：`---` **以下是正文**（改完拷过去）；`tts\tests\test_agents_hygiene.ps1` 会核对两者逐字一致 | 低 |
 | 永不 | `local\archive\`（**gitignore**） | 过期留档：旧简报 ×4 · 旧 STATE · 已终局那一局的全部文档 · 旧 init 产物 —— **未随仓库分发** | 冻结 |

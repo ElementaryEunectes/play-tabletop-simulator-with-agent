@@ -240,10 +240,10 @@ Steam 那两个高热度提问都只拿到「自己写脚本」类回答 ⇒ **�
 | [Tiarait/playwright-image-translator](https://raw.githubusercontent.com/Tiarait/playwright-image-translator/refs/heads/main/README.md) | playwright 驱动的**图像/页面翻译** | 同题；待实测能否吃本地图 |
 | digiKam [OCR Text Converter](https://docs.digikam.org/en/post_processing/ocrtext_converter.html) | 桌面软件批量图 OCR | 本机已有 digiKam 时可零成本 |
 
-### 9.4 落地顺序（⏸ **仓库主人 2026-10-12 明确：第 1、2 步不急**）
+### 9.4 落地顺序（⏸ **第 1、2 步不急**；2026-10-13 更新）
 
-1. 用 `tts-editor` 交叉验证我们手写的客户端有没有漏坑；
-2. 把 `LibreTranslate ＋ cardocr ＋ tts-card-naming-tool` 串成"外文 mod → 中文"整链；
+1. ~~用 `tts-editor` 交叉验证我们手写的客户端~~ **已作废** ⇒ §9.5（项目已归档、无许可证：既没验证价值，也没可抄的代码）；
+2. **外文 mod → 中文**：**接口与部署方案已独立成文 ⇒ `I18N.md`**（仓库只出"抽文本 / 写回"两侧 ＋ 一个 **TSV 契约**；翻译引擎挂 §9.3 那些现成件，⛔ **不内置任何引擎**）；
 3. 其余按需。
 
 ### 9.5 读 `tts-editor` 的**实际收获**（2026-10-12 查证）
