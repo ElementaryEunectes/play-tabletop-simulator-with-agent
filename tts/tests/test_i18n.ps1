@@ -109,6 +109,66 @@ Check 'NEGATIVE: a tsv missing a row is refused' `
     (($r3.mismatches -gt 0) -and ($r3.text -eq $raw)) `
     'a missing id means the tsv and the save are out of step'
 
+# ---- 6. the image half (tts\lib\i18nimg.ps1): cache-name mapping, url scan, redraw, size preserved ----
+. (Join-Path $Root 'tts\lib\i18nimg.ps1')
+$tmp = Join-Path $Root 'cache\i18n_imgtest'
+if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force }
+New-Item -ItemType Directory -Force (Join-Path $tmp 'images') | Out-Null
+New-Item -ItemType Directory -Force (Join-Path $tmp 'out') | Out-Null
+
+$urlA = 'https://example.invalid/ugc/111/AAAABBBBCCCC/'
+$urlB = 'https://example.invalid/ugc/222/DDDDEEEEFFFF/'
+$nameA = Get-I18nImageCacheBase -Url $urlA
+Check 'cache base name strips every non-alphanumeric character' `
+    ($nameA -eq 'httpsexampleinvalidugc111AAAABBBBCCCC') ('got ' + $nameA)
+
+$nameB = Get-I18nImageCacheBase -Url $urlB
+$srcA = Join-Path $tmp ('images\' + $nameA + '.jpg')
+$srcB = Join-Path $tmp ('images\' + $nameB + '.jpg')
+foreach ($pair in @(@($srcA, [System.Drawing.Color]::FromArgb(255, 10, 200, 10)), @($srcB, [System.Drawing.Color]::FromArgb(255, 10, 10, 200)))) {
+    $bmp = New-Object System.Drawing.Bitmap(200, 80)
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.Clear($pair[1])
+    $g.Dispose()
+    $bmp.Save($pair[0], [System.Drawing.Imaging.ImageFormat]::Jpeg)
+    $bmp.Dispose()
+}
+Check 'fixture images written' ((Test-Path $srcA) -and (Test-Path $srcB))
+
+$found = Find-I18nCachedImage -Dir (Join-Path $tmp 'images') -Url $urlA
+Check 'a cache file is found by url' (($null -ne $found) -and ($found.Name -eq ($nameA + '.jpg')))
+
+$saveText = '{"ObjectStates":[{"FaceURL":"' + $urlA + '"},{"FaceURL":"' + $urlB + '"},{"FaceURL":"https://example.invalid/ugc/333/ZZZZ/"}]}'
+$map = Get-I18nImageUrls -Raw $saveText
+Check 'the url scan finds every distinct image url' ($map.Count -eq 3) ('got ' + $map.Count)
+Check 'the url scan ignores empty urls' (-not $map.ContainsKey(''))
+
+$blocks = @(@{ x = 0; y = 0; w = 120; h = 40; fill = '#000000'; alpha = 255; lines = @(
+    @{ text = 'TEXT TEST'; x = 4; y = 4; font = 'Microsoft YaHei'; size = 14; bold = $true; color = '#FFFFFF' } ) })
+$outA = Join-Path $tmp ('out\' + $nameA + '.jpg')
+New-I18nPatchedImage -SourcePath $srcA -OutPath $outA -Blocks $blocks
+Check 'patched image written' (Test-Path $outA)
+$o = [System.Drawing.Image]::FromFile($outA)
+$s = [System.Drawing.Image]::FromFile($srcA)
+Check 'pixel size is preserved exactly (a size change itself breaks rendering)' `
+    (($o.Width -eq $s.Width) -and ($o.Height -eq $s.Height))
+$o.Dispose()
+$s.Dispose()
+$pb = New-Object System.Drawing.Bitmap($outA)
+$covered = $pb.GetPixel(5, 5)
+$untouched = $pb.GetPixel(190, 70)
+$pb.Dispose()
+Check 'the block really covered the corner' ($covered.R -lt 60 -and $covered.G -lt 60 -and $covered.B -lt 60) ('pixel ' + $covered.ToString())
+Check 'the rest of the image is untouched' ($untouched.G -gt 120) ('pixel ' + $untouched.ToString())
+
+$ruleJson = Join-Path $tmp 'rules.json'
+[System.IO.File]::WriteAllText($ruleJson, '{"blocks":[{"match":"AAAABBBBCCCC","x":0,"y":0,"w":10,"h":10,"lines":[]}]}', (New-Object System.Text.UTF8Encoding($false)))
+$rules = Get-I18nImageRule -RulePath $ruleJson
+$hit = @($rules) | Where-Object { $urlA -like ('*' + $_.match + '*') } | Select-Object -First 1
+$miss = @($rules) | Where-Object { $urlB -like ('*' + $_.match + '*') } | Select-Object -First 1
+Check 'a rule matches its own url and not another' (($null -ne $hit) -and ($null -eq $miss))
+Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+
 if ($failed -gt 0) { Write-Host ("$failed i18n case(s) failed"); exit 1 }
 Write-Host 'all i18n cases passed'
 exit 0
