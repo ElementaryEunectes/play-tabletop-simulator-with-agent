@@ -13,7 +13,7 @@
 1. 改任何东西前先 `git commit`；⛔ 不批量字符串替换改活代码（⇒ `CONTRIBUTING.md` §4）。
 2. `param()` 是第一句；默认值不许引用 config 变量 ⇒ 默认 `''`，dot-source 后回填（`test_param_backfill`）。
 3. 路径/隐私走 `tts\config.ps1`；⛔ 绝对路径/用户名不进受跟踪文件（`instruction hygiene`）。
-4. 改完 `.ps1` ⇒ `tts\check_ps1.ps1` ＋ `tts\tests\run_all.ps1`（唯一入口 7 条；解析过 ≠ 能用）。
+4. 改完 `.ps1` ⇒ `tts\check_ps1.ps1` ＋ `tts\tests\run_all.ps1`（唯一入口 8 条；解析过 ≠ 能用）。
 5. 骰子：`roll.ps1` 必须明说 `-Roll`/`-NoRoll`；判定以玩家报的为准。
 6. 玩家每次宣告 = 我的出牌机会 ⇒ 必须表态「出牌 / 不出牌」。
 7. 隐藏信息双向：不读对手隐藏区、不拿 guid 对身份；我的手牌/计划也不外传（⇒ `local\games\<游戏>\MYHAND.md`）。

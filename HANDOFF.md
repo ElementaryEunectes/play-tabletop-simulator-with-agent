@@ -3,7 +3,7 @@
 > **怎么读（按这个顺序）**：**§1 启动** → **§4 待办**（**发布前真正剩两条**：E（demo ＋ 30 秒录屏）与**冷启动验证**；**新登记一条**：第 9 条**外文 mod 机翻**）→ **§7.9 回合交接** → **§9 纪要**。
 > 长期规矩 ⇒ `AGENTS.md`（本项目）＋ `$DSH_HOME\AGENTS.md`（平台宪章）；改东西前 ⇒ `tts\docs\MAINTENANCE.md`；坑 ×17 ＋ 注入 ⇒ harness home 的 `platform\MAINTENANCE.md`。
 > **文档全索引 ⇒ `tts\docs\README.md`**；**本局状态 ⇒ `local\games\<游戏>\STATE.md`**（唯一真源：含"现在轮到谁"与续局步骤）。
-> ⚠️ **先做 §1 的启动动作**（否则脚本会读写一个不存在的旧目录）＋ **每个新会话重建两个活件**（轮询器 ＋ file 哨兵，⇒ §4 第 3b 条）；**验证两件套** = 门禁 `tts\tests\run_all.ps1`（7 条）· 活体 `tts\tests\live_smoke.ps1`（17 条**只读**，需要 TTS）。
+> ⚠️ **先做 §1 的启动动作**（否则脚本会读写一个不存在的旧目录）＋ **每个新会话重建两个活件**（轮询器 ＋ file 哨兵，⇒ §4 第 3b 条）；**验证两件套** = 门禁 `tts\tests\run_all.ps1`（8 条）· 活体 `tts\tests\live_smoke.ps1`（17 条**只读**，需要 TTS）。
 > 🪙 **省 token 纪律**（全文 ⇒ `AGENTS.md` 第 9 条）：**批量发命令**（⚠️ **例外：TTS 命令仍一条一发**）· **只 `grep` ＋ 切片读** · **搬运/审计交子代理** · **回复压到几行**。
 > 🔌 **桥接**：**烤在存档里** ⇒ 换版本要重烤 ＋ 请玩家重载。盘上已成 **`v16-tracker-guid`**（`TS_Save_18.json`，显示名 = 该局游戏名 ＋ `-v16`）；**`TS_Save_17.json` 是上一档 `v15-tags-snap-hand`**（objs 都是 118）⇒ 判定**以 `tts\play.ps1 status` 返回为准**（⚠️ **端口 LISTENING ≠ API 可用**：2026-10-12 收工后现场核对时 39999 在监听、`status` 却报 **`BRIDGE DOWN`** ⇒ **盘上到底是哪一档仍未定音**，下次 TTS 正常时再读一次）；版本史 ＋ v16 的 guid 参数（**尚有未结的掉线嫌疑**）⇒ §9 / `VALIDATION.md` F14。
 
@@ -41,7 +41,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
 3. 🟡 **游戏侧**：本局（第二款 mod）的目的是**验证工具链** ⇒ 规则/座位/图卡**不必做**；✅ **卡库已建成**（`cache\<游戏>_cards.md`，**171 张**，`tts\card.ps1 -Q <牌名>`；生成器 **`tts\tools\cards_from_save.js`**（吃**存档**、文本完整；⛔ `build_cards.js` 是**活体**那条路、取不到牌堆内部的卡 ⇒ `MAINTENANCE.md` §5））⇒ 这一局**已无真待办**；真打时按 `local\games\<游戏>\FLOW.md` §5 问玩家。
 3b. 🔴 **每个新会话要重建"活件"（最容易漏）**：**轮询器**（`tts\tools\turn_poller.ps1`，后台作业、不跨会话）＋ **file 哨兵**（`cache\turn_side.txt`，`pattern=^mine`，**必须显式 `max_fires`**）⇒ `tts\docs\PLAY.md` 回合交接节。
 4. 🟡 **让第三方"简单部署 · 廉价游玩"的最后一块**：**E** demo ＋ 30 秒录屏（需 TTS）；✅ **A** `STATE`/`FLOW`/`MYHAND` 模板 ＋ **C** `tts\setup.ps1` 向导 **已完成**。判据：陌生人只有**公开仓库 ＋ Windows ＋ TTS ＋ 一个 workshop mod**，能否**一小时内**打完一回合（成本期望已写进 `README.md` / `README.en.md`）。🔴 **仍未做**：**冷启动验证**（clone 到新目录 ＋ 独立 `$DSH_HOME`，照 README 走一遍）；已做的部分与它抓到的真缺陷 ⇒ 本节顶部的 🔬。
-5. 🟡 **开源收尾**：`LICENSE`(MIT) ✅ · `README.en.md` ✅ · 路径/隐私 ✅（树里 0 处 `C:\Users\<名字>`）· 离线门禁 **7 条** ✅ ⇒ 剩下"首次上手的时间/成本期望"写进 README 顶部。
+5. 🟡 **开源收尾**：`LICENSE`(MIT) ✅ · `README.en.md` ✅ · 路径/隐私 ✅（树里 0 处 `C:\Users\<名字>`）· 离线门禁 **8 条** ✅ ⇒ 剩下"首次上手的时间/成本期望"写进 README 顶部。
 6. ⚪ **平台层不随仓库走**（坑只在 harness home）⇒ 开源用户只有 `tts\docs\MAINTENANCE.md` §0；**"等玩家点结束回合"依赖 DSH 的 sentinel**，换 agent 平台会退化成轮询。
 7. ⚪ **火绒**（环境事实，不是待办）⇒ `tts\docs\MAINTENANCE.md` §0。
 8. ✅ **已归档（用户拍板）**：`read_turn.ps1`（批量替换事故的残骸 —— 运行期错，`check_ps1` 查不出来）· `front_watch.ps1`（某一局专用）· **`find_moved.js`（2026-10-12，0 引用的一次性调试件）** · **`tests\gen_bridge_alone.lua`（98 KB，F8 的一次性夹具；输入是 gitignored 且已不存在的 `local\scratch\running_global.lua` ⇒ **无法从受跟踪输入重建**、也没有陈旧性对拍）＋ `tools\scan_exec.js`（它唯一的读者）** —— 全部**移出仓库** ⇒ `~\.dsh\archive\tts-legacy\`（**逐件 SHA256 对拍一致**）；`cache\front.txt` 从此没有生产者；`gen_bridge_alone_test.js` **保留在树里**（工具，逻辑仍有参考价值）。台账 ⇒ `tts\docs\VALIDATION.md` F4/F8 · 清单 ⇒ `MAINTENANCE.md` §5「已归档」。
@@ -53,6 +53,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File <本仓库>\start-agent.ps1 
    - **接口**：`obj_index.ps1`／`dump_lua.ps1`（读存档）＋ `install_save2.ps1`（写存档）⇒ 整链可离线跑。
    - ⏸ **实测顺序**（主人 2026-10-12：不急）：先用 `tts-editor` 交叉验证我们手写的客户端，再把 `LibreTranslate ＋ cardocr ＋ tts-card-naming-tool` 串成整链。
    - ✅ **离线地基已验通（2026-10-12，探针 `cache\i18n_probe.ps1`）**：机翻要写回存档，"**改文本**"这条路先在**自动存档的副本**上跑通 —— `JavaScriptSerializer` 解析 728 KB 存档 OK（26 个顶层键）· 文本字段 **Nickname 470 / Description 470 / GMNotes 470**（⚠️ **绝大多数是空串**，非空的只有 8 个）· 对**原文做字符串级替换**（⛔ **绝不**重新序列化整个解析对象：`JavaScriptSerializer` 会丢字段/乱序 ⇒ 静默毁存档）⇒ 产物仍是**合法存档 JSON**（re-parse OK）、字节增量可预测（+7/处）。⚠️ **仍未验**：改过的存档**能不能被 TTS 载入**（要 TTS ＋ 人）。
+   - ✅ **两侧接口已实现并进了门禁（2026-10-13）**：导出 `tts\tools\i18n_export.ps1` · 回写 `tts\tools\i18n_apply.ps1`（⛔ **默认只报告，`-Apply` 才写**；按 `id` 配对而非行序；写前拿**重新扫描的存档**逐条核对"字段名 ＋ 原文"，对不上就**拒绝**；只替换"值"那段字节、从文件末尾往回换；产物**回读校验**仍是合法存档 JSON）。机制住在 `tts\lib\i18n.ps1`（无 `exit`、不碰文件 ⇒ 测试**直接调函数**，不必 spawn 子 PowerShell）。**契约 = 一张 TSV**：`id`/`field`/`source` → `id`/`field`/`target`；⛔ **仓库不内置任何翻译引擎**（引擎怎么选 ⇒ **`tts\docs\I18N.md`** §2 的部署矩阵，首选 Transformers.js —— **只要 Node**）。
+     验证：新门禁 **`i18n (TSV round trip)`**（16 用例，含**两个阴性对照**：存档在导出后被改 ⇒ 拒绝且一个字节不动 · TSV 缺行 ⇒ 拒绝）· 真实 **1.9 MB** 自动存档上 **2589 个字段 0 mismatch**（export 788 ms）· **CLI 端到端**也实测（不带 `-Apply` 确实不落盘；带 `-Apply` 产物 +28 B 且回读合法）。⚠️ **仍未验**：改过的存档**能不能被 TTS 载入**（与上一条同一待验项）· **翻译引擎配方没在本机跑过**（本机只有 Node，装不了 npm 包）。
    - 📋 **出网机器上的实测清单**（本沙箱 `pwsh` 出网被挡，只能这样交接）：① ~~用 `tts-editor` 交叉验证~~ **已作废**（2026-10-12 查证：该项目**已归档、无许可证** ⇒ 既没验证价值、也没可抄的代码）；② 起 `LibreTranslate` 翻一段卡面文本，量**耗时与内存**（判据 = 这台机器能否离线跑）；③ 用 `cardocr` 或 digiKam OCR 认**一张**卡面图，看排版认不认；④ 用 `tts-card-naming-tool` 打开**本局存档的副本**试批量改名，确认不破坏结构；⑤ 全链通了再决定"自己写"还是"站在它们上面"。
 
 10. 🆕 **"感知重载"**（2026-10-12，由 `tts-editor` 的**入站事件清单**触发）：桥接（Global 脚本）**拿得到 `onLoad`/`onSave` 回调** ⇒ 在里面 `sendExternalMessage` 一条"刚被载入 / 刚被保存" ⇒ hub / 轮询器**立刻知道"回合归属已被重置、必须先校准"**，不必再靠 `turn_side` 的异常去猜 —— 这是今晚"载入存档会冲掉 tracker 位置 ⇒ `mine` 不可信"那个坑的**根治**。⚠️ 改桥接 = **要重烤 ＋ 请玩家重载** ⇒ 排在"想清楚再动"那一档。依据 ⇒ `tts\docs\PRIOR_ART.md` §9.5。

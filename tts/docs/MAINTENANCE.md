@@ -18,7 +18,7 @@
   `git -c http.sslBackend=openssl -c http.extraheader="Authorization: Basic <base64(x-access-token:<token>)>" push` —— token 用 `gh auth token` 读进变量，**不回显、不落盘、不进命令行**。
   ⚠️ 含 **`.github/workflows/`** 的推送**要求 token 带 `workflow` scope**，否则 GitHub 明确拒（`refusing to allow an OAuth App to create or update workflow …`）；补 scope 的 `gh auth refresh -h github.com -s workflow` **要连 `github.com` ⇒ 本沙箱做不了，得在本机终端跑**。
   📌 **CI 红了先下 artifact**（`gh run download <id> -n gate-logs -D <dir>`）——`gh run view --log-failed` 会写工作区外的缓存目录而被拒，且 `run_all.ps1` 的失败详情本来就落在那份 artifact 里。
-- **沙箱限制子进程时的姿势**：抓子进程输出**写文件再读**（`& x 2>&1` 静默丢输出、退出码仍是 0）· ⛔ 别用 `Start-Process`（隐藏控制台 → `0xC0000142`）。门禁已改**同进程调用**、不再 spawn 内层 PowerShell ⇒ 受限模式下 7 条全绿（清单 ⇒ `CONTRIBUTING.md` §3）。
+- **沙箱限制子进程时的姿势**：抓子进程输出**写文件再读**（`& x 2>&1` 静默丢输出、退出码仍是 0）· ⛔ 别用 `Start-Process`（隐藏控制台 → `0xC0000142`）。门禁已改**同进程调用**、不再 spawn 内层 PowerShell ⇒ 受限模式下 8 条全绿（清单 ⇒ `CONTRIBUTING.md` §3）。
 - ⛔ **`spawnObject` 造"自定义件"必须带内容参数，否则 TTS 会弹「自定义板块」窗口跟你要贴图**（2026-10-09 实测 + 官方文档）：
   `Custom_Tile`/`Custom_Token`/`Custom_Model`/`Custom_Board`/`CardCustom`/`DeckCustom` 这些**自定义**类型，
   `spawnObject({type="Custom_Tile"})` **不带 `image`** ⇒ 游戏主线程被那个模态窗口挂住 ⇒ **回执永远不来**、脚本改动随后被回滚。
@@ -42,7 +42,7 @@
 ## 1. 改完必须过的门禁
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # ⭐ 唯一入口：7 条；"退出码 0 ＋ 输出含成功标志"才算过，空输出 = NOT RUN
+powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # ⭐ 唯一入口：8 条；"退出码 0 ＋ 输出含成功标志"才算过，空输出 = NOT RUN
 ```
 ⭐ **门禁绿了才提交**；改测试判定逻辑前**先造一个"坏"的阳性对照**确认它真会红（本仓库已两次出现"假绿"）。逐条清单/限制 ⇒ `CONTRIBUTING.md` §3。
 - ⚠️ **`bridge primitives (Lua)` 这条门禁要先有 `fengari`**（JS 里的 Lua 虚拟机；本机没有 lua 二进制，TTS 也不自带可调用的）：
@@ -150,6 +150,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 | `crop_zoom.ps1` | 裁图 ＋ 放大转真 PNG（**读卡面/查图用**；`Mods\Images` 里扩展名常与真实格式不符） |
 | `tts_api.ps1` | TTS **External Editor API（39999）** 原始客户端；`tools\exec_script.ps1` = 走它的 **`messageID 3`** 执行 Lua（**安全**，见 `TTS_RULES.md` §七）。⚠️ **39998 只有一个槽**：轮询器每 2.5 s 占它一片 ⇒ 交接会撞 `listener busy`（`exec_script.ps1` 已把绑定重试提到 6 次/~10 s）；**根治 = 常驻进程独占 39998**（hub 方案 ⇒ `PRIOR_ART.md`；⇒ `VALIDATION.md` F14） |
 | **`tools\dump_lua.ps1`** | **把存档里物件的 `LuaScript` 抽成文件**（**离线，不碰 TTS**）：`-Guid <g> -OutFile <f>` 抽那**一件**（**改别人脚本前的备份**动作）· 默认把 ≥`-MinChars`（50）的**全部**导出到 `cache\scripts\` · `-List` 只报不写 ⇒ 取代了归档里那份 `dump_scripts.ps1`（后者写死两条机器路径） |
+| **`tts\tools\i18n_export.ps1`** | **存档 → TSV**（机翻接口的**导出侧**，离线、不碰 TTS）：从**存档**里抽出可翻译的文本字段（`Nickname`/`Description`/`GMNotes`）⇒ `id <TAB> field <TAB> source` 三列，交给翻译器填第 4 列 ⇒ 契约与整链 ⇒ `tts\docs\I18N.md` |
+| `tts\tools\i18n_apply.ps1` | **TSV → 存档**：把译表写回存档 —— ⛔ **默认只报告，加 `-Apply` 才写**；**按 `id` 配对**（不按行序）、**写前校验**（字段名 ＋ 原文）、字节级替换、产物**回读校验**仍是合法 JSON ⇒ `tts\docs\I18N.md` |
 | **`tools\tts_hub.ps1`** | ⭐ **独占 39998 的常驻 hub**（`PRIOR_ART.md` 指的那个方案）：它**一次性绑住回复端口**，其它工具把信封投到 **39997**（一行 JSON：`{envelope,want,timeoutSec}` → `{raw,skipped,ms}` 或 `{hubErr,…}`）。**`ttslib.ps1` 的 `Invoke-Tts` 优先走它**（没有 hub 时原样回落到自绑 39998）⇒ **`listener busy` 与"连发把 API 推垮"从根上消失**（⇒ `VALIDATION.md` F14/L19）。跑法：后台作业起它；出错日志 `cache\hub.log`。⛔ **同时只能有一个 owner**：hub 跑着时别的进程别去占 39998。
   ⛔ **别在任务管理器里按 PID 猜着杀**（2026-10-11 我真踩了）：**一个后台作业 = 包装进程 ＋ 子进程**，两行都叫 `powershell.exe` ⇒ 杀掉"另一个"会把**整对**带走（我按端口判出 hub 是 `5196`，顺手杀了另一行 `22272`，结果 hub 连同它的 job 一起没了）。判据要用**命令行**列（含 `tts_hub.ps1` / `turn_poller.ps1`）或直接 `job_kill <id>`；清理轮询器还有专闸 `cache\poller.stop` |
 
@@ -165,7 +167,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1   # �
 
 ### 🧪 离线测试（**不开 TTS 也能跑**）
 
-7 条、唯一入口 `tts\tests\run_all.ps1`；判据/清单/限制 ⇒ **§1** ＋ `CONTRIBUTING.md` §3（**不复述**）。
+8 条、唯一入口 `tts\tests\run_all.ps1`；判据/清单/限制 ⇒ **§1** ＋ `CONTRIBUTING.md` §3（**不复述**）。
 📌 **活体那半**：`tests\live_smoke.ps1`（需要 TTS）。
 ⚠️ **第 6 条（`bridge primitives`）额外依赖 `fengari`**（JS 版 Lua VM，**不在仓库里**）：缺它时门禁报 **`NOT RUN`（不算失败）**、其余 6 条照跑；**装法（含本机沙箱要求的 `--cache`/`--prefix` 写法）⇒ 本文件 §1 那条**，面向陌生人的简版 ⇒ `README.md` 的"四条前置"第 4 条。
 

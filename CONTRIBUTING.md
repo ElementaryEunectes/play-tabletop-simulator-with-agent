@@ -23,15 +23,15 @@
 | 换游戏 / 开新局 | `local\games\_current.md` 的 `GAME=` 行 ＋ 该游戏的 `{STATE,FLOW,MYHAND}.md` | ❌（脚本会报 "no current game"） |
 | `tts\config.ps1` 暴露的变量 | 用它的脚本（grep 变量名） | ❌ |
 
-## 3. 提交前必跑（**唯一入口**，7 条，都不需要 TTS）
+## 3. 提交前必跑（**唯一入口**，8 条，都不需要 TTS）
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\run_all.ps1    # "退出码 0 ＋ 输出含成功标志"才算过；空输出 = NOT RUN
 ```
-7 条（**按 `run_all.ps1` 的顺序**）= `check_ps1`（补 BOM ＋ 真解析器）· `param backfill`（每个 `''` 默认值有出处）· `diff chain`（差分链离线自测）· `game data`（**游戏数据必须在文件里、不在代码里**）· `instruction hygiene`（三个指令槽的体积/漂移/隐私）· `bridge primitives (Lua)`（桥接真跑 ＋ **整块加载后每条定义都可达**）· `doc refs`（文档里的路径必须存在，**最后一条**）。
+8 条（**按 `run_all.ps1` 的顺序**）= `check_ps1`（补 BOM ＋ 真解析器）· `param backfill`（每个 `''` 默认值有出处）· `diff chain`（差分链离线自测）· `game data`（**游戏数据必须在文件里、不在代码里**）· `instruction hygiene`（三个指令槽的体积/漂移/隐私）· `bridge primitives (Lua)`（桥接真跑 ＋ **整块加载后每条定义都可达**）· `i18n (TSV round trip)`（TSV 往返；离线、不需要 TTS）· `doc refs`（文档里的路径必须存在，**最后一条**）。
 
 - ⛔ 抓子进程输出**一律写文件再读**（`& x 2>&1` 会静默丢输出、退出码仍是 0）· ⛔ 别用 `Start-Process`（隐藏控制台 → `0xC0000142`）· ⛔ **别给 `$LASTEXITCODE` 赋值**（会遮住自动变量 ⇒ 之后读永远是空，见 `MAINTENANCE.md` §0）。
-- ✅ **门禁一律同进程调用、不 spawn 子 PowerShell**（2026-10-09 起）：受限沙箱会拦"命令**及其后代**"里的 `powershell.exe`，而那个 spawn 本来就多余 ⇒ **7 条在受限模式下全绿，不再需要完全权限**。做法：被判脚本**不用顶层 `exit`**（改 `return`；调用方 `& ... 6>&1` 抓 `Write-Host`；契约由 `test_diff_index.ps1` case 8 用**解析器 token** 钉死）。例外：**stdout 就是结果**的终端工具（`card.ps1` / `bootstrap.ps1`）保留 `exit`。
+- ✅ **门禁一律同进程调用、不 spawn 子 PowerShell**（2026-10-09 起）：受限沙箱会拦"命令**及其后代**"里的 `powershell.exe`，而那个 spawn 本来就多余 ⇒ **8 条在受限模式下全绿，不再需要完全权限**。做法：被判脚本**不用顶层 `exit`**（改 `return`；调用方 `& ... 6>&1` 抓 `Write-Host`；契约由 `test_diff_index.ps1` case 8 用**解析器 token** 钉死）。例外：**stdout 就是结果**的终端工具（`card.ps1` / `bootstrap.ps1`）保留 `exit`。
 - ⚠️ **"抽取出来的那一段能跑" ≠ "源文件装得上"**（F8 的教训）：只测抽取块的用例会**整段跳过**抽取点之外的坏区。⇒ 另配一条**整块加载**检查（`tts\tools\verify_f8.js`），并**造一个坏版本确认它真会红**。
 - 沙箱 / HIPS / 编码等本机细节 ⇒ `tts\docs\MAINTENANCE.md` §0。
 

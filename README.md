@@ -45,7 +45,7 @@
 1. **需要 DSH**（这个 agent harness）—— 它提供哨兵与工具调用；没有它，这套脚本只是一堆脚本，回合交接会退化成手动轮询。
 2. **游戏专属动词需要一个"控制层"**（`local\games\<游戏>\control\play.ps1`，按 `BOOTSTRAP.md` §2 写）。**没有它时 `play.ps1 status` 仍可用**（桥接版本 · 物件数 · 在位玩家 · 轮到谁），但 `play.ps1 <游戏动词>` 会明确报 `NO PART` 并指向那节。
 3. **换 mod 要重做"回合校准"**（座位坐标每款都不同）：`tts\tools\turn_calib.ps1 -Discover` ＋ `-Answer`，约 5 分钟。
-4. **离线门禁 7 条里有 1 条要额外依赖**：`bridge primitives (Lua)` 需要一个 JavaScript 版 Lua VM（`fengari`，本机放在 `local\scratch\luatest`）。**没装它时那条显示 `NOT RUN`（不算失败）**，其余 6 条照跑；要跑全 7 条 ⇒ `npm i fengari` 装到那个目录，或用环境变量 `FENGARI_DIR` 指过去。
+4. **离线门禁 8 条里有 1 条要额外依赖**：`bridge primitives (Lua)` 需要一个 JavaScript 版 Lua VM（`fengari`，本机放在 `local\scratch\luatest`）。**没装它时那条显示 `NOT RUN`（不算失败）**，其余 6 条照跑；要跑全 7 条 ⇒ `npm i fengari` 装到那个目录，或用环境变量 `FENGARI_DIR` 指过去。
 
 
 ## 怎么读（**别整份读，按角色取**）
@@ -83,7 +83,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tts\tests\test_param_backfil
 
 ⚠️ 本仓库用 `.gitattributes`（`* -text`）**锁住行尾与编码**：clone 出来的字节与提交的完全一致。**别改成 `text=auto`** —— 那会一次性重写所有文件的 blob，还可能碰坏 `.ps1` 必须保留的 UTF-8 BOM。
 
-⭐ **这七条门禁在 CI 上也跑**（`.github\workflows\gates.yml`，**Windows** runner —— 门禁是 PowerShell ＋ Windows 路径）：CI 会替你装上第 6 条需要的 `fengari`，所以那边是 **7/7**；万一装不上，那条会如实报 **`NOT RUN`（不算失败）**而不是假装绿。这就是"新 clone 第一步"应该看到的结果。
+⭐ **这八条门禁在 CI 上也跑**（`.github\workflows\gates.yml`，**Windows** runner —— 门禁是 PowerShell ＋ Windows 路径）：CI 会替你装上第 6 条需要的 `fengari`，所以那边是 **8/8**；万一装不上，那条会如实报 **`NOT RUN`（不算失败）**而不是假装绿。这就是"新 clone 第一步"应该看到的结果。
 
 ## 路径配置（**不要再把用户名写进脚本**）
 
@@ -115,7 +115,7 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
 ## 已知状态
 
 - ✅ **`tts\` 下 45 个 `.ps1` 全部通过真解析器**（`check_ps1.ps1`，递归；口径 = 含 `tests\` / `tools\` / `lib\`）：0 解析错误、BOM 齐。
-- ✅ **离线门禁 7 条**（不需要 TTS）：唯一入口 `tts\tests\run_all.ps1`（清单 ⇒ `CONTRIBUTING.md` §3）。
+- ✅ **离线门禁 8 条**（不需要 TTS）：唯一入口 `tts\tests\run_all.ps1`（清单 ⇒ `CONTRIBUTING.md` §3）。
 - ✅ **无个人路径**：树里已无 `C:\Users\<名字>` 之类硬编码（`tts\config.ps1` 是唯一解析层）· `LICENSE` = **MIT**。
 - ⏸ 对局处于**挂起**态：**现状与续局步骤不在仓库里**（`local\games\_current.md` 指到具体文件）。
 - ⚡ **每回合成本**（2026-10-08 实测）：回合开局一条 `tts\play.ps1 turn` ≈ **1.5s**（替代 `status`+`roll`+`tabread` 的 ~2.9s）；`say.ps1` 每条 **0.79s**。**每个 PowerShell 进程固定 ~0.27 s（271 ms；权威基线 ⇒ `tts\docs\MAINTENANCE.md` §1b）⇒ 合并命令就是省时间**，TTS 往返不是瓶颈。

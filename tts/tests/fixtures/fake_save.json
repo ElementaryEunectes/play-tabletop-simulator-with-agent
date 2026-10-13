@@ -1,0 +1,14 @@
+{
+  "SaveName": "fake_save_for_i18n_test",
+  "Note": "Fixture for tts\\tests\\test_i18n.ps1. Shaped like a real save: nested ObjectStates with a deck holding cards, duplicate values, empty values, and values needing JSON escapes.",
+  "ObjectStates": [
+    { "GUID": "aaaa01", "Name": "Card", "Nickname": "Draw two cards.", "Description": "Draw 2 cards.\nThen discard 1.", "GMNotes": "" },
+    { "GUID": "aaaa02", "Name": "Card", "Nickname": "Draw two cards.", "Description": "A quote: \"hi\" and a backslash \\ here.", "GMNotes": "note A" },
+    { "GUID": "bbbb01", "Name": "Deck", "Nickname": "", "Description": "",
+      "ContainedObjects": [
+        { "GUID": "cccc01", "Name": "Card", "Nickname": "Unused card", "Description": "", "GMNotes": "deep" }
+      ] }
+  ],
+  "TurnOrder": "aaaa01,aaaa02",
+  "VersionNumber": 13
+}

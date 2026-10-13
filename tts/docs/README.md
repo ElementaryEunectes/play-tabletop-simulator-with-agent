@@ -36,8 +36,9 @@
 - `tts\tests\` = **离线自测（不需要 TTS、不需要存档）**：`test_diff_index.ps1`（桩冒充 `live_index.ps1` ＋ 合成 fixture）·
   `test_game_data.ps1`（假游戏 fixture ⇒ 别名表 / `objects.json` 必须来自**文件**，拿掉文件工具就该不知道答案）·
   `test_param_backfill.ps1`（每个 `''` 默认值必须被回填或判空）· `test_agents_hygiene.ps1`（三槽体积 / 承载性指针 / 隐私 / 漂移）·
-  `test_doc_refs.ps1`（受跟踪 `.md` 里指向的路径必须存在）· `test_bridge_primitives.ps1`（fengari 里真跑桥接原语）。**改完脚本先跑它们。**
-- `tts\lib\` = **通用层的实现模块**（当前只有 `bridge.ps1`：一条命令的发送与回包校验）· 由当前游戏的控制层 dot-source（同进程，无额外进程启动）。**某一款游戏的** `play`/`dice`/`rules`/`verbs` 模块**不在这里** ⇒ `local\games\<游戏>\control\`（不进仓库）。
+  `test_doc_refs.ps1`（受跟踪 `.md` 里指向的路径必须存在）· `test_bridge_primitives.ps1`（fengari 里真跑桥接原语）·
+  `test_i18n.ps1`（机翻机制离线自测：转义往返 · 重复值按 id 配对 · 两个阴性对照）。**改完脚本先跑它们。**
+- `tts\lib\` = **通用层的实现模块**（当前有 `bridge.ps1`（桥接：一条命令的发送与回包校验）与 `i18n.ps1`（机翻机制：一个正则 + TSV 读 / 写 + 按 id 合并））· 由当前游戏的控制层 dot-source（同进程，无额外进程启动）。**某一款游戏的** `play`/`dice`/`rules`/`verbs` 模块**不在这里** ⇒ `local\games\<游戏>\control\`（不进仓库）。
 - `tts\lua\` = TTS 模组的**全局 Lua**（`dsh_global.lua` = 桥接本体；`install_save2.ps1` 依赖它，**别动**）。`tts\validate_lua.js` = 改 Lua 前的校验器。
 - `tts\tools\` = **跨语言小工具**：`fetch_pdf.js`（用 **Node 的 TLS 栈**下载 —— 沙箱里 `curl`/`Invoke-WebRequest` 会报 TLS 凭证错）·
   `pdf_images.js`（从**图片型** PDF 抽整页图）—— 规则书那条链用的就是这两个（见 `local\games\<游戏>\FLOW.md` 附录 A）·
