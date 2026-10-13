@@ -14,6 +14,10 @@
   ⇒ **纯 ASCII 的文件对 BOM 免疫**（`tts\tests\test_agents_hygiene.ps1` 的淘汰名单就用"运行时按码位拼字"写成纯 ASCII，并自带一条"本文件除 BOM 外不得有非 ASCII 字节"的自检）。
 - 跑脚本一律 `powershell -NoProfile -ExecutionPolicy Bypass -File '<绝对路径>'`；**工具壳是 Windows PowerShell 5.1** ⇒ 读中文文件要 `-Encoding UTF8` / `[IO.File]::ReadAllText`（否则乱码，文件没坏）。
 - 写工作区之外 ⇒ `[sandbox: file access denied]`（**策略不是 bug**，一次提权重试）；判端口用 `netstat -ano | findstr :39999`（`Get-NetTCPConnection` 在本沙箱假报"没人在听"）。
+- 🔌 **推 GitHub（2026-10-13 实测，本沙箱专属）**：`api.github.com` **放行**、**`github.com` 不通** ⇒ `gh repo create` / `gh api` / `gh run` 全都能用，而 **`git push` 直连会被重置**；另外 **schannel 后端报 `SEC_E_NO_CREDENTIALS`**（进程拿不到 TLS 客户端凭据，**与网络无关**，提权也没用）。可用组合：
+  `git -c http.sslBackend=openssl -c http.extraheader="Authorization: Basic <base64(x-access-token:<token>)>" push` —— token 用 `gh auth token` 读进变量，**不回显、不落盘、不进命令行**。
+  ⚠️ 含 **`.github/workflows/`** 的推送**要求 token 带 `workflow` scope**，否则 GitHub 明确拒（`refusing to allow an OAuth App to create or update workflow …`）；补 scope 的 `gh auth refresh -h github.com -s workflow` **要连 `github.com` ⇒ 本沙箱做不了，得在本机终端跑**。
+  📌 **CI 红了先下 artifact**（`gh run download <id> -n gate-logs -D <dir>`）——`gh run view --log-failed` 会写工作区外的缓存目录而被拒，且 `run_all.ps1` 的失败详情本来就落在那份 artifact 里。
 - **沙箱限制子进程时的姿势**：抓子进程输出**写文件再读**（`& x 2>&1` 静默丢输出、退出码仍是 0）· ⛔ 别用 `Start-Process`（隐藏控制台 → `0xC0000142`）。门禁已改**同进程调用**、不再 spawn 内层 PowerShell ⇒ 受限模式下 7 条全绿（清单 ⇒ `CONTRIBUTING.md` §3）。
 - ⛔ **`spawnObject` 造"自定义件"必须带内容参数，否则 TTS 会弹「自定义板块」窗口跟你要贴图**（2026-10-09 实测 + 官方文档）：
   `Custom_Tile`/`Custom_Token`/`Custom_Model`/`Custom_Board`/`CardCustom`/`DeckCustom` 这些**自定义**类型，

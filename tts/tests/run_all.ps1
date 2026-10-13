@@ -1,4 +1,4 @@
-# run_all.ps1 - run every offline gate and refuse to be fooled by an empty exit code.
+﻿# run_all.ps1 - run every offline gate and refuse to be fooled by an empty exit code.
 #
 # WHY THIS EXISTS (2026-10-09): while the workspace-write confinement was failing to launch child
 # processes, `& powershell -File tts\tests\test_x.ps1` returned NOTHING and left $LASTEXITCODE empty
@@ -78,7 +78,13 @@ foreach ($g in $gates) {
     if ($text -match 'MISSING DEP') { Write-Host ("NOT RUN  {0}  <- missing dependency (gate said so)" -f $g.name); continue }
     if ($code -eq 0 -and $hit) { Write-Host ("PASS     {0}" -f $g.name); continue }
     Say ("FAIL     {0}  exit={1} marker={2}" -f $g.name, $code, $hit)
-    $out | Select-Object -Last 8 | ForEach-Object { Write-Host ("           " + $_) }
+    # WHY $text AND NOT $out (fixed 2026-10-13, after this repository's first CI run): this line used to
+    # reference an `$out` that never existed, so a failing gate printed NOTHING under its FAIL line. The
+    # CI log then showed only "FAIL ... marker=False" and the real reason had to be dug out of the
+    # uploaded gate log instead. Say() is used so the reason also lands in -OutFile.
+    $tail = @($text -split "`r?`n" | Where-Object { $_.Trim() -ne '' } | Select-Object -Last 8)
+    if ($tail.Count -eq 0) { Say '           (gate produced no output at all)' }
+    foreach ($l in $tail) { Say ("           " + $l) }
     $failed++
 }
 Say ''
