@@ -20,7 +20,7 @@ param(
     [string]$Root = '',
     [string]$In = '',
     [string]$Out = '',
-    [string]$DictFile = '',
+    [string[]]$DictFile = @(),
     [switch]$CaseSensitive,
     [switch]$AllowInside
 )
@@ -31,12 +31,14 @@ if ($Root -eq '') { $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot
 
 if ($In -eq '') { Write-Host 'ERR -In is required (the TSV from i18n_export.ps1)'; exit 2 }
 if (-not (Test-Path -LiteralPath $In)) { Write-Host ('ERR no such tsv: ' + $In); exit 2 }
-if ($DictFile -eq '') { Write-Host 'ERR -DictFile is required (source<TAB>target per line)'; exit 2 }
-if (-not (Test-Path -LiteralPath $DictFile)) { Write-Host ('ERR no such dictionary: ' + $DictFile); exit 2 }
+if (@($DictFile).Count -eq 0) { Write-Host 'ERR -DictFile is required (source<TAB>target per line; several files allowed, earlier ones win)'; exit 2 }
+foreach ($df in $DictFile) { if (-not (Test-Path -LiteralPath $df)) { Write-Host ('ERR no such dictionary: ' + $df); exit 2 } }
 if ($Out -eq '') { $Out = Join-Path $DshCache 'i18n_zh.tsv' }
 
 $terms = Read-I18nDictionary -Path $DictFile
-Write-Host ('dictionary: ' + @($terms).Count + ' term(s) from ' + (Split-Path $DictFile -Leaf))
+$names = (@($DictFile) | ForEach-Object { Split-Path $_ -Leaf }) -join ' + '
+Write-Host ('dictionary: ' + @($terms).Count + ' term(s) from ' + $names)
+if (@($DictFile).Count -gt 1) { Write-Host '            (layered: the earlier file wins for the same source - put the game-specific one first)' }
 $mode = 'exact rows only'
 if ($AllowInside) { $mode = 'exact rows, then terms inside sentences' }
 Write-Host ('mode      : ' + $mode + '   (a whole sentence belongs to an engine - see the header)')

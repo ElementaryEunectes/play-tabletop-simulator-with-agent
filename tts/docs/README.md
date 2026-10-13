@@ -48,6 +48,7 @@
 - `tts\templates\` = **新游戏起手的三个模板**（`STATE` / `FLOW` / `MYHAND`）⇒ 由 `tts\setup.ps1 -InitGame <slug>` 填成
   `local\games\<slug>\`（`<游戏>` 占位符会被替换成 slug）。
 - `tts\docs\` = 上面那张表里的文档。
+- `tts\i18n\` = **术语表**（跨 mod 通用的 `原文<TAB>译文`，给 `tools\i18n_mt_dict.ps1` 用 —— 术语走词典比走模型稳）。⚠️ **某一款游戏专属的译名不进仓库** ⇒ `local\games\<游戏>\`。
 - `cache\` = **产物**（可重建）：`chan.txt`（**现役**哨兵心跳：笔记本叫醒）· `turn_side.txt`（**现役**：回合叫醒）· `front.txt`（**旧链遗留**：`front_watch` 已归档，2026-10-11）· `<游戏>_cards.md`（游戏数据）·
   `live_index.csv` / `baseline.csv` / `obj_index.csv`（快照）· `hidden_zones.csv`（隐藏区规则）· 规则书 PDF 与整页图。
 - **不进仓库的**（都在 `.gitignore`）：`AGENTS.local.md`（本机事实）· `local\`（私有：手牌 / 归档 / scratch）· `cache\` · `out\` · `logs\` · `shots\`。

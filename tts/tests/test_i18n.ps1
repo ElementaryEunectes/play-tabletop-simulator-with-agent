@@ -230,6 +230,16 @@ Check 'an untouched row keeps an empty target (empty = keep original)' `
     (((@($r4.text)[3] -split "`t")[3] -eq '')) (@($r4.text)[3])
 Check 'an empty source stays empty and is not counted as translatable' `
     ((((@($r4.text)[4] -split "`t")[3] -eq '') -and ($r4.total -eq 3)))
+# ---- 9. layered dictionaries: the game-specific table overrides the shared one ----
+$dictBase = Join-Path $tmp 'base.tsv'
+$dictGame = Join-Path $tmp 'game.tsv'
+[System.IO.File]::WriteAllLines($dictBase, @(('Deck' + "`t" + 'BASE-DECK')), (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::WriteAllLines($dictGame, @(('Deck' + "`t" + 'GAME-DECK'), ('Stilt Village' + "`t" + 'GAME-PLACE')), (New-Object System.Text.UTF8Encoding($false)))
+$layered = Read-I18nDictionary -Path @($dictGame, $dictBase)
+Check 'a layered dictionary keeps exactly one entry per source' (@($layered).Count -eq 2) ('got ' + @($layered).Count)
+$deckEntry = @($layered) | Where-Object { $_.src -eq 'Deck' } | Select-Object -First 1
+Check 'the FIRST file wins for a shared source (game table over shared table)' `
+    ($deckEntry.dst -eq 'GAME-DECK') ('got ' + $deckEntry.dst)
 Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
 
 if ($failed -gt 0) { Write-Host ("$failed i18n case(s) failed"); exit 1 }

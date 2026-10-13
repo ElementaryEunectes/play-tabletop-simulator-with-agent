@@ -155,13 +155,24 @@ function Merge-I18nText {
 function Read-I18nDictionary {
     # TSV: `source<TAB>target`, `#` comments. Returned longest-source-first so that a specific phrase is
     # tried before the general words it contains ("Draw two cards." before "Draw").
-    param([string]$Path)
+    #
+    # SEVERAL FILES, MERGED, FIRST WINS: this is what makes a layered table possible - the shared card
+    # terms live in the repository (tts\i18n\terms_card.tsv), while one game's own names live in
+    # local\games\<game>\ (per the charter: game-specific content does not ship). Pass the specific table
+    # FIRST and it overrides the general one for the same source string.
+    param([string[]]$Path)
     $terms = New-Object System.Collections.Generic.List[object]
-    foreach ($line in [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)) {
-        if ($line -eq '' -or $line.StartsWith('#')) { continue }
-        $c = $line -split "`t"
-        if ($c.Count -lt 2 -or $c[0] -eq '') { continue }
-        $terms.Add([pscustomobject]@{ src = $c[0]; dst = $c[1] })
+    $seen = @{}
+    foreach ($p in $Path) {
+        if (-not (Test-Path -LiteralPath $p)) { throw ('no such dictionary: ' + $p) }
+        foreach ($line in [System.IO.File]::ReadAllLines($p, [System.Text.Encoding]::UTF8)) {
+            if ($line -eq '' -or $line.StartsWith('#')) { continue }
+            $c = $line -split "`t"
+            if ($c.Count -lt 2 -or $c[0] -eq '') { continue }
+            if ($seen.ContainsKey($c[0])) { continue }
+            $seen[$c[0]] = $true
+            $terms.Add([pscustomobject]@{ src = $c[0]; dst = $c[1] })
+        }
     }
     return @($terms | Sort-Object -Property @{ Expression = { $_.src.Length }; Descending = $true })
 }
