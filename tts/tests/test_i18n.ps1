@@ -167,6 +167,29 @@ $rules = Get-I18nImageRule -RulePath $ruleJson
 $hit = @($rules) | Where-Object { $urlA -like ('*' + $_.match + '*') } | Select-Object -First 1
 $miss = @($rules) | Where-Object { $urlB -like ('*' + $_.match + '*') } | Select-Object -First 1
 Check 'a rule matches its own url and not another' (($null -ne $hit) -and ($null -eq $miss))
+
+# ---- 7. text-band detection (no OCR engine involved - see the function header for why) ----
+$bandImg = Join-Path $tmp 'band.png'
+$bmp = New-Object System.Drawing.Bitmap(300, 150)
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.Clear([System.Drawing.Color]::White)
+$g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+$font = New-Object System.Drawing.Font('Microsoft YaHei', 18, [System.Drawing.FontStyle]::Bold)
+$g.DrawString('TEXT BAND TEST 12345', $font, [System.Drawing.Brushes]::Black, 12, 40)
+$g.Dispose()
+$font.Dispose()
+$bmp.Save($bandImg, [System.Drawing.Imaging.ImageFormat]::Png)
+$bmp.Dispose()
+$bands = Get-I18nTextBands -Path $bandImg -WorkWidth 300
+Check 'text band detection finds at least one band' (@($bands).Count -ge 1) ('got ' + @($bands).Count)
+$hitBand = @($bands) | Where-Object { $_.y0 -le 52 -and $_.y1 -ge 52 } | Select-Object -First 1
+Check 'a band covers the drawn text (y around 40-64)' ($null -ne $hitBand) `
+    ((@($bands) | ForEach-Object { 'y' + $_.y0 + '-' + $_.y1 }) -join ' ')
+$lowBand = @($bands) | Where-Object { $_.y0 -gt 90 } | Select-Object -First 1
+Check 'the empty lower half produces no band' ($null -eq $lowBand)
+$prev = Join-Path $tmp 'band_preview.png'
+Export-I18nBandPreview -Path $bandImg -OutPath $prev -Bands $bands -PreviewWidth 300
+Check 'band preview written' (Test-Path $prev)
 Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
 
 if ($failed -gt 0) { Write-Host ("$failed i18n case(s) failed"); exit 1 }
