@@ -151,3 +151,57 @@ function Merge-I18nText {
         log         = $log
     }
 }
+
+function Read-I18nDictionary {
+    # TSV: `source<TAB>target`, `#` comments. Returned longest-source-first so that a specific phrase is
+    # tried before the general words it contains ("Draw two cards." before "Draw").
+    param([string]$Path)
+    $terms = New-Object System.Collections.Generic.List[object]
+    foreach ($line in [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)) {
+        if ($line -eq '' -or $line.StartsWith('#')) { continue }
+        $c = $line -split "`t"
+        if ($c.Count -lt 2 -or $c[0] -eq '') { continue }
+        $terms.Add([pscustomobject]@{ src = $c[0]; dst = $c[1] })
+    }
+    return @($terms | Sort-Object -Property @{ Expression = { $_.src.Length }; Descending = $true })
+}
+
+function Convert-I18nTsvWithDict {
+    # The dictionary "translator": fills column 4 for any row it has a term for, leaves the rest empty
+    # (empty target = keep the original text - that is the contract, see tts\docs\I18N.md section 0).
+    # Exact match wins; otherwise terms are substituted inside the string, longest first.
+    # Returns text / total / exact / inside / missed.
+    param([string[]]$Lines, $Terms, [switch]$CaseSensitive)
+    $cmp = [System.StringComparison]::Ordinal
+    if (-not $CaseSensitive) { $cmp = [System.StringComparison]::OrdinalIgnoreCase }
+    $out = New-Object System.Collections.Generic.List[string]
+    $total = 0
+    $exact = 0
+    $inside = 0
+    $missed = 0
+    foreach ($line in $Lines) {
+        if ($line -eq '' -or $line.StartsWith('#')) { $out.Add($line); continue }
+        $c = $line -split "`t"
+        if ($c.Count -lt 3 -or $c[0] -eq 'id') { $out.Add($line); continue }
+        $src = $c[2]
+        if ($src -eq '') { $out.Add($c[0] + "`t" + $c[1] + "`t" + $src + "`t"); continue }
+        $total++
+        $dst = ''
+        foreach ($t in $Terms) {
+            if ($src.Equals($t.src, $cmp)) { $dst = $t.dst; $exact++; break }
+        }
+        if ($dst -eq '') {
+            $work = $src
+            $changed = $false
+            foreach ($t in $Terms) {
+                if ($work.IndexOf($t.src, $cmp) -ge 0) {
+                    $work = [regex]::Replace($work, [regex]::Escape($t.src), $t.dst.Replace('$', '$$'), 'IgnoreCase')
+                    $changed = $true
+                }
+            }
+            if ($changed) { $dst = $work; $inside++ } else { $missed++ }
+        }
+        $out.Add($c[0] + "`t" + $c[1] + "`t" + $src + "`t" + $dst)
+    }
+    return @{ text = $out; total = $total; exact = $exact; inside = $inside; missed = $missed }
+}

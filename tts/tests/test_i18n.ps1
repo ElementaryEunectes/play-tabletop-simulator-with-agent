@@ -190,6 +190,40 @@ Check 'the empty lower half produces no band' ($null -eq $lowBand)
 $prev = Join-Path $tmp 'band_preview.png'
 Export-I18nBandPreview -Path $bandImg -OutPath $prev -Bands $bands -PreviewWidth 300
 Check 'band preview written' (Test-Path $prev)
+
+# ---- 8. the dictionary translator: longest match first, empty in means empty out ----
+# NOTE the parentheses around every concatenation below. WITHOUT them this array came out with SEVEN
+# elements instead of three ("Draw two cards.", a bare tab, "TRANSLATED-EXACT", ...) and the dictionary
+# file written from it was half a term per line - the translator then found nothing and eight assertions
+# failed. The mechanism was right; the fixture was wrong. Caught 2026-10-13.
+$dictPath = Join-Path $tmp 'terms.tsv'
+[System.IO.File]::WriteAllLines($dictPath, @(
+        '# test dictionary',
+        ('Draw two cards.' + "`t" + 'TRANSLATED-EXACT'),
+        ('Draw' + "`t" + 'TRANSLATED-WORD'),
+        ('Discard' + "`t" + 'TRANSLATED-DISCARD')
+    ), (New-Object System.Text.UTF8Encoding($false)))
+$terms = Read-I18nDictionary -Path $dictPath
+Check 'dictionary reader skips comments and sorts longest source first' `
+    ((@($terms).Count -eq 3) -and ($terms[0].src -eq 'Draw two cards.')) `
+    ((@($terms) | ForEach-Object { $_.src }) -join ' | ')
+$tsvLines = @(
+    ('id' + "`t" + 'field' + "`t" + 'source' + "`t" + 'target'),
+    ('1' + "`t" + 'Nickname' + "`t" + 'Draw two cards.' + "`t"),
+    ('2' + "`t" + 'Description' + "`t" + 'Draw a card.' + "`t"),
+    ('3' + "`t" + 'GMNotes' + "`t" + 'Unknown prose here.' + "`t"),
+    ('4' + "`t" + 'Nickname' + "`t" + '' + "`t")
+)
+$r4 = Convert-I18nTsvWithDict -Lines $tsvLines -Terms $terms
+Check 'dictionary translator counts only translatable rows' ($r4.total -eq 3) ('total ' + $r4.total)
+Check 'an exact match wins over the shorter term inside it' ($r4.exact -eq 1) ('exact ' + $r4.exact)
+Check 'a term inside a longer sentence is substituted' ($r4.inside -eq 1) ('inside ' + $r4.inside)
+Check 'a row with no matching term is left untouched' ($r4.missed -eq 1) ('missed ' + $r4.missed)
+Check 'the exact row carries its translation' (@($r4.text)[1] -like '*TRANSLATED-EXACT') (@($r4.text)[1])
+Check 'an untouched row keeps an empty target (empty = keep original)' `
+    (((@($r4.text)[3] -split "`t")[3] -eq '')) (@($r4.text)[3])
+Check 'an empty source stays empty and is not counted as translatable' `
+    ((((@($r4.text)[4] -split "`t")[3] -eq '') -and ($r4.total -eq 3)))
 Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
 
 if ($failed -gt 0) { Write-Host ("$failed i18n case(s) failed"); exit 1 }
