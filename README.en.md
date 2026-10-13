@@ -185,9 +185,12 @@ budget, and a human/AI split where the human only decides and clicks End Turn.
 
 This repository's **code and documentation** are MIT licensed — see `LICENSE`,
 Copyright (c) 2026 ElementaryEunectes.
-That does **not** cover: **Tabletop Simulator** (Berserk Games), **Dice Throne** and its card
-text/art (Roxley / MINDVG), or the Workshop mod itself. No game rules or card text ship with this repository (the self-use notes live in `local\games\`); that file is a
-personal play-aid that transcribes parts of the card text; **no card art is included** — the
-images and the card-text cache live in `cache\`, which is not committed.
+That does **not** cover **any Steam Workshop mod you load into TTS**: a mod's card text, artwork and
+rulebook belong to **their respective rights holders** (Tabletop Simulator itself belongs to Berserk
+Games). **None of that content ships with this repository** — this machine's own play-aid lives in
+`local\games\` (gitignored; it transcribes parts of some card text and **includes no card art**), and the
+card-text and image caches live in `cache\`, neither of which is committed.
+> ⚠️ **This repository names no specific mod**: every document writes `<game>` or a description instead.
+> The gate `tts\tests\test_agents_hygiene.ps1` enforces that character by character.
 `tts\validate_lua.js` needs **`luaparse`** (MIT), which is not vendored here: run
 `npm i luaparse`, or set `LUAPARSE_DIR`.

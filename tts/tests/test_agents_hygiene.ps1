@@ -106,9 +106,10 @@ if ($tracked.Count -gt 0) {
 #         frozen in by check_ps1.ps1, which re-saved it WITH a BOM. The self-check below guards that.
 #   * to ADD a name: append its code points as a second array argument, then re-run. The length
 #     control below fails loudly if the list and the pattern ever disagree.
-#   * the ONLY exemption is the licence section of the two READMEs: an attribution has to let the
-#     rights holder be identified, so a blanket ban there would be wrong rather than strict. Keep
-#     this list short - anywhere else write <game> or a description instead.
+#   * there are NO exemptions (2026-10-13): the two READMEs used to name one specific mod in their
+#     licence section so the rights holder was identifiable. The owner asked for generic wording
+#     instead ("any Workshop mod you load"), so the ban now covers every tracked file. Keep this list
+#     short - anywhere write <game> or a description instead.
 $script:gameCp = @(
     @(0x64, 0x69, 0x63, 0x65, 0x74, 0x68, 0x72, 0x6F, 0x6E, 0x65),                  # a match-shaped board game (run-together)
     @(0x64, 0x69, 0x63, 0x65, 0x20, 0x74, 0x68, 0x72, 0x6F, 0x6E, 0x65),            # ... and its SPACED form (0x20) - the run-together entry alone missed it
@@ -122,14 +123,9 @@ $script:gameCp = @(
 )
 $script:gameWord = @($script:gameCp | ForEach-Object { -join ($_ | ForEach-Object { [char]$_ }) })
 $script:gamePattern = ($script:gameWord -join '|')
-$nameExempt = @('README.md', 'README.en.md')          # licence/attribution sections only
 if ($tracked.Count -gt 0) {
     $nameLeaks = @()
     foreach ($rel in $tracked) {
-        # Compare the BASENAME: git ls-files returns repo-relative paths like tts/tests/x.ps1, so a
-        # bare-name exemption list would silently never match (it did not, on the first try).
-        $base = Split-Path -Leaf $rel
-        if ($nameExempt -contains $base) { continue }
         $body = Read-Utf8 (Join-Path $Root $rel)
         if ($null -eq $body) { continue }
         foreach ($m in [regex]::Matches($body, $script:gamePattern, 'IgnoreCase')) { $nameLeaks += ($rel + ': ' + $m.Value) }

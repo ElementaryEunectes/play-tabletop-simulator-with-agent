@@ -139,9 +139,8 @@ $env:TTS_IMAGES_DIR= 'D:\...\Mods\Images'  # TTS 图片缓存（默认：同上�
 ## 许可与第三方
 
 本仓库的**代码与文档**按 **MIT** 授权（见 `LICENSE`，Copyright (c) 2026 ElementaryEunectes）。
-它**不覆盖**：**Tabletop Simulator**（Berserk Games）· **《王权骰铸》/ Dice Throne** 及其卡面文本与美术（Roxley / MINDVG）·
-创意工坊模组本身。**规则/卡面文本不随仓库分发**（自用便签在 `local\games\`）：那份便签转抄了部分卡面文字，**不含任何卡图** ——
-图片与卡面文本库都在 `cache\`，不进仓库。
-> ⚠️ **上面这一处是全仓库唯一的"点名"**（法律声明必须让权利人可识别）。其余任何地方**都不准出现真游戏名**：
-> 一律用 `<游戏>` / "对局型 mod" 这类占位或描述 —— 门禁 `tts\tests\test_agents_hygiene.ps1` 会逐字检查（`README.en.md` 的对应段同理）。
+它**不覆盖**你在 TTS 里载入的**任何创意工坊模组**：模组的卡面文本、美术、规则书等归**各自的权利人**所有
+（Tabletop Simulator 本身归 Berserk Games）。**这些内容一律不随仓库分发** —— 本局自用的便签在 `local\games\`（gitignored；转抄了部分卡面文字、**不含任何卡图**），卡面文本库与图片在 `cache\`，两者都不进仓库。
+> ⚠️ **本仓库不点名任何具体模组**：所有文档一律用 `<游戏>` / "对局型 mod" 这类占位或描述 ——
+> 门禁 `tts\tests\test_agents_hygiene.ps1` 会逐字检查（`README.en.md` 同理）。
 `tts\validate_lua.js` 依赖 **`luaparse`**（MIT），但**未随仓库分发**：`npm i luaparse`，或设 `LUAPARSE_DIR`。
