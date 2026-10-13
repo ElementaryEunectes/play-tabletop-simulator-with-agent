@@ -1,0 +1,48 @@
+# terms_card.tsv - 通用卡牌/桌游术语表（对任何 TTS 卡牌 mod 都成立 ⇒ 进仓库）
+#
+# 格式：`原文<TAB>译文`，`#` 开头是注释。给 tts\tools\i18n_mt_dict.ps1 用。
+# 规矩：
+#   * **长的写前面**（工具按"最长匹配优先"排，但同一概念的短语和单词都列出来更保险）
+#   * 只收**术语/固定短语**，别收整句散文（散文交给机翻引擎）
+#   * 卡牌语境的义项优先：Draw = 抽牌（不是"画"）、Discard = 弃牌、Deck = 牌库
+#   * 每加一条都在这里留一句"为什么"，因为它会被复用到别的 mod
+#
+# 这一批是 2026-10-13 玩家当场纠正后立的：模型把 "Draw two cards." 译成「画两张牌」。
+
+Draw two cards.	抽两张牌
+Draw a card.	抽一张牌
+Draw cards.	抽牌
+Draw	抽
+Discard a card.	弃一张牌
+Discard cards.	弃牌
+Discard	弃
+Deck	牌库
+Draw pile	抽牌堆
+Discard pile	弃牌堆
+Hand	手牌
+Shuffle	洗牌
+Shuffles	洗牌
+Card	卡牌
+Cards	卡牌
+Player	玩家
+Players	玩家
+Turn	回合
+Round	轮
+Health	生命
+Hit points	生命值
+Damage	伤害
+Attack	攻击
+Defense	防御
+Shield	护盾
+Token	标记
+Counter	指示物
+Gain	获得
+Lose	失去
+Take	拿取
+Place	放置
+Move	移动
+Choose	选择
+Target	目标
+Opponent	对手
+All players	所有玩家
+Each player	每名玩家

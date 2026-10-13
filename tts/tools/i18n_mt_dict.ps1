@@ -21,7 +21,8 @@ param(
     [string]$In = '',
     [string]$Out = '',
     [string]$DictFile = '',
-    [switch]$CaseSensitive
+    [switch]$CaseSensitive,
+    [switch]$AllowInside
 )
 $ErrorActionPreference = 'Stop'
 if ($Root -eq '') { $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
@@ -36,8 +37,11 @@ if ($Out -eq '') { $Out = Join-Path $DshCache 'i18n_zh.tsv' }
 
 $terms = Read-I18nDictionary -Path $DictFile
 Write-Host ('dictionary: ' + @($terms).Count + ' term(s) from ' + (Split-Path $DictFile -Leaf))
+$mode = 'exact rows only'
+if ($AllowInside) { $mode = 'exact rows, then terms inside sentences' }
+Write-Host ('mode      : ' + $mode + '   (a whole sentence belongs to an engine - see the header)')
 $lines = [System.IO.File]::ReadAllLines($In, [System.Text.Encoding]::UTF8)
-$r = Convert-I18nTsvWithDict -Lines $lines -Terms $terms -CaseSensitive:$CaseSensitive
+$r = Convert-I18nTsvWithDict -Lines $lines -Terms $terms -CaseSensitive:$CaseSensitive -AllowInside:$AllowInside
 
 $outDir = Split-Path -Parent $Out
 if ($outDir -ne '' -and -not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Force $outDir | Out-Null }

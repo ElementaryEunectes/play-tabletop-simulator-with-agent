@@ -169,9 +169,12 @@ function Read-I18nDictionary {
 function Convert-I18nTsvWithDict {
     # The dictionary "translator": fills column 4 for any row it has a term for, leaves the rest empty
     # (empty target = keep the original text - that is the contract, see tts\docs\I18N.md section 0).
-    # Exact match wins; otherwise terms are substituted inside the string, longest first.
-    # Returns text / total / exact / inside / missed.
-    param([string[]]$Lines, $Terms, [switch]$CaseSensitive)
+    #
+    # EXACT MATCH ONLY BY DEFAULT, and that default was corrected by measurement (2026-10-13): substituting
+    # terms inside a sentence produced "洗牌 the 牌库 and 抽一张牌" - half translated, and the model pass
+    # then skips the row precisely because the target is no longer empty. A whole sentence belongs to the
+    # engine; a dictionary is for terms. -AllowInside re-enables the old behaviour if someone wants it.
+    param([string[]]$Lines, $Terms, [switch]$CaseSensitive, [switch]$AllowInside)
     $cmp = [System.StringComparison]::Ordinal
     if (-not $CaseSensitive) { $cmp = [System.StringComparison]::OrdinalIgnoreCase }
     $out = New-Object System.Collections.Generic.List[string]
@@ -190,7 +193,7 @@ function Convert-I18nTsvWithDict {
         foreach ($t in $Terms) {
             if ($src.Equals($t.src, $cmp)) { $dst = $t.dst; $exact++; break }
         }
-        if ($dst -eq '') {
+        if ($dst -eq '' -and $AllowInside) {
             $work = $src
             $changed = $false
             foreach ($t in $Terms) {
@@ -199,8 +202,9 @@ function Convert-I18nTsvWithDict {
                     $changed = $true
                 }
             }
-            if ($changed) { $dst = $work; $inside++ } else { $missed++ }
+            if ($changed) { $dst = $work; $inside++ }
         }
+        if ($dst -eq '') { $missed++ }
         $out.Add($c[0] + "`t" + $c[1] + "`t" + $src + "`t" + $dst)
     }
     return @{ text = $out; total = $total; exact = $exact; inside = $inside; missed = $missed }

@@ -217,8 +217,14 @@ $tsvLines = @(
 $r4 = Convert-I18nTsvWithDict -Lines $tsvLines -Terms $terms
 Check 'dictionary translator counts only translatable rows' ($r4.total -eq 3) ('total ' + $r4.total)
 Check 'an exact match wins over the shorter term inside it' ($r4.exact -eq 1) ('exact ' + $r4.exact)
-Check 'a term inside a longer sentence is substituted' ($r4.inside -eq 1) ('inside ' + $r4.inside)
-Check 'a row with no matching term is left untouched' ($r4.missed -eq 1) ('missed ' + $r4.missed)
+# DEFAULT IS EXACT-ONLY, corrected 2026-10-13 by measuring the output: substituting terms inside a
+# sentence gave "洗牌 the 牌库 and 抽一张牌" and the engine pass then skips the row (target no longer
+# empty), so a half-translated sentence could never be fixed. A whole sentence belongs to the engine.
+Check 'by default, a term inside a sentence is NOT substituted' `
+    (($r4.inside -eq 0) -and ($r4.missed -eq 2)) ('inside ' + $r4.inside + ' missed ' + $r4.missed)
+$r5 = Convert-I18nTsvWithDict -Lines $tsvLines -Terms $terms -AllowInside
+Check 'with -AllowInside the term inside a sentence is substituted again' ($r5.inside -eq 1) ('inside ' + $r5.inside)
+Check 'rows with no matching term are left untouched' ($r4.missed -eq 2) ('missed ' + $r4.missed)
 Check 'the exact row carries its translation' (@($r4.text)[1] -like '*TRANSLATED-EXACT') (@($r4.text)[1])
 Check 'an untouched row keeps an empty target (empty = keep original)' `
     (((@($r4.text)[3] -split "`t")[3] -eq '')) (@($r4.text)[3])
