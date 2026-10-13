@@ -1,6 +1,6 @@
-# tts-agent — an AI plays the board game, you make the decisions
+# Play Tabletop Simulator with an agent — you make the decisions
 
-[![gates](https://github.com/ElementaryEunectes/tts-agent/actions/workflows/gates.yml/badge.svg)](https://github.com/ElementaryEunectes/tts-agent/actions/workflows/gates.yml)
+[![gates](https://github.com/ElementaryEunectes/play-tabletop-simulator-with-agent/actions/workflows/gates.yml/badge.svg)](https://github.com/ElementaryEunectes/play-tabletop-simulator-with-agent/actions/workflows/gates.yml)
 
 > 🤖 **The code and docs here were written mostly by an AI agent (DSH)** — the human made the decisions,
 > reviewed and signed off, and every commit carries the *why*. That is not a disclaimer, it is the thing

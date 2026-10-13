@@ -1,6 +1,6 @@
 # TTS 代玩工作区（DSH × Tabletop Simulator）
 
-[![gates](https://github.com/ElementaryEunectes/tts-agent/actions/workflows/gates.yml/badge.svg)](https://github.com/ElementaryEunectes/tts-agent/actions/workflows/gates.yml)
+[![gates](https://github.com/ElementaryEunectes/play-tabletop-simulator-with-agent/actions/workflows/gates.yml/badge.svg)](https://github.com/ElementaryEunectes/play-tabletop-simulator-with-agent/actions/workflows/gates.yml)
 
 > 🤖 **本仓库的代码与文档主要由 AI（DSH agent）撰写** —— 人负责**决策、审阅与拍板**，每个提交记着"为什么改"。
 > 这不是免责声明，而是本项目要验证的东西：**agent 能不能留下可交接、可门禁、可复现的活**。
