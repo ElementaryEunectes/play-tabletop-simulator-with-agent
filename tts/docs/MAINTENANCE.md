@@ -14,6 +14,8 @@
   ⇒ **纯 ASCII 的文件对 BOM 免疫**（`tts\tests\test_agents_hygiene.ps1` 的淘汰名单就用"运行时按码位拼字"写成纯 ASCII，并自带一条"本文件除 BOM 外不得有非 ASCII 字节"的自检）。
 - 跑脚本一律 `powershell -NoProfile -ExecutionPolicy Bypass -File '<绝对路径>'`；**工具壳是 Windows PowerShell 5.1** ⇒ 读中文文件要 `-Encoding UTF8` / `[IO.File]::ReadAllText`（否则乱码，文件没坏）。
 - 写工作区之外 ⇒ `[sandbox: file access denied]`（**策略不是 bug**，一次提权重试）；判端口用 `netstat -ano | findstr :39999`（`Get-NetTCPConnection` 在本沙箱假报"没人在听"）。
+- ⛔ **junction（目录联接）绝不能用 `Remove-Item -Recurse` 删** —— 它会**穿透删掉链接指向的真实内容**。安全做法：`[System.IO.Directory]::Delete($path, $false)`（`$false` = 不递归 ⇒ 只删链接本身）。2026-10-14 实测：这样删，链接消失而目标完好。
+  📌 **更好的做法是根本不要链接**：需要"让 Node 从某目录找到包"时，**直接把包装进那个目录**（`node_modules/` 本来就在 `.gitignore` 里 —— 真实目录没有穿透风险，也不重复占空间）；同卷 `Move-Item` 只改目录项、不复制 465 MB。
 - 🔌 **推 GitHub（2026-10-13 实测，本沙箱专属）**：`api.github.com` **放行**、**`github.com` 不通** ⇒ `gh repo create` / `gh api` / `gh run` 全都能用，而 **`git push` 直连会被重置**；另外 **schannel 后端报 `SEC_E_NO_CREDENTIALS`**（进程拿不到 TLS 客户端凭据，**与网络无关**，提权也没用）。可用组合：
   `git -c http.sslBackend=openssl -c http.extraheader="Authorization: Basic <base64(x-access-token:<token>)>" push` —— token 用 `gh auth token` 读进变量，**不回显、不落盘、不进命令行**。
   ⚠️ 含 **`.github/workflows/`** 的推送**要求 token 带 `workflow` scope**，否则 GitHub 明确拒（`refusing to allow an OAuth App to create or update workflow …`）；补 scope 的 `gh auth refresh -h github.com -s workflow` **要连 `github.com` ⇒ 本沙箱做不了，得在本机终端跑**。
