@@ -44,7 +44,8 @@
   `pdf_images.js`（从**图片型** PDF 抽整页图）—— 规则书那条链用的就是这两个（见 `local\games\<游戏>\FLOW.md` 附录 A）·
   回合交接那套：`exec_script.ps1`（官方 External Editor API 的 `messageID 3`，**直连 TCP** 发 Lua）· `turn_calib.ps1` / `turn_side.ps1`（每款 mod 一次的校准与判定）·
   `turn_poller.ps1`（2.5 s 轮询写 `cache\turn_side.txt`，配 file 哨兵做快速叫醒）· `tracker_read.lua`（回合标记体检）·
-  `git_blob_eol.js` / `git_blob_cmp.js`（**量提交里的行尾** —— PowerShell 重定向会改行尾，不能用来量）。
+  `git_blob_eol.js` / `git_blob_cmp.js`（**量提交里的行尾** —— PowerShell 重定向会改行尾，不能用来量）·
+  **机翻那套**：`i18n_export.ps1` / `i18n_apply.ps1`（存档 ↔ TSV）· `i18n_mt_dict.ps1`（词典，可分层）· `i18n_mt_transformers.mjs`（本地模型，**0 token**）· `i18n_images.ps1`（改图：覆盖 TTS 图片缓存）· `i18n_bands.ps1`（文字带候选）· `ocr_boxes.ps1` ＋ `ocr_probe.py`（OCR 定位 —— **可选，需要 Python**）⇒ 全套说明见 **`tts\docs\I18N.md`**。
 - `tts\templates\` = **新游戏起手的三个模板**（`STATE` / `FLOW` / `MYHAND`）⇒ 由 `tts\setup.ps1 -InitGame <slug>` 填成
   `local\games\<slug>\`（`<游戏>` 占位符会被替换成 slug）。
 - `tts\docs\` = 上面那张表里的文档。
